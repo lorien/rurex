@@ -56,10 +56,12 @@ There is no `SWAP_GREED` flag: swapped greediness is pattern syntax,
 Attributes: `pattern`, `flags`, `groups` (number of capture groups),
 `groupindex` (name -> number mapping).
 
-Methods. The five text methods accept `pos`/`endpos` logical bounds:
-`^` and `\A` anchor at `pos`, and no match reports past `endpos`.
-They are code-point indices, translated to engine byte offsets
-internally.
+Methods. The five text methods accept `pos`/`endpos` logical bounds.
+Exactly like `re`: `pos` only moves where the scan starts (`^`/`\A`
+still anchor at the real text start, so `search(r'^b', 'ab', 1)` finds
+nothing), and `endpos` behaves as if the text were truncated there.
+They are code-point indices for `str` and byte indices for `bytes`,
+translated to engine byte offsets internally.
 
 - `search(text, pos=0, endpos=None) -> Match | None` — first match
   anywhere in the window.
@@ -71,8 +73,10 @@ internally.
 - `is_match(text) -> bool` — cheap existence check, no Match built.
 - `findall(text, pos=0, endpos=None) -> list` — strings for patterns
   without groups; tuples of group strings when the pattern has
-  groups; unmatched groups are `None`.
-- `finditer(text, pos=0, endpos=None) -> iterator of Match` — lazy.
+  groups; unmatched groups are the empty string (like `re.findall`;
+  `re.split` is the method that yields `None`).
+- `finditer(text, pos=0, endpos=None) -> FindIter` — a lazy iterator
+  of `Match`; the GIL is released around each scan step.
 - `split(text, maxsplit=0) -> list` — splits on zero-width matches
   per Python 3.7+ `re` semantics.
 - `sub(repl, text, count=0) -> str` — `repl` may be a string using
@@ -134,6 +138,15 @@ Methods and accessors:
 
 `repr(m)` renders like `<rurex.Match span=(0, 2), match='aa'>`.
 
+## Template errors
+
+`sub`/`subn`/`expand` templates are parsed eagerly (before scanning,
+like `re`): a bad template raises even when nothing matches. The
+messages mirror `re` (`bad escape \q at position 0`, `invalid group
+reference 1 at position 1`, `missing >, unterminated name`). One
+CPPython quirk is preserved: an unknown name in `\g<name>` raises
+`IndexError: unknown group name 'x'`, not `rurex.error`.
+
 ## Errors
 
 `rurex.error` subclasses `Exception` like `re.error` and carries the
@@ -164,6 +177,10 @@ the Rust extension and never leaks (the rure-python lesson).
   compile with `rurex.error`.
 - `prefixmatch` instead of `match` (Python 3.15's name); no `match`
   alias.
+- `fullmatch` with `pos > 0` on patterns containing an explicit
+  `^`/`\A` anchors at the window start instead of failing (the
+  anchored fallback variant operates on the window); plain
+  `fullmatch(text)` is unaffected.
 - No module-level convenience functions and no pattern cache.
 - `re`'s absolute-end anchor `\Z` is spelled `\z` by the engine;
   `\Z` in a pattern is a compile error. `\A` works as in `re`.

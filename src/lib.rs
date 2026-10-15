@@ -4,9 +4,12 @@ use pyo3::prelude::*;
 
 mod error;
 mod flags;
+mod match_;
 mod regex;
+mod template;
 
-use regex::Regex;
+use match_::Match;
+use regex::{FindIter, Regex};
 
 /// Escape all regex metacharacters in `text`.
 #[pyfunction]
@@ -31,6 +34,8 @@ fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(escape, m)?)?;
     m.add_function(wrap_pyfunction!(compile, m)?)?;
     m.add_class::<Regex>()?;
+    m.add_class::<Match>()?;
+    m.add_class::<FindIter>()?;
     m.add("error", m.py().get_type::<error::Error>())?;
     // Flag constants at stdlib `re` bit values (ADR-0004, revised).
     for (name, value) in [

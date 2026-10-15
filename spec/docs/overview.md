@@ -47,6 +47,7 @@ by placeholder release 0.0.1.
       lib.rs             #[pymodule] registration, module-level functions
       regex.rs           the `Regex` type wrapping regex::Regex / regex::bytes::Regex
       regexset.rs        the `RegexSet` type for multi-pattern membership
+      template.rs        re-style replacement-template parser/expander
       match_.rs          the `Match` type returned by search/prefixmatch/finditer
       flags.rs           flag constants and translation to regex::RegexBuilder
       error.rs           regex::Error -> rurex.error mapping

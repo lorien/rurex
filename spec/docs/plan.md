@@ -3,25 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Implement Match objects and the matching API
-
-Status: new
-Priority: 3
-
-Implement `src/match_.rs` (Match with `group`/`__getitem__`,
-`groups`, `groupdict`, `start`/`end`/`span`, `expand`, `re`,
-`string`, `pos`, `endpos`, `lastindex`, `lastgroup`, `__repr__`,
-`None`/`-1` unmatched semantics) and the `Regex` methods: `search`,
-`prefixmatch`, `fullmatch`, `is_match`, `findall`, `finditer`,
-`split`, `sub`, `subn`, with `pos`/`endpos` windows on the five text
-methods (code-point bounds translated to byte offsets), a lazy
-`finditer`, `re`-style templates plus callable `repl`,
-copy/deepcopy/pickle via `__reduce__`, and GIL release around scans
-per `spec/docs/architecture.md`. `str` and `bytes` modes both
-supported.
-
-References: ADR-0002, ADR-0004
-
 ## Implement RegexSet
 
 Status: new

@@ -56,9 +56,10 @@ References: ADR-0002
 
 ### Future-task notes
 
-- [open] The matching task (next in plan.md) must consume the stored
+- [acted] The matching task (next in plan.md) must consume the stored
   program and deliver `Match` objects with the byte-to-char offset
   conversion already proven in `src/error.rs`.
+  (Done in the matching-API task, report-1792102391.)
 
 ### Tooling/process
 
