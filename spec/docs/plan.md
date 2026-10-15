@@ -3,19 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Implement RegexSet
-
-Status: new
-Priority: 2
-
-Implement `rurex.compile_set(patterns, flags=0)` returning a
-`RegexSet` wrapping `regex::RegexSet`: `is_match(text) -> bool` and
-`matches(text) -> list[bool]`, membership only, flags applied to all
-patterns. Coverage for empty pattern list, result ordering, and
-`str`/`bytes` modes.
-
-References: ADR-0004
-
 ## Comprehensive Python test suite
 
 Status: new

@@ -109,15 +109,21 @@ escapes, which under the ASCII default mean the raw byte).
 
 ## RegexSet objects
 
-`rurex.compile_set(patterns, flags=0)` compiles an iterable of
+`rurex.compile_set(patterns, flags=0)` compiles any iterable of
 patterns into a `RegexSet` that scans for all of them in a single
-pass; the flags value applies to every pattern. The v0 surface is
+pass; the flags value applies to every pattern. The first pattern's
+type sets the mode (`str` or `bytes`); a later pattern of the other
+type raises `TypeError: patterns must be all str or all bytes`. An
+empty pattern list is allowed and never matches. The v0 surface is
 membership only (ADR-0004):
 
 - `is_match(text) -> bool` — true if any pattern matches.
 - `matches(text) -> list[bool]` — one boolean per pattern, in order.
 
-No offsets, captures, or `pos`/`endpos` in v0.
+No offsets, captures, or `pos`/`endpos` in v0. Text arguments follow
+the same mode-mismatch `TypeError`s as `Regex`, and a bad pattern
+raises `rurex.error` with the full attribute set — `pattern` and
+`pos` refer to the individual failing pattern.
 
 ## Match objects
 

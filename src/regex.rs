@@ -85,9 +85,56 @@ fn window(pos: usize, end: Option<usize>, len: usize) -> (usize, usize) {
     (p, e)
 }
 
-enum Hay<'a> {
+pub(crate) enum Hay<'a> {
     Text(&'a str),
     Bytes(&'a [u8]),
+}
+
+/// Pre-parse a pattern with regex-syntax (the engine's own parser)
+/// under `cfg`, so syntax errors carry structured positions for full
+/// `re.error` attribute parity. `pattern` becomes the error's
+/// `pattern` attribute; `text` is the (UTF-8 validated) pattern text.
+pub(crate) fn validate_pattern(
+    py: Python<'_>,
+    pattern: &Bound<'_, PyAny>,
+    text: &str,
+    cfg: &flags::Config,
+    bytes_mode: bool,
+) -> PyResult<()> {
+    let mut parser = regex_syntax::ParserBuilder::new();
+    parser
+        .case_insensitive(cfg.case_insensitive)
+        .multi_line(cfg.multi_line)
+        .dot_matches_new_line(cfg.dot_matches_new_line)
+        .ignore_whitespace(cfg.ignore_whitespace)
+        .unicode(cfg.unicode)
+        .utf8(!bytes_mode);
+    if let Err(err) = parser.build().parse(text) {
+        // kind()/span() exist on the Parse/Translate variants; the
+        // enum is non_exhaustive, so anything else falls back to a
+        // position-less error.
+        let (msg, offset) = match &err {
+            regex_syntax::Error::Parse(e) => (e.kind().to_string(), Some(e.span().start.offset)),
+            regex_syntax::Error::Translate(e) => {
+                (e.kind().to_string(), Some(e.span().start.offset))
+            }
+            _ => (err.to_string(), None),
+        };
+        let (pos, lineno, colno) = match offset {
+            Some(off) if bytes_mode => {
+                let (l, c) = error::line_col_bytes(text.as_bytes(), off);
+                (Some(off), Some(l), Some(c))
+            }
+            Some(off) => {
+                let p = error::byte_offset_to_char(text, off);
+                let (l, c) = error::line_col_text(text, p);
+                (Some(p), Some(l), Some(c))
+            }
+            None => (None, None, None),
+        };
+        return Err(error::make_error(py, &msg, pattern, pos, lineno, colno)?);
+    }
+    Ok(())
 }
 
 /// An owned handle to `self` from a `PyRef` receiver (used to populate
@@ -99,7 +146,10 @@ fn py_handle(slf: &PyRef<'_, Regex>, py: Python<'_>) -> Py<Regex> {
         .unbind()
 }
 
-fn extract_hay<'py>(bytes_mode: bool, obj: &'py Bound<'py, PyAny>) -> PyResult<Hay<'py>> {
+pub(crate) fn extract_hay<'py>(
+    bytes_mode: bool,
+    obj: &'py Bound<'py, PyAny>,
+) -> PyResult<Hay<'py>> {
     if bytes_mode {
         let bytes_bound: &Bound<'py, PyBytes> = obj.cast::<PyBytes>().map_err(|_| {
             PyTypeError::new_err("cannot use a bytes pattern on a string-like object")
@@ -161,41 +211,7 @@ impl Regex {
             },
         };
 
-        // Pre-parse with regex-syntax (the engine's own parser) under
-        // the same flag configuration, so syntax errors carry
-        // structured positions for full `re.error` attribute parity.
-        let mut parser = regex_syntax::ParserBuilder::new();
-        parser
-            .case_insensitive(cfg.case_insensitive)
-            .multi_line(cfg.multi_line)
-            .dot_matches_new_line(cfg.dot_matches_new_line)
-            .ignore_whitespace(cfg.ignore_whitespace)
-            .unicode(cfg.unicode)
-            .utf8(!bytes_mode);
-        if let Err(err) = parser.build().parse(text) {
-            let (msg, offset) = match &err {
-                regex_syntax::Error::Parse(e) => {
-                    (e.kind().to_string(), Some(e.span().start.offset))
-                }
-                regex_syntax::Error::Translate(e) => {
-                    (e.kind().to_string(), Some(e.span().start.offset))
-                }
-                _ => (err.to_string(), None),
-            };
-            let (pos, lineno, colno) = match (&pat, offset) {
-                (Pattern::Text(s), Some(offset)) => {
-                    let char_pos = error::byte_offset_to_char(s, offset);
-                    let (l, c) = error::line_col_text(s, char_pos);
-                    (Some(char_pos), Some(l), Some(c))
-                }
-                (Pattern::Bytes(b), Some(offset)) => {
-                    let (l, c) = error::line_col_bytes(b, offset);
-                    (Some(offset), Some(l), Some(c))
-                }
-                _ => (None, None, None),
-            };
-            return Err(error::make_error(py, &msg, pattern, pos, lineno, colno)?);
-        }
+        validate_pattern(py, pattern, text, &cfg, bytes_mode)?;
 
         // Build the engine program. Errors here are engine limits
         // (e.g. compiled too big), which have no pattern position.

@@ -6,10 +6,12 @@ mod error;
 mod flags;
 mod match_;
 mod regex;
+mod regexset;
 mod template;
 
 use match_::Match;
 use regex::{FindIter, Regex};
+use regexset::RegexSet;
 
 /// Escape all regex metacharacters in `text`.
 #[pyfunction]
@@ -28,12 +30,22 @@ fn compile(pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Regex> {
     Regex::build(pattern, flags)
 }
 
+/// Compile many patterns into a `rurex.RegexSet` that scans for all of
+/// them in a single pass (membership only).
+#[pyfunction]
+#[pyo3(signature = (patterns, flags = 0))]
+fn compile_set(patterns: &Bound<'_, PyAny>, flags: u32) -> PyResult<RegexSet> {
+    regexset::build(patterns.py(), patterns, flags)
+}
+
 #[pymodule]
 fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_function(wrap_pyfunction!(escape, m)?)?;
     m.add_function(wrap_pyfunction!(compile, m)?)?;
+    m.add_function(wrap_pyfunction!(compile_set, m)?)?;
     m.add_class::<Regex>()?;
+    m.add_class::<RegexSet>()?;
     m.add_class::<Match>()?;
     m.add_class::<FindIter>()?;
     m.add("error", m.py().get_type::<error::Error>())?;

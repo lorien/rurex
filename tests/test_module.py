@@ -23,7 +23,7 @@ def test_error_subclasses_exception():
 
 def test_public_surface():
     allowed = (
-        ["__version__", "compile", "escape", "Regex", "Match", "FindIter", "error"]
+        ["__version__", "compile", "compile_set", "escape", "Regex", "RegexSet", "Match", "FindIter", "error"]
         + ["I", "IGNORECASE", "M", "MULTILINE", "S", "DOTALL"]
         + ["U", "UNICODE", "X", "VERBOSE", "A", "ASCII"]
     )
