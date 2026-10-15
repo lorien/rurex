@@ -39,7 +39,9 @@ and Rust crate are `rurex` (ADR-0003). The name is registered on PyPI
 by placeholder release 0.0.1.
 
     AGENTS.md            pointer for coding agents (read first)
+    README.md            project readme
     Cargo.toml           Rust crate manifest (cdylib: the extension module)
+    rust-toolchain.toml  pinned Rust toolchain
     pyproject.toml       Python packaging via the maturin backend
     src/
       lib.rs             #[pymodule] registration, module-level functions

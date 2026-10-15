@@ -28,6 +28,9 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
 - [adr/0004-v0-api-surface.md](adr/0004-v0-api-surface.md) — the six
   v0 API surface decisions: no module functions, `prefixmatch`,
   `pos`/`endpos`, flag set, minimal `RegexSet`, `error(Exception)`.
+- [adr/0005-hybrid-wheel-strategy.md](adr/0005-hybrid-wheel-strategy.md) —
+  version-specific wheels for speed plus an abi3-py310 fallback wheel
+  for rolling-release resilience; speed-tuned release profile.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

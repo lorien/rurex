@@ -3,21 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Scaffold the PyO3 extension crate
-
-Status: new
-Priority: 5
-
-Create the cargo crate `rurex` (crate-type cdylib) with PyO3 and `regex`
-dependencies, `pyproject.toml` using the maturin backend, `src/lib.rs`
-with a `#[pymodule]` exposing `__version__` and `rurex.error`, and a
-minimal `cargo test` + pytest skeleton that imports the module after
-`maturin develop`. Everything must build clean under `cargo fmt`,
-`clippy -D warnings`, and pytest with no public API beyond
-`__version__`, `escape`, and `error`.
-
-References: ADR-0001, ADR-0002, ADR-0003
-
 ## Implement regex compilation and flag mapping
 
 Status: new
@@ -92,9 +77,10 @@ Add a GitHub Actions workflow running `cargo fmt --check`,
 Status: new
 Priority: -1
 
-Deferred until the API stabilizes: maturin-generated wheels (abi3,
-manylinux/macOS/Windows) and PyPI publishing on tags. The PyPI name
-`rurex` is held by placeholder 0.0.1 (ADR-0003); the first
-maturin-built release supersedes it.
+Deferred until the API stabilizes: maturin-built wheels and PyPI
+publishing on tags. Hybrid strategy (ADR-0005): version-specific
+wheels for each supported CPython minor plus one abi3-py310 fallback
+wheel per platform. First real version is 0.1.0, superseding the
+placeholder 0.0.1 that holds the PyPI name (ADR-0003).
 
-References: ADR-0001, ADR-0003
+References: ADR-0001, ADR-0003, ADR-0005
