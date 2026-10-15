@@ -2,7 +2,7 @@
 
 Catalog of the documents under `spec/docs/`. Recommended reading order:
 
-1. [overview.md](overview.md) — what rex is, scope, repository layout.
+1. [overview.md](overview.md) — what rurex is, scope, repository layout.
 2. [conventions.md](conventions.md) — document, code, and commit
    conventions; the ADR convention.
 3. [architecture.md](architecture.md) — crate structure, compilation and
@@ -22,6 +22,9 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   — PyO3 for bindings, maturin for build/packaging.
 - [adr/0002-mirror-python-re-api.md](adr/0002-mirror-python-re-api.md) —
   API modeled on Python's `re`, Rust `regex` semantics underneath.
+- [adr/0003-pypi-name-rurex.md](adr/0003-pypi-name-rurex.md) —
+  distribution/import/crate name `rurex`; name claimed on PyPI with
+  placeholder 0.0.1.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

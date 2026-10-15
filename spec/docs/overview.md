@@ -1,8 +1,8 @@
 # Overview
 
-## What rex is
+## What rurex is
 
-`rex` is a Python extension module that binds the Rust [`regex`](https://crates.io/crates/regex)
+`rurex` is a Python extension module that binds the Rust [`regex`](https://crates.io/crates/regex)
 crate to CPython. It exposes a fast, safe, linear-time regular expression
 engine as a Python package: compile a pattern once, then match `str` (and
 `bytes`) against it with an API modeled on Python's `re` module.
@@ -21,7 +21,7 @@ In scope:
 - Matching over `str` and `bytes`, including Unicode character classes
   (`\p{Greek}`) and named groups (`(?P<name>...)`).
 - Search / match / findall / finditer / split / sub surface.
-- Clear `rex.error` exceptions for pattern and engine errors.
+- Clear `rurex.error` exceptions for pattern and engine errors.
 
 Out of scope (the underlying engine does not support them and never will):
 
@@ -32,6 +32,10 @@ Out of scope (the underlying engine does not support them and never will):
 
 ## Repository layout
 
+The repository directory is `rex`; the published package, import name,
+and Rust crate are `rurex` (ADR-0003). The name is registered on PyPI
+by placeholder release 0.0.1.
+
     AGENTS.md            pointer for coding agents (read first)
     Cargo.toml           Rust crate manifest (cdylib: the extension module)
     pyproject.toml       Python packaging via the maturin backend
@@ -40,7 +44,7 @@ Out of scope (the underlying engine does not support them and never will):
       regex.rs           the `Regex` type wrapping regex::Regex / regex::bytes::Regex
       match_.rs          the `Match` type returned by search/match/finditer
       flags.rs           flag constants and translation to regex::RegexBuilder
-      error.rs           regex::Error -> rex.error mapping
+      error.rs           regex::Error -> rurex.error mapping
     tests/               pytest suite (test_*.py)
     spec/
       docs/              design documents (source of truth; see index.md)

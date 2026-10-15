@@ -12,7 +12,7 @@ the shape of every public name in `spec/docs/api.md`.
 
 ## Decision
 
-Expose an API modeled on Python's `re` module: `rex.compile`,
+Expose an API modeled on Python's `re` module: `rurex.compile`,
 `Regex` with `search`/`match`/`fullmatch`/`findall`/`finditer`/`split`/
 `sub`/`subn`, `Match` objects with `group`/`groups`/`groupdict`/`span`,
 and `re`-style flag constants (`IGNORECASE`, `MULTILINE`, `DOTALL`,

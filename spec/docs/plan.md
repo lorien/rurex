@@ -8,24 +8,24 @@ Priorities: higher number = more important; `-1` = deferred.
 Status: new
 Priority: 5
 
-Create the cargo crate `rex` (crate-type cdylib) with PyO3 and `regex`
+Create the cargo crate `rurex` (crate-type cdylib) with PyO3 and `regex`
 dependencies, `pyproject.toml` using the maturin backend, `src/lib.rs`
-with a `#[pymodule]` exposing `__version__` and `rex.error`, and a
+with a `#[pymodule]` exposing `__version__` and `rurex.error`, and a
 minimal `cargo test` + pytest skeleton that imports the module after
 `maturin develop`. Everything must build clean under `cargo fmt`,
 `clippy -D warnings`, and pytest with no public API beyond
 `__version__`, `escape`, and `error`.
 
-References: ADR-0001, ADR-0002
+References: ADR-0001, ADR-0002, ADR-0003
 
 ## Implement regex compilation and flag mapping
 
 Status: new
 Priority: 4
 
-Implement `rex.compile` and the `Regex` constructor: flag constants in
+Implement `rurex.compile` and the `Regex` constructor: flag constants in
 `src/flags.rs` translated to `regex::RegexBuilder` options, and
-`src/error.rs` mapping `regex::Error` to `rex.error` with the engine's
+`src/error.rs` mapping `regex::Error` to `rurex.error` with the engine's
 message. Unit tests for every flag and for representative bad patterns
 (backreference, lookaround, unbalanced paren).
 
@@ -72,6 +72,8 @@ Status: new
 Priority: -1
 
 Deferred until the API stabilizes: maturin-generated wheels (abi3,
-manylinux/macOS/Windows) and PyPI publishing on tags.
+manylinux/macOS/Windows) and PyPI publishing on tags. The PyPI name
+`rurex` is held by placeholder 0.0.1 (ADR-0003); the first
+maturin-built release supersedes it.
 
-References: ADR-0001
+References: ADR-0001, ADR-0003

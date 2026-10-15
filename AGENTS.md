@@ -1,4 +1,4 @@
-# rex — Python bindings to the Rust regex crate
+# rurex — Python bindings to the Rust regex crate
 
 Read `spec/docs/index.md` (the catalog and reading order of all design
 documents) before working in this repository, then the workflow files in

@@ -1,15 +1,15 @@
 # Python API
 
-The module is `rex`. Names mirror Python's `re` module where the engines
+The module is `rurex`. Names mirror Python's `re` module where the engines
 share semantics; differences are listed at the bottom. This document is
 the contract the implementation is written against.
 
 ## Module attributes and functions
 
-- `rex.__version__` — package version (from Cargo metadata).
-- `rex.compile(pattern, flags=0) -> Regex` — validate and compile once.
-- `rex.escape(text) -> str` — escape all regex metacharacters.
-- `rex.error` — exception raised for pattern errors; subclasses
+- `rurex.__version__` — package version (from Cargo metadata).
+- `rurex.compile(pattern, flags=0) -> Regex` — validate and compile once.
+- `rurex.escape(text) -> str` — escape all regex metacharacters.
+- `rurex.error` — exception raised for pattern errors; subclasses
   `ValueError`.
 
 ## Flags
@@ -25,7 +25,7 @@ Int constants, combinable with `|`:
 
 ## Regex objects
 
-`Regex(pattern, flags=0)` is equivalent to `rex.compile`.
+`Regex(pattern, flags=0)` is equivalent to `rurex.compile`.
 
 Attributes: `pattern`, `flags`, `groups` (number of capture groups),
 `groupindex` (name -> number mapping).
@@ -60,12 +60,12 @@ Methods and accessors:
 ## Semantic differences from `re`
 
 - No backreferences and no lookaround: patterns using them fail to compile
-  with `rex.error`.
+  with `rurex.error`.
 - Unicode is always on for `str` patterns; `\p{...}` Unicode classes and
   `(?P<name>...)` named groups are available.
 - `bytes` patterns match bytes and yield `bytes` results.
 - The engine guarantees linear-time matching; catastrophic backtracking is
   impossible by construction.
 - Module-level convenience functions (`re.search(pattern, text)` style)
-  are intentionally not provided: always compile first. `rex` has no
+  are intentionally not provided: always compile first. `rurex` has no
   pattern cache.

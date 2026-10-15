@@ -20,16 +20,16 @@ running environment first).
 - Files: `tests/test_*.py`.
 - Cover every public name in `spec/docs/api.md`: compilation, flags,
   search/match/fullmatch/is_match, findall/finditer, split/sub/subn,
-  Match accessors, `rex.error` on bad patterns, and `str`/`bytes` modes.
-- Where `re` and `rex` agree on semantics, compare outputs against the
+  Match accessors, `rurex.error` on bad patterns, and `str`/`bytes` modes.
+- Where `re` and `rurex` agree on semantics, compare outputs against the
   `re` module in the test to lock in compatibility.
 - Where they differ (no backreferences/lookaround), assert the documented
-  failure mode (`rex.error`).
+  failure mode (`rurex.error`).
 
 ## Final checks (per session, before committing)
 
 1. `cargo fmt --check` and `cargo clippy -- -D warnings` — clean.
 2. `cargo test` — pass.
 3. `maturin develop && pytest` — pass.
-4. `python -c "import rex"` — imports cleanly in a fresh interpreter.
+4. `python -c "import rurex"` — imports cleanly in a fresh interpreter.
 5. No hard-coded credentials anywhere in the change.

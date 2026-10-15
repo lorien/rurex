@@ -19,7 +19,7 @@ The extension is built into the active environment with maturin:
 
 Smoke check:
 
-    python -c "import rex; print(rex.__version__)"
+    python -c "import rurex; print(rurex.__version__)"
 
 ## Checks before committing
 

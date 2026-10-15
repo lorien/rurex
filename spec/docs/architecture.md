@@ -3,7 +3,7 @@
 ## Components
 
 The repository is a single Rust crate that produces one CPython extension
-module, `rex`.
+module, `rurex`.
 
     regex (crates.io)          the engine
         |
@@ -11,17 +11,17 @@ module, `rex`.
         |                     (regex::Regex for str, regex::bytes::Regex for bytes)
     src/match_.rs  Match       span/group view over one match
     src/flags.rs               flag bit constants -> RegexBuilder options
-    src/error.rs               regex::Error -> rex.error (ValueError subclass)
+    src/error.rs               regex::Error -> rurex.error (ValueError subclass)
         |
     src/lib.rs  #[pymodule]    module init, module-level functions (compile, escape)
 
 ## Compilation path
 
-`rex.compile(pattern, flags=0)` validates inputs in Python types, maps flag
+`rurex.compile(pattern, flags=0)` validates inputs in Python types, maps flag
 bits to `regex::RegexBuilder` options in `src/flags.rs`, builds the
 compiled regex once, and stores it inside the `Regex` pyclass as a Rust
 struct field. A compile failure is converted in `src/error.rs` to a raised
-`rex.error` carrying the regex crate's message. Compilation cost is paid
+`rurex.error` carrying the regex crate's message. Compilation cost is paid
 once; matching methods reuse the stored program.
 
 ## Matching path
@@ -42,7 +42,7 @@ once; matching methods reuse the stored program.
 All fallible paths return `PyResult`. Rust panics must not cross into
 Python: panicking code paths are bugs to fix, not to map. `regex::Error`
 is the only expected failure at the boundary and always maps to
-`rex.error`.
+`rurex.error`.
 
 ## Memory and safety
 
