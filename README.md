@@ -1,23 +1,147 @@
 # rurex
 
+[![CI](https://github.com/lorien/rurex/actions/workflows/ci.yml/badge.svg)](https://github.com/lorien/rurex/actions/workflows/ci.yml)
+
 Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
-crate: fast, safe, linear-time regular expressions for Python, with an
-API modeled on the standard `re` module.
+crate: **linear-time regular expressions** for Python, with an API modeled
+on the standard `re` module.
 
-Repository: https://github.com/lorien/rurex
+- **Linear-time guarantee.** Worst-case *O(m·n)* matching — catastrophic
+  backtracking is impossible by construction, so rurex is safe on
+  untrusted patterns and untrusted input.
+- **`re`-compatible API.** `compile`, `search`, `fullmatch`, `findall`,
+  `finditer`, `split`, `sub`, module-level shortcuts with a pattern
+  cache — same names, same flags (`re.IGNORECASE` works as-is), same
+  `Match` semantics, same error style.
 
-Status: under development toward 0.1.0. The design lives in
-[`spec/docs/`](spec/docs/index.md); the API contract is
-[`spec/docs/api.md`](spec/docs/api.md).
+## Differences from `re`
+
+Read this before porting:
+
+- **No backreferences, no lookaround.** The engine cannot express them
+  in linear time; patterns using them fail to compile with
+  `rurex.error`.
+- `prefixmatch()` instead of `match()` (Python 3.15's new name; no
+  `match` alias).
+- The absolute-end anchor is `\z` (`re` spells it `\Z`), and `$`
+  matches at the end of the haystack only — not before a trailing
+  newline.
+- Octal escapes (`\141`) are rejected; use `\xNN`.
+- `LOCALE` is not supported (the engine has no locale mode).
+- Everything else mirrors `re` down to the details: zero-width-match
+  stepping, `findall` returning `''` for unmatched groups,
+  `re.error`-style attributes (`msg`, `pattern`, `pos`, `lineno`,
+  `colno`).
+
+Beyond `re`:
+
+- **Unicode-first:** `\p{Greek}`-style classes and full case folding
+  by default.
+- **`RegexSet`**: compile many patterns and scan for all of them in a
+  single pass.
+- **Bytes with an opt-in:** bytes patterns use ASCII semantics like
+  `re`, and a `(?u:...)` group opts a region into UTF-8-aware
+  matching.
+
+## Installation
+
+```
+pip install rurex
+```
+
+> The first binary release (0.1.0) is pending; until it ships, install
+> from source — you will need a [Rust toolchain](https://rustup.rs):
+
+```
+git clone https://github.com/lorien/rurex
+cd rurex
+pip install .
+```
+
+## Quickstart
+
+Matching, ported from `re` muscle memory:
+
+```python
+import rurex
+
+rx = rurex.compile(r"(?P<year>\d{4})-(\d{2})", rurex.IGNORECASE)
+
+rx.search("released 2024-10-07")        # first match anywhere
+rx.prefixmatch("2024-10-07: log")       # anchored at the start (re.match)
+rx.fullmatch("2024-10-07")              # the whole string
+
+m = rx.search("released 2024-10-07")
+m["year"], m.span(1)                    # '2024', (9, 13)
+m.group(0, 2), m.groupdict()            # ('2024-10', '10'), {'year': '2024'}
+```
+
+Iteration, splitting, substitution:
+
+```python
+rurex.findall(r"\d+", "a1b22c333")                   # ['1', '22', '333']
+[m.span() for m in rurex.finditer(r"a*", "baac")]    # [(0,0), (1,3), (3,3), (4,4)]
+
+rurex.split(r"[\s,]+", "a b, c")                     # ['a', 'b', 'c']
+rurex.sub(r"(\w+) (\w+)", r"\2 \1", "hello world")   # 'world hello'
+rurex.subn(r"a", "b", "banana", count=2)             # ('bbnbna', 2)
+```
+
+Module functions work like `re`'s, with the same kind of bounded
+pattern cache:
+
+```python
+rurex.search(r"\d+", "ab123").span()                 # (2, 5)
+```
+
+Many patterns, one pass:
+
+```python
+patterns = rurex.compile_set([r"\d+", r"[a-z]+"])
+patterns.is_match("abc 12")                          # True
+patterns.matches("abc 12")                           # [True, True]
+```
+
+Bytes: ASCII semantics like `re`, with an opt-in for UTF-8-aware
+regions:
+
+```python
+data = "café".encode()                               # b'caf\xc3\xa9'
+rurex.findall(rb"\w+", data)                         # [b'caf']
+rurex.compile(rb"(?u:\w+)").search(data).group()     # b'caf\xc3\xa9'
+```
+
+Unsupported constructs fail loudly, not silently:
+
+```
+>>> rurex.compile(r"(\w+)\1")     # backreference: not supported
+rurex.error: backreferences are not supported at position 5
+```
+
+## Why linear time?
+
+`re` is a backtracking engine: for patterns like `(a+)+b` on
+adversarial input, matching time grows exponentially — the classic
+ReDoS denial-of-service. rurex's engine compiles patterns to finite
+automata and guarantees *O(m·n)* worst-case time (m: pattern size,
+n: input size). The trade-off is exactly the differences list above:
+constructs that cannot be matched in linear time — backreferences and
+lookaround — are not offered.
 
 ## Development
 
-```sh
-python -m venv .venv
-source .venv/bin/activate
+```
+python -m venv .venv && source .venv/bin/activate
 pip install maturin pytest
 maturin develop
 pytest
 ```
 
-See `spec/docs/dev.md` for the full workflow.
+Design documents live in
+[`spec/docs/`](spec/docs/index.md) (the API contract is
+[`spec/docs/api.md`](spec/docs/api.md)). CI runs fmt, clippy, and the
+full test suite across Python 3.10–3.15 on every push.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
