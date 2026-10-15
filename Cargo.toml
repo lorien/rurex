@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = "0.30"
 regex = "1.13"
+regex-syntax = "0.8"
 
 [features]
 # Builds the abi3-py310 fallback wheel (ADR-0005); default builds are

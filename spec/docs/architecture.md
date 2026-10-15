@@ -18,14 +18,23 @@ module, `rurex`.
 
 ## Compilation path
 
-`rurex.compile(pattern, flags=0)` validates inputs in Python types, maps flag
-bits to `regex::RegexBuilder` options in `src/flags.rs`, builds the
-compiled regex once, and stores it inside the `Regex` pyclass as a Rust
-struct field. `rurex.compile_set` does the same for `regex::RegexSet`,
+`rurex.compile(pattern, flags=0)` validates inputs in Python types,
+maps flag bits to `regex::RegexBuilder` options in `src/flags.rs`
+(mirroring CPython's `fix_flags`, including its error messages and
+the `UNICODE`-forced-on normalization for `str` patterns), and builds
+the compiled regex once, storing it inside the `Regex` pyclass as a
+Rust struct field. Bytes patterns are built with the engine's Unicode
+mode off, so classes are ASCII-only single bytes exactly like `re`.
+Before compilation the pattern is parsed with `regex-syntax` (the
+engine's own parser, under the same flag configuration) so syntax
+errors carry structured positions; `src/error.rs` turns them into
+`rurex.error` instances with the full `re.error` attribute set
+(`msg`, `pattern`, `pos`, `lineno`, `colno`). A compile failure at
+the engine level (size limits) is mapped to `rurex.error` with `None`
+positions. `rurex.compile_set` does the same for `regex::RegexSet`,
 storing one program that answers membership for all patterns in a
-single scan. A compile failure is converted in `src/error.rs` to a raised
-`rurex.error` carrying the regex crate's message. Compilation cost is paid
-once; matching methods reuse the stored program.
+single scan. Compilation cost is paid once; matching methods reuse the
+stored program.
 
 ## Matching path
 

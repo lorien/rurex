@@ -1,7 +1,7 @@
 # v0 API surface decisions
 
 Date: 2026-10-15
-Status: accepted
+Status: accepted (revised 2026-10-15 — see Revision)
 
 ## Context
 
@@ -35,6 +35,27 @@ regress bindings.
    for unmatched group accessors and `-1` for their spans.
 
 The contract itself lives in `spec/docs/api.md`.
+
+## Revision (2026-10-15)
+
+During implementation planning of the compile task, the owner revised
+three points after researching the engine's actual behavior:
+
+1. Decision 4's flag set drops `SWAP_GREED`: swapped greediness is
+   pattern syntax (`(?U)`), and a rurex-specific flag would have
+   forced an extension bit namespace with collision risk against
+   future stdlib flags. The accepted flags are exactly `re`'s bits
+   (`I=2`, `M=8`, `S=16`, `U=32`, `X=64`, `A=256`), with `re`'s own
+   `fix_flags` semantics and messages for `U` (no-op on `str`, error
+   on `bytes`, incompatible with `A`).
+2. `Regex.flags` and all flag handling mirror CPython exactly,
+   including `UNICODE` being forced on for `str` patterns compiled
+   without `ASCII`.
+3. Decision 6's error surface is upgraded to full `re.error`
+   attribute parity (`msg`, `pattern`, `pos`, `lineno`, `colno`) by
+   pre-parsing patterns with `regex-syntax` (the engine's own parser)
+   under the same flag configuration; engine-limit errors carry
+   `None` positions.
 
 ## Alternatives rejected
 

@@ -3,19 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Implement regex compilation and flag mapping
-
-Status: new
-Priority: 4
-
-Implement `rurex.compile` and the `Regex` constructor: flag constants in
-`src/flags.rs` translated to `regex::RegexBuilder` options, and
-`src/error.rs` mapping `regex::Error` to `rurex.error` with the engine's
-message. Unit tests for every flag and for representative bad patterns
-(backreference, lookaround, unbalanced paren).
-
-References: ADR-0002
-
 ## Implement Match objects and the matching API
 
 Status: new

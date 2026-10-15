@@ -22,13 +22,18 @@ def test_error_subclasses_exception():
 
 
 def test_public_surface():
+    allowed = (
+        ["__version__", "compile", "escape", "Regex", "error"]
+        + ["I", "IGNORECASE", "M", "MULTILINE", "S", "DOTALL"]
+        + ["U", "UNICODE", "X", "VERBOSE", "A", "ASCII"]
+    )
     # PyO3 maintains __all__ on the extension module; maturin's package
     # shim re-exports the public names through it.
-    assert rurex.__all__ == ["__version__", "escape", "error"]
+    assert sorted(rurex.__all__) == sorted(allowed)
     public = {name for name in dir(rurex) if not name.startswith("_")}
     # `maturin develop` installs an editable shim package whose
     # `from .rurex import *` leaks the submodule name into dir(); a real
     # wheel install does not. Ignore exactly that artifact.
     if isinstance(getattr(rurex, "rurex", None), types.ModuleType):
         public.discard("rurex")
-    assert public == {"escape", "error"}
+    assert public == set(allowed) - {"__version__"}

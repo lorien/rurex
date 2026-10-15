@@ -3,6 +3,10 @@
 use pyo3::prelude::*;
 
 mod error;
+mod flags;
+mod regex;
+
+use regex::Regex;
 
 /// Escape all regex metacharacters in `text`.
 #[pyfunction]
@@ -11,14 +15,40 @@ fn escape(text: &str) -> String {
 }
 
 fn escape_str(text: &str) -> String {
-    regex::escape(text)
+    ::regex::escape(text)
+}
+
+/// Compile a regular expression into a `rurex.Regex`.
+#[pyfunction]
+#[pyo3(signature = (pattern, flags = 0))]
+fn compile(pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Regex> {
+    Regex::build(pattern, flags)
 }
 
 #[pymodule]
 fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_function(wrap_pyfunction!(escape, m)?)?;
+    m.add_function(wrap_pyfunction!(compile, m)?)?;
+    m.add_class::<Regex>()?;
     m.add("error", m.py().get_type::<error::Error>())?;
+    // Flag constants at stdlib `re` bit values (ADR-0004, revised).
+    for (name, value) in [
+        ("I", flags::IGNORECASE),
+        ("IGNORECASE", flags::IGNORECASE),
+        ("M", flags::MULTILINE),
+        ("MULTILINE", flags::MULTILINE),
+        ("S", flags::DOTALL),
+        ("DOTALL", flags::DOTALL),
+        ("U", flags::UNICODE),
+        ("UNICODE", flags::UNICODE),
+        ("X", flags::VERBOSE),
+        ("VERBOSE", flags::VERBOSE),
+        ("A", flags::ASCII),
+        ("ASCII", flags::ASCII),
+    ] {
+        m.add(name, value)?;
+    }
     Ok(())
 }
 

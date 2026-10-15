@@ -2,7 +2,7 @@
 
 The module is `rurex`. Names mirror Python's `re` module where the
 engines share semantics; deliberate deviations are listed at the bottom
-and recorded in ADR-0004. This document is the contract the
+and recorded in ADR-0004 (revised). This document is the contract the
 implementation is written against.
 
 ## Module attributes and functions
@@ -23,20 +23,31 @@ with `rurex.compile` and reuse the object (ADR-0002, ADR-0004).
 
 ## Flags
 
-Int constants, combinable with `|`; short aliases as in `re`:
+Int constants at the stdlib `re` bit values, so `re.IGNORECASE` and
+friends can be passed directly:
 
-| Constant         | Effect                                                       |
-|------------------|--------------------------------------------------------------|
-| `IGNORECASE`/`I` | case-insensitive matching                                    |
-| `MULTILINE`/`M`  | `^`/`$` match at line boundaries                             |
-| `DOTALL`/`S`     | `.` matches newlines                                         |
-| `VERBOSE`/`X`    | whitespace and `#` comments ignored in the pattern           |
-| `ASCII`/`A`      | non-Unicode mode: `\w` `\d` `\s` `\b` and case folding are ASCII-only |
-| `SWAP_GREED`     | greediness swapped: `*` lazy, `*?` greedy (no short alias: `U` collides with `re`'s `UNICODE`) |
+| Constant          | Value | Effect                                                        |
+|-------------------|-------|---------------------------------------------------------------|
+| `IGNORECASE`/`I`  | 2     | case-insensitive matching                                     |
+| `MULTILINE`/`M`   | 8     | `^`/`$` match at line boundaries                              |
+| `DOTALL`/`S`      | 16    | `.` matches newlines                                          |
+| `UNICODE`/`U`     | 32    | no-op for `str` (Unicode is the default), error for `bytes`   |
+| `VERBOSE`/`X`     | 64    | whitespace and `#` comments ignored in the pattern            |
+| `ASCII`/`A`       | 256   | ASCII-only `\w` `\d` `\s` `\b` and case folding (`str` only)  |
 
-Passing `re.LOCALE`, `re.TEMPLATE`, `re.DEBUG`, or any unrecognized bit
-raises `ValueError` naming the flag; unsupported flags are never
-silently ignored.
+Validation mirrors CPython's `re._parser.fix_flags`, including its
+messages: `UNICODE` with a `bytes` pattern raises `ValueError: cannot
+use UNICODE flag with a bytes pattern`; `ASCII | UNICODE` raises
+`ValueError: ASCII and UNICODE flags are incompatible`; `LOCALE` with
+a `str` pattern raises CPython's message. Bits the engine cannot honor
+are rejected loudly: `LOCALE` with `bytes` (`LOCALE is not supported
+by the rurex engine`), `TEMPLATE` (1), `DEBUG` (128), and any unknown
+bits (`unknown flag bits: 0x…`). `ASCII` on `bytes` is a no-op, as in
+`re`. `Regex.flags` reports the normalized value like `re` does:
+`UNICODE` is forced on for `str` patterns compiled without `ASCII`.
+
+There is no `SWAP_GREED` flag: swapped greediness is pattern syntax,
+`(?U)a+?` (ADR-0004, revised).
 
 ## Regex objects
 
@@ -77,6 +88,21 @@ non-default.
 Zero-width matches: iteration and substitution advance one character
 past an empty match, matching Python 3.7+ `re` behavior.
 
+## Bytes mode
+
+`bytes` patterns behave like `re`'s: character classes are ASCII-only
+single bytes, and the default has no Unicode matching. The engine
+superset remains available inside the pattern — a `(?u:...)` group
+opts that region into UTF-8-aware matching, something `re` cannot do:
+
+    rx = rurex.compile(rb"(?u:\w+)")
+    # on b"caf\xc3\xa9" this matches the whole word (UTF-8 "café"),
+    # while plain rb"\w+" stops at ASCII, like re.
+
+Pattern text must be valid UTF-8 in both modes: a `bytes` pattern
+containing raw non-UTF-8 bytes raises `rurex.error` (use `\xNN`
+escapes, which under the ASCII default mean the raw byte).
+
 ## RegexSet objects
 
 `rurex.compile_set(patterns, flags=0)` compiles an iterable of
@@ -108,6 +134,23 @@ Methods and accessors:
 
 `repr(m)` renders like `<rurex.Match span=(0, 2), match='aa'>`.
 
+## Errors
+
+`rurex.error` subclasses `Exception` like `re.error` and carries the
+same attribute set: `msg` (short reason), `pattern` (the pattern that
+failed), `pos`, `lineno`, `colno`. Positions are character indices for
+`str` patterns and byte indices for `bytes` patterns, exactly as in
+`re`. The exception message mirrors `re`'s formatting:
+`"{msg} at position {pos}"`, with `(line L, column C)` for multi-line
+patterns. Engine-limit errors (compiled program too large) have no
+position: `pos`/`lineno`/`colno` are `None` and the message carries the
+engine's text.
+
+The structured positions come from parsing the pattern with
+`regex-syntax` (the engine's own parser) before compilation; flag
+problems are `ValueError` (bad arguments), pattern problems are
+`rurex.error` — the same split `re` makes.
+
 ## Offsets
 
 All public offsets — spans, `pos`/`endpos`, split points — are
@@ -126,8 +169,17 @@ the Rust extension and never leaks (the rure-python lesson).
   `\Z` in a pattern is a compile error. `\A` works as in `re`.
 - `$` matches at the end of the haystack only — unlike `re`, not
   before a trailing newline (emulate `re`'s `$` with `\n?$`).
+- Octal escapes (`\101`) are not supported; the engine rejects them
+  (with a backreference hint) rather than silently reinterpreting
+  them. Use `\xNN`/`\u{..}`.
+- Pattern text must be valid UTF-8, including for `bytes` patterns
+  (raw non-UTF-8 bytes in the pattern are rejected; `\xNN` escapes
+  produce raw-byte matching under the ASCII default).
+- `LOCALE` is unsupported on both pattern types (the engine has no
+  locale mode); `re` allows it on bytes.
 - Unicode is always on for `str` patterns; `\p{...}` Unicode classes
-  and `(?P<name>...)` named groups are available.
-- `bytes` patterns match bytes and yield `bytes` results.
+  and `(?P<name>...)` named groups are available. For `bytes`
+  patterns Unicode classes require a `(?u:...)` group (see Bytes
+  mode).
 - The engine guarantees linear-time matching; catastrophic
   backtracking is impossible by construction.
