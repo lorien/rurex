@@ -306,3 +306,18 @@ def test_match_bytes_repr_and_expand():
     assert m.expand(rb"\2\1") == b"ba"
     with pytest.raises(TypeError):
         m.expand(r"\1")
+
+
+def test_match_not_picklable_like_re():
+    import pickle
+
+    m = rurex.compile(r"a").search("a")
+    with pytest.raises(TypeError):
+        pickle.dumps(m)
+    with pytest.raises(TypeError):
+        pickle.dumps(stdre.compile(r"a").search("a"))
+
+
+def test_finditer_is_own_iterator():
+    it = rurex.compile(r"\d").finditer("12")
+    assert iter(it) is it

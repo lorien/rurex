@@ -139,3 +139,47 @@ def test_bytes_unicode_superset_optin():
 def test_verbose_flag_parses():
     rx = rurex.compile(r"\d+  # the number \n \d+", rurex.X)
     assert rx.groups == 0
+
+
+# --- documented deviations from re (api.md "Semantic differences") -------
+
+def test_deviation_absolute_end_anchor():
+    # re's \Z is the engine's \z; \Z itself is a compile error.
+    with pytest.raises(rurex.error):
+        rurex.compile(r"a\Z")
+    assert rurex.search(r"a\z", "a\n") is None
+    assert rurex.search(r"a\z", "a").span() == (0, 1)
+
+
+def test_deviation_dollar_and_trailing_newline():
+    # re's $ matches before a trailing newline; ours matches at the
+    # haystack end only, and \n?$ emulates re's behavior.
+    assert rurex.search(r"a$", "a\n") is None
+    assert stdre.search(r"a$", "a\n").span() == (0, 1)
+    assert rurex.search(r"a\n?$", "a\n").span() == (0, 2)
+
+
+def test_deviation_octal_escapes_rejected():
+    with pytest.raises(rurex.error):
+        rurex.compile(r"\141")
+
+
+def test_deviation_locale_rejected_everywhere():
+    with pytest.raises(ValueError, match="LOCALE"):
+        rurex.compile("a", stdre.L)
+    with pytest.raises(ValueError, match="LOCALE"):
+        rurex.compile(rb"a", stdre.L)
+
+
+def test_no_match_alias():
+    assert not hasattr(rurex, "match")
+    assert not hasattr(rurex.Regex, "match")
+    assert hasattr(rurex, "prefixmatch")
+
+
+def test_swap_greed_inline_flag():
+    # (?U) is the engine-native replacement for a SWAP_GREED flag.
+    assert rurex.findall(r"(?U)a+", "aaa") == ["a", "a", "a"]
+    assert rurex.search(r"(?U)a+", "aaa").span() == (0, 1)
+    # Swapped twice: lazy-then-greedy becomes plain greedy again.
+    assert rurex.search(r"(?U)a+?", "aaa").span() == (0, 3)

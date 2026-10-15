@@ -83,14 +83,40 @@ fn cached_compile(py: Python<'_>, pattern: &Bound<'_, PyAny>, flags: u32) -> PyR
     Ok(rx)
 }
 
-/// Escape all regex metacharacters in `text`.
+/// Escape all regex metacharacters in `text` (str or bytes, like
+/// `re.escape`).
 #[pyfunction]
-fn escape(text: &str) -> String {
-    escape_str(text)
+fn escape<'py>(py: Python<'py>, text: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    if let Ok(s) = text.cast::<PyString>() {
+        let escaped = escape_bytes(
+            s.to_str()
+                .map_err(|_| PyTypeError::new_err("invalid str argument"))?
+                .as_bytes(),
+        );
+        Ok(PyString::new(py, &String::from_utf8_lossy(&escaped)).into_any())
+    } else if let Ok(b) = text.cast::<PyBytes>() {
+        Ok(PyBytes::new(py, &escape_bytes(b.as_bytes())).into_any())
+    } else {
+        Err(PyTypeError::new_err(format!(
+            "escape() argument must be str or bytes, not {}",
+            text.get_type()
+        )))
+    }
 }
 
-fn escape_str(text: &str) -> String {
-    ::regex::escape(text)
+/// Prefix a backslash to every regex metacharacter, mirroring
+/// CPython's `re.escape` byte-for-byte (the same special-character
+/// set; non-metacharacters, including non-ASCII, pass through).
+fn escape_bytes(bytes: &[u8]) -> Vec<u8> {
+    const SPECIAL: &[u8] = b"()[]{}?*+-|^$\\.&~# \t\n\r\x0b\x0c";
+    let mut out = Vec::with_capacity(bytes.len() + 8);
+    for &b in bytes {
+        if SPECIAL.contains(&b) {
+            out.push(b'\\');
+        }
+        out.push(b);
+    }
+    out
 }
 
 /// Compile a regular expression into a `rurex.Regex`.
@@ -272,12 +298,15 @@ fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::escape_str;
+    use super::escape_bytes;
 
     #[test]
     fn escapes_metacharacters() {
-        assert_eq!(escape_str("a.b*c"), r"a\.b\*c");
-        assert_eq!(escape_str("plain"), "plain");
-        assert_eq!(escape_str("(a)"), r"\(a\)");
+        assert_eq!(escape_bytes(b"a.b*c"), br"a\.b\*c");
+        assert_eq!(escape_bytes(b"plain"), b"plain");
+        assert_eq!(escape_bytes(b"(a)"), br"\(a\)");
+        // High bytes and non-metacharacters pass through untouched.
+        assert_eq!(escape_bytes(b"\xff\xc3\xa9~"), b"\xff\xc3\xa9\\~");
+        assert_eq!(escape_bytes(b"a b"), br"a\ b");
     }
 }

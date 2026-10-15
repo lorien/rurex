@@ -3,21 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Comprehensive Python test suite
-
-Status: new
-Priority: 2
-
-Fill `tests/` with pytest coverage of every public name in
-`spec/docs/api.md`: compilation, all flags, all matching methods
-including `prefixmatch` and `pos`/`endpos` windows, `RegexSet`
-membership, Match accessors, error cases, `str`/`bytes` modes, and
-differential cases comparing against the stdlib `re` where
-semantics are shared (including `\A` anchoring and zero-width-match
-behavior).
-
-References: ADR-0002, ADR-0004
-
 ## CI workflow
 
 Status: new

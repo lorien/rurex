@@ -77,12 +77,12 @@ fn next_boundary(s: &str, at: usize) -> usize {
     }
 }
 
-/// Clamp a scan window: pos clamped into the text, end defaults to the
-/// text end and never precedes pos.
-fn window(pos: usize, end: Option<usize>, len: usize) -> (usize, usize) {
+/// Clamp a scan window like CPython: pos and endpos are both clamped
+/// into the text first, and endpos < pos then means no match at all.
+fn window(pos: usize, end: Option<usize>, len: usize) -> Option<(usize, usize)> {
     let p = pos.min(len);
-    let e = end.map_or(len, |e| e.min(len)).max(p);
-    (p, e)
+    let e = end.map_or(len, |e| e.min(len));
+    (e >= p).then_some((p, e))
 }
 
 pub(crate) enum Hay<'a> {
@@ -399,11 +399,13 @@ impl Regex {
         let re = py_handle(&slf, py);
         match extract_hay(bytes_mode, text)? {
             Hay::Text(s) => {
-                let (pb, eb) = window(
+                let Some((pb, eb)) = window(
                     char_to_byte(s, pos),
                     endpos.map(|e| char_to_byte(s, e)),
                     s.len(),
-                );
+                ) else {
+                    return Ok(None);
+                };
                 let engine = match &slf.inner {
                     Inner::Text(re) => re,
                     Inner::Bytes(_) => unreachable!(),
@@ -424,7 +426,9 @@ impl Regex {
                 }))
             }
             Hay::Bytes(b) => {
-                let (pb, eb) = window(pos, endpos, b.len());
+                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
+                    return Ok(None);
+                };
                 let engine = match &slf.inner {
                     Inner::Bytes(re) => re,
                     Inner::Text(_) => unreachable!(),
@@ -458,10 +462,15 @@ impl Regex {
         endpos: Option<usize>,
     ) -> PyResult<Option<Match>> {
         // Same scan as `search`, accepted only if the match starts
-        // exactly at `pos` (leftmost-first guarantees the match at pos
-        // is found first when it exists).
+        // exactly at the (length-clamped) window start; leftmost-first
+        // guarantees the match there is found first when it exists.
+        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
+        let start = match extract_hay(bytes_mode, text)? {
+            Hay::Text(s) => pos.min(s.chars().count()),
+            Hay::Bytes(b) => pos.min(b.len()),
+        };
         let m = Self::search(slf, py, text, pos, endpos)?;
-        Ok(m.filter(|m| m.start0() == pos as isize))
+        Ok(m.filter(|m| m.start0() == start as isize))
     }
 
     /// The whole `[pos, endpos)` window must match.
@@ -477,11 +486,13 @@ impl Regex {
         let re = py_handle(&slf, py);
         match extract_hay(bytes_mode, text)? {
             Hay::Text(s) => {
-                let (pb, eb) = window(
+                let Some((pb, eb)) = window(
                     char_to_byte(s, pos),
                     endpos.map(|e| char_to_byte(s, e)),
                     s.len(),
-                );
+                ) else {
+                    return Ok(None);
+                };
                 let hay = &s[pb..eb];
                 match slf.anchored() {
                     Some(Inner::Text(engine)) => {
@@ -524,7 +535,9 @@ impl Regex {
                 }
             }
             Hay::Bytes(b) => {
-                let (pb, eb) = window(pos, endpos, b.len());
+                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
+                    return Ok(None);
+                };
                 let hay = &b[pb..eb];
                 match slf.anchored() {
                     Some(Inner::Bytes(engine)) => {
@@ -578,9 +591,9 @@ impl Regex {
         endpos: Option<usize>,
     ) -> PyResult<FindIter> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let (scan, end_b, endpos_u, names) = match extract_hay(bytes_mode, text)? {
+        let (window_ok, endpos_u, names) = match extract_hay(bytes_mode, text)? {
             Hay::Text(s) => {
-                let (pb, eb) = window(
+                let ok = window(
                     char_to_byte(s, pos),
                     endpos.map(|e| char_to_byte(s, e)),
                     s.len(),
@@ -590,20 +603,25 @@ impl Regex {
                     Inner::Bytes(_) => unreachable!(),
                 };
                 (
-                    pb,
-                    eb,
+                    ok,
                     endpos.unwrap_or_else(|| s.chars().count()),
                     names_of(engine),
                 )
             }
             Hay::Bytes(b) => {
-                let (pb, eb) = window(pos, endpos, b.len());
+                let ok = window(pos, endpos, b.len());
                 let engine = match &slf.inner {
                     Inner::Bytes(re) => re,
                     Inner::Text(_) => unreachable!(),
                 };
-                (pb, eb, endpos.unwrap_or(b.len()), names_of_bytes(engine))
+                (ok, endpos.unwrap_or(b.len()), names_of_bytes(engine))
             }
+        };
+        // An invalid window (endpos < pos after clamping) yields an
+        // exhausted iterator immediately.
+        let (scan, end_b, done) = match window_ok {
+            Some((pb, eb)) => (pb, eb, false),
+            None => (1, 0, true),
         };
         Ok(FindIter {
             re: py_handle(&slf, py),
@@ -616,7 +634,7 @@ impl Regex {
             bytes_seen: 0,
             names,
             bytes_mode,
-            done: false,
+            done,
         })
     }
 

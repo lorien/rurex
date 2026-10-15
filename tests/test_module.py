@@ -3,6 +3,8 @@
 import re
 import types
 
+import pytest
+
 import rurex
 
 
@@ -56,3 +58,23 @@ def test_public_surface():
     if isinstance(getattr(rurex, "rurex", None), types.ModuleType):
         public.discard("rurex")
     assert public == set(allowed) - {"__version__"}
+
+
+def test_escape_differential():
+    import string
+
+    chars = string.punctuation + string.whitespace + "é造ß"
+    for ch in chars:
+        assert rurex.escape(ch) == re.escape(ch), ch
+    for s in ["a.b*c", "", "plain", "(a|b) [x] {1,2}", "a\\b"]:
+        assert rurex.escape(s) == re.escape(s)
+
+
+def test_escape_bytes_differential():
+    for b in [b".", b"a\xff", b"\xc3\xa9", b" \t", b"*+?[](){}^$&-#~", b""]:
+        assert rurex.escape(b) == re.escape(b), b
+
+
+def test_escape_type_error():
+    with pytest.raises(TypeError, match="str or bytes"):
+        rurex.escape(42)

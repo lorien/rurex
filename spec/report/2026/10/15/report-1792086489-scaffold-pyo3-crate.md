@@ -55,9 +55,11 @@ References: ADR-0001, ADR-0002, ADR-0003
 - [open] CI and publish tasks must build the hybrid matrix:
   version-specific wheels per supported CPython minor plus one
   `--features abi3` fallback wheel per platform (ADR-0005).
-- [open] `escape` currently accepts `str` only; the compile task
+- [acted] `escape` currently accepts `str` only; the compile task
   should decide the bytes-mode escape story when `regex::bytes`
   enters (api.md documents bytes patterns as in-scope).
+  (Resolved in the test-suite task: escape now accepts str and
+  bytes, mirroring `re.escape`; report-1792104576.)
 
 ### Tooling/process
 

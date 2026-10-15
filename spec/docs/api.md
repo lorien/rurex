@@ -13,7 +13,9 @@ implementation is written against.
   regex, `bytes` compiles a bytes regex.
 - `rurex.compile_set(patterns, flags=0) -> RegexSet` — compile many
   patterns at once for single-pass membership matching.
-- `rurex.escape(text) -> str` — escape all regex metacharacters.
+- `rurex.escape(text) -> str | bytes` — escape all regex
+  metacharacters (ASCII specials and whitespace; other characters
+  pass through), mirroring `re.escape` for both types.
 - `rurex.error` — exception raised for pattern errors; subclasses
   `Exception`, exactly like `re.error`.
 
@@ -72,6 +74,8 @@ Methods. The five text methods accept `pos`/`endpos` logical bounds.
 Exactly like `re`: `pos` only moves where the scan starts (`^`/`\A`
 still anchor at the real text start, so `search(r'^b', 'ab', 1)` finds
 nothing), and `endpos` behaves as if the text were truncated there.
+Both are clamped to the text length first; an `endpos` below the
+clamped `pos` yields no match (an empty iterator for `finditer`).
 They are code-point indices for `str` and byte indices for `bytes`,
 translated to engine byte offsets internally.
 
