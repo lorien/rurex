@@ -36,14 +36,32 @@ References: ADR-0002
 Status: new
 Priority: 3
 
-Implement `src/match_.rs` (Match with group/groups/groupdict/span/
-start/end, `re`, `string`, `pos`, `endpos`, `lastindex`, `lastgroup`)
-and the `Regex` methods: `search`, `match`, `fullmatch`, `is_match`,
-`findall`, `finditer`, `split`, `sub`, `subn`, including string and
-callable `repl` for `sub`, and GIL release around scans per
-`spec/docs/architecture.md`. `str` and `bytes` modes both supported.
+Implement `src/match_.rs` (Match with `group`/`__getitem__`,
+`groups`, `groupdict`, `start`/`end`/`span`, `expand`, `re`,
+`string`, `pos`, `endpos`, `lastindex`, `lastgroup`, `__repr__`,
+`None`/`-1` unmatched semantics) and the `Regex` methods: `search`,
+`prefixmatch`, `fullmatch`, `is_match`, `findall`, `finditer`,
+`split`, `sub`, `subn`, with `pos`/`endpos` windows on the five text
+methods (code-point bounds translated to byte offsets), a lazy
+`finditer`, `re`-style templates plus callable `repl`,
+copy/deepcopy/pickle via `__reduce__`, and GIL release around scans
+per `spec/docs/architecture.md`. `str` and `bytes` modes both
+supported.
 
-References: ADR-0002
+References: ADR-0002, ADR-0004
+
+## Implement RegexSet
+
+Status: new
+Priority: 2
+
+Implement `rurex.compile_set(patterns, flags=0)` returning a
+`RegexSet` wrapping `regex::RegexSet`: `is_match(text) -> bool` and
+`matches(text) -> list[bool]`, membership only, flags applied to all
+patterns. Coverage for empty pattern list, result ordering, and
+`str`/`bytes` modes.
+
+References: ADR-0004
 
 ## Comprehensive Python test suite
 
@@ -51,11 +69,14 @@ Status: new
 Priority: 2
 
 Fill `tests/` with pytest coverage of every public name in
-`spec/docs/api.md`: compilation, all flags, all matching methods, Match
-accessors, error cases, `str`/`bytes` modes, and differential cases
-comparing against the stdlib `re` where semantics are shared.
+`spec/docs/api.md`: compilation, all flags, all matching methods
+including `prefixmatch` and `pos`/`endpos` windows, `RegexSet`
+membership, Match accessors, error cases, `str`/`bytes` modes, and
+differential cases comparing against the stdlib `re` where
+semantics are shared (including `\A` anchoring and zero-width-match
+behavior).
 
-References: ADR-0002
+References: ADR-0002, ADR-0004
 
 ## CI workflow
 

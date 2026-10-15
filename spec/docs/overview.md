@@ -17,10 +17,12 @@ Python-visible API mirrors `re`'s names where the engines agree, and Rust
 In scope:
 
 - Compiling patterns with `re`-style flags (`IGNORECASE`, `MULTILINE`,
-  `DOTALL`, `VERBOSE`).
+  `DOTALL`, `VERBOSE`, `ASCII`, `SWAP_GREED`).
 - Matching over `str` and `bytes`, including Unicode character classes
   (`\p{Greek}`) and named groups (`(?P<name>...)`).
-- Search / match / findall / finditer / split / sub surface.
+- `search` / `prefixmatch` / `fullmatch` / `findall` / `finditer` /
+  `split` / `sub` surface with `pos`/`endpos` windows, plus
+  single-pass multi-pattern `RegexSet` membership matching.
 - Clear `rurex.error` exceptions for pattern and engine errors.
 
 Out of scope (the underlying engine does not support them and never will):
@@ -42,7 +44,8 @@ by placeholder release 0.0.1.
     src/
       lib.rs             #[pymodule] registration, module-level functions
       regex.rs           the `Regex` type wrapping regex::Regex / regex::bytes::Regex
-      match_.rs          the `Match` type returned by search/match/finditer
+      regexset.rs        the `RegexSet` type for multi-pattern membership
+      match_.rs          the `Match` type returned by search/prefixmatch/finditer
       flags.rs           flag constants and translation to regex::RegexBuilder
       error.rs           regex::Error -> rurex.error mapping
     tests/               pytest suite (test_*.py)

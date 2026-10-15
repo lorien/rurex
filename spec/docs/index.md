@@ -25,6 +25,9 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
 - [adr/0003-pypi-name-rurex.md](adr/0003-pypi-name-rurex.md) —
   distribution/import/crate name `rurex`; name claimed on PyPI with
   placeholder 0.0.1.
+- [adr/0004-v0-api-surface.md](adr/0004-v0-api-surface.md) — the six
+  v0 API surface decisions: no module functions, `prefixmatch`,
+  `pos`/`endpos`, flag set, minimal `RegexSet`, `error(Exception)`.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

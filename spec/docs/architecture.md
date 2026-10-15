@@ -9,9 +9,10 @@ module, `rurex`.
         |
     src/regex.rs  Regex        Python-visible type; owns a compiled program
         |                     (regex::Regex for str, regex::bytes::Regex for bytes)
+    src/regexset.rs  RegexSet  multi-pattern membership in one scan
     src/match_.rs  Match       span/group view over one match
     src/flags.rs               flag bit constants -> RegexBuilder options
-    src/error.rs               regex::Error -> rurex.error (ValueError subclass)
+    src/error.rs               regex::Error -> rurex.error (Exception subclass)
         |
     src/lib.rs  #[pymodule]    module init, module-level functions (compile, escape)
 
@@ -20,7 +21,9 @@ module, `rurex`.
 `rurex.compile(pattern, flags=0)` validates inputs in Python types, maps flag
 bits to `regex::RegexBuilder` options in `src/flags.rs`, builds the
 compiled regex once, and stores it inside the `Regex` pyclass as a Rust
-struct field. A compile failure is converted in `src/error.rs` to a raised
+struct field. `rurex.compile_set` does the same for `regex::RegexSet`,
+storing one program that answers membership for all patterns in a
+single scan. A compile failure is converted in `src/error.rs` to a raised
 `rurex.error` carrying the regex crate's message. Compilation cost is paid
 once; matching methods reuse the stored program.
 
