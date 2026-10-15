@@ -31,6 +31,9 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
 - [adr/0005-hybrid-wheel-strategy.md](adr/0005-hybrid-wheel-strategy.md) —
   version-specific wheels for speed plus an abi3-py310 fallback wheel
   for rolling-release resilience; speed-tuned release profile.
+- [adr/0006-module-functions-and-cache.md](adr/0006-module-functions-and-cache.md) —
+  `re`-style module-level functions backed by a bounded FIFO pattern
+  cache; supersedes ADR-0004 decision 1.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

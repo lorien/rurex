@@ -17,9 +17,21 @@ implementation is written against.
 - `rurex.error` — exception raised for pattern errors; subclasses
   `Exception`, exactly like `re.error`.
 
-There are intentionally no module-level match shortcuts
-(`re.search(pattern, text)` style) and no pattern cache: compile once
-with `rurex.compile` and reuse the object (ADR-0002, ADR-0004).
+Module-level convenience functions mirror `re`'s, with
+`prefixmatch` where `re` has `match`:
+
+- `search(pattern, text, flags=0)`, `prefixmatch(...)`,
+  `fullmatch(...)`, `findall(...)`, `finditer(...)`
+- `split(pattern, text, maxsplit=0, flags=0)`
+- `sub(pattern, repl, text, count=0, flags=0)`,
+  `subn(pattern, repl, text, count=0, flags=0)`
+- `purge()` — clear the pattern cache
+
+They are backed by a bounded pattern cache exactly like `re`'s:
+keyed by pattern type, text, and flags; at most 512 entries with FIFO
+eviction. All error paths are identical to `rurex.compile` since they
+share it (ADR-0006; ADR-0002's compile-once advice still applies for
+hot loops).
 
 ## Flags
 
@@ -187,7 +199,6 @@ the Rust extension and never leaks (the rure-python lesson).
   `^`/`\A` anchors at the window start instead of failing (the
   anchored fallback variant operates on the window); plain
   `fullmatch(text)` is unaffected.
-- No module-level convenience functions and no pattern cache.
 - `re`'s absolute-end anchor `\Z` is spelled `\z` by the engine;
   `\Z` in a pattern is a compile error. `\A` works as in `re`.
 - `$` matches at the end of the haystack only — unlike `re`, not

@@ -1,7 +1,7 @@
 # v0 API surface decisions
 
 Date: 2026-10-15
-Status: accepted (revised 2026-10-15 — see Revision)
+Status: accepted (revised 2026-10-15 — see Revision; decision 1 superseded by ADR-0006)
 
 ## Context
 
