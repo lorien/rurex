@@ -35,9 +35,11 @@ Add a GitHub Actions workflow running `cargo fmt --check`,
 
 ### Future-task notes
 
-- [open] The 3.15 matrix entry is unverified against real runners:
+- [acted] The 3.15 matrix entry is unverified against real runners:
   if PyO3 0.30.1 cannot build for 3.15 headers yet, trim the entry
   and re-add when supported (observe on the first CI run).
+  (Verified on the maiden run 38821913820: all six Python versions
+  including 3.15 passed.)
 - [open] Free-threaded entries (3.14t/3.15t) belong with the publish
   task's wheel-strategy decision, not CI; revisit there.
 
