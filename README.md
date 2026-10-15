@@ -4,6 +4,8 @@ Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
 crate: fast, safe, linear-time regular expressions for Python, with an
 API modeled on the standard `re` module.
 
+Repository: https://github.com/lorien/rurex
+
 Status: under development toward 0.1.0. The design lives in
 [`spec/docs/`](spec/docs/index.md); the API contract is
 [`spec/docs/api.md`](spec/docs/api.md).

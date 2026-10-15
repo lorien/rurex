@@ -37,4 +37,5 @@ running environment first).
 CI runs the same checks on every push and PR to `main`
 (`.github/workflows/ci.yml`): the `rust` job covers 1–3, the `python`
 job builds the extension with `maturin develop` and runs `pytest`
-across Python 3.10–3.15.
+across Python 3.10–3.15. Runs and logs:
+https://github.com/lorien/rurex/actions

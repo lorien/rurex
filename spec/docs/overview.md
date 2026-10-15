@@ -12,6 +12,8 @@ and packaged with [maturin](https://www.maturin.rs) (see ADR-0001). The
 Python-visible API mirrors `re`'s names where the engines agree, and Rust
 `regex` semantics live underneath (see ADR-0002).
 
+Repository: https://github.com/lorien/rurex
+
 ## Scope
 
 In scope:

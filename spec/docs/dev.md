@@ -30,6 +30,18 @@ Smoke check:
 
 See `spec/docs/testing.md` for what each of these covers.
 
+## Repository and CI
+
+- Remote: `git@github.com:lorien/rurex.git` (already configured as
+  `origin`). Web: https://github.com/lorien/rurex
+- Authentication: the `gh` CLI, account `lorien`; the token lives in
+  the OS keyring (via `gh auth login`), never in the repo, docs, or
+  environment.
+- Pushing: `git push -u origin main`. Every push and PR to `main`
+  runs CI (`.github/workflows/ci.yml`).
+- Watching runs: `gh run watch` or
+  https://github.com/lorien/rurex/actions
+
 ## Project configuration notes
 
 - `pyproject.toml` uses the `maturin` build backend; the Python
