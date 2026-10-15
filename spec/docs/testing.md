@@ -33,3 +33,8 @@ running environment first).
 3. `maturin develop && pytest` — pass.
 4. `python -c "import rurex"` — imports cleanly in a fresh interpreter.
 5. No hard-coded credentials anywhere in the change.
+
+CI runs the same checks on every push and PR to `main`
+(`.github/workflows/ci.yml`): the `rust` job covers 1–3, the `python`
+job builds the extension with `maturin develop` and runs `pytest`
+across Python 3.10–3.15.

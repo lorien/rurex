@@ -3,15 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## CI workflow
-
-Status: new
-Priority: 1
-
-Add a GitHub Actions workflow running `cargo fmt --check`,
-`cargo clippy -- -D warnings`, `cargo test`, and `maturin develop` +
-`pytest` on a small Python/Linux matrix, on every push and PR.
-
 ## Build and publish wheels
 
 Status: new
