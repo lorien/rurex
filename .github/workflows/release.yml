@@ -80,13 +80,15 @@ jobs:
           name: wheel-${{ matrix.py }}-x86_64-${{ matrix.features || 'native' }}
           path: dist/*.whl
 
-  # Cross-compiled aarch64 wheels: the rust-cross image runs on the
-  # x86_64 runner and carries the manylinux_2_28 target sysroot +
-  # cross toolchain (maturin-action's own default for this
-  # combination). 8 cells mirroring the native job.
+  # aarch64 wheels, built natively on GitHub's free arm64 runners:
+  # same steps as the x86_64 job. (A cross-compilation variant via
+  # the rust-manylinux images was tried first; their container env
+  # hijacks the host linker for build scripts. The pypa manylinux_2_28
+  # image is not published for arm64, so the glibc floor here comes
+  # from the runner's own sysroot - auditwheel tags accordingly and
+  # the count check in publish still enforces the full set.)
   wheels-aarch64:
-    runs-on: ubuntu-latest
-    container: ghcr.io/rust-cross/manylinux_2_28-cross:x86_64
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
@@ -113,22 +115,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@v2
         with:
           key: aarch64
       - uses: astral-sh/setup-uv@v7
       - name: Build wheel
-        env:
-          PYO3_CROSS_PYTHON_VERSION: ${{ matrix.py }}
         run: |
           uv python install "${{ matrix.py }}"
           PY="$(uv python find '${{ matrix.py }}')"
           if [ -n "${{ matrix.features }}" ]; then
-            uvx maturin build --release --target aarch64-unknown-linux-gnu --interpreter "$PY" --features ${{ matrix.features }} --out dist
+            uvx maturin build --release --interpreter "$PY" --features ${{ matrix.features }} --out dist
           else
-            uvx maturin build --release --target aarch64-unknown-linux-gnu --interpreter "$PY" --out dist
+            uvx maturin build --release --interpreter "$PY" --out dist
           fi
       - uses: actions/upload-artifact@v4
         with:
