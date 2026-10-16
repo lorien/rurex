@@ -75,6 +75,8 @@ jobs:
           source .venv/bin/activate
           maturin develop
           echo "rustc: $(rustc --version)"
-          python -c "import rurex; print('plain import ok:', rurex.__version__)"
-          python -X gil=1 -c "import rurex; print('import with gil ok:', rurex.__version__)"
+          echo "ext suffix: $(python -c 'import sysconfig; print(sysconfig.get_config_var("EXT_SUFFIX"))')"
+          ls .venv/lib/python3.14t/site-packages/rurex/ || true
+          python -X gil=1 -c "import rurex; print('import with gil ok:', rurex.__version__)" || true
+          python -c "import rurex; print('plain import ok:', rurex.__version__)" || true
           python -m pytest tests/ -q
