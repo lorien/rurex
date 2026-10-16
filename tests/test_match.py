@@ -81,6 +81,17 @@ def test_match_pos_endpos_attributes():
     assert (m2.pos, m2.endpos) == (0, 3)
 
 
+def test_endpos_default_counts_characters():
+    # endpos=None reports the character length (not bytes), resolved
+    # lazily on first read.
+    text = "héllo wörld 造字"
+    m = rurex.compile(r"wö").search(text)
+    assert m.endpos == len(text)
+    assert m.span() == (6, 8)
+    # The value is cached per match and stable across reads.
+    assert m.endpos == len(text)
+
+
 # --- Match objects --------------------------------------------------------
 
 def test_match_group_access():

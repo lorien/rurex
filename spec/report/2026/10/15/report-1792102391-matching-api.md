@@ -66,11 +66,15 @@ References: ADR-0002, ADR-0004
 
 ### Future-task notes
 
-- [open] Performance pass later: `Match.names` is cloned per match
+- [acted] Performance pass later: `Match.names` is cloned per match
   from `FindIter`/`sub`; consider `Rc<Vec<Option<String>>>` shared
   with the Regex. Group extraction via Python slicing could move to
   direct `&str` slicing if PyO3 lifetimes permit a stored borrowed
   text handle.
+  — Resolved 2026-10-16: names are now `Arc<Vec<Option<String>>>`
+  shared from the Regex (refcount clone per match); `findall` builds
+  values by direct `&str`/`&[u8]` slicing, and `piece`/slicing was
+  removed from the findall path entirely.
 - [open] `escape` for bytes remains str-only (carried over from the
   scaffold report; still unowned by any task).
 

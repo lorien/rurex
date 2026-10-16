@@ -48,6 +48,15 @@ stored program.
   blocking other Python threads.
 - Results are converted back to Python objects (`Match`, tuples, lists)
   after the scan, under the GIL.
+- `findall` is a dedicated whole-scan path: every match's spans are
+  collected in one GIL-released Rust pass, then only the returned
+  values (strings, or one string per group) are built — no `Match`
+  objects are constructed.
+- Work proportional to the whole haystack must not run per call or
+  per match: `Match.endpos` for `endpos=None` resolves lazily on
+  first read (counting characters is O(n) in the text), capture
+  names are shared `Arc` data, and `pos`/`endpos` window conversion
+  walks the text at most once, only as far as the indices given.
 
 ## Error handling
 

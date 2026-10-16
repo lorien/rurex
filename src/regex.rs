@@ -2,7 +2,7 @@
 //! lazy `FindIter` returned by `finditer`.
 
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -10,7 +10,7 @@ use pyo3::types::{PyAny, PyBytes, PyDict, PyList, PyString, PyTuple};
 
 use crate::error;
 use crate::flags;
-use crate::match_::Match;
+use crate::match_::{Endpos, Match};
 use crate::template;
 
 enum Inner {
@@ -32,6 +32,9 @@ pub struct Regex {
     flags: u32,
     /// Number of capture groups (excluding the implicit group 0).
     groups: usize,
+    /// Capture names by group index (index 0 unnamed), shared with
+    /// every `Match` this regex produces.
+    names: Arc<Vec<Option<String>>>,
     /// Lazily compiled `\A(?:pattern)\z` variant used by `fullmatch`.
     /// `None` means the variant could not be built and the span-check
     /// fallback is used instead.
@@ -62,11 +65,29 @@ fn spans_to_py(s: &str, spans: &[Option<(usize, usize)>]) -> Vec<Option<(usize, 
         .collect()
 }
 
-fn char_to_byte(s: &str, pos: usize) -> usize {
-    match s.char_indices().nth(pos) {
-        Some((b, _)) => b,
-        None => s.len(),
+/// Byte bounds of the `[pos, endpos)` window in `s` (Python char
+/// indices), from a single left-to-right walk that stops at the
+/// farther of the two indices; `endpos=None` and `pos=0` walk nothing.
+/// Unreached indices clamp to the text end, and `endpos < pos` yields
+/// `None`, exactly like `window`.
+fn window_bytes(s: &str, pos: usize, endpos: Option<usize>) -> Option<(usize, usize)> {
+    let far = endpos.map_or(pos, |e| pos.max(e));
+    let mut pb = if pos == 0 { Some(0) } else { None };
+    let mut eb = s.len();
+    if far > 0 {
+        for (i, (b, _)) in s.char_indices().enumerate() {
+            if i == pos {
+                pb = Some(b);
+            }
+            if endpos == Some(i) {
+                eb = b;
+            }
+            if i >= far {
+                break;
+            }
+        }
     }
+    window(pb.unwrap_or(s.len()), Some(eb), s.len())
 }
 
 fn next_boundary(s: &str, at: usize) -> usize {
@@ -264,11 +285,16 @@ impl Regex {
             Inner::Text(re) => re.captures_len() - 1,
             Inner::Bytes(re) => re.captures_len() - 1,
         };
+        let names = Arc::new(match &inner {
+            Inner::Text(re) => names_of(re),
+            Inner::Bytes(re) => names_of_bytes(re),
+        });
         Ok(Regex {
             inner,
             pattern: pat,
             flags: cfg.stored_flags,
             groups,
+            names,
             anchored: OnceLock::new(),
         })
     }
@@ -399,11 +425,7 @@ impl Regex {
         let re = py_handle(&slf, py);
         match extract_hay(bytes_mode, text)? {
             Hay::Text(s) => {
-                let Some((pb, eb)) = window(
-                    char_to_byte(s, pos),
-                    endpos.map(|e| char_to_byte(s, e)),
-                    s.len(),
-                ) else {
+                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(None);
                 };
                 let engine = match &slf.inner {
@@ -413,14 +435,13 @@ impl Regex {
                 let hay = &s[..eb];
                 let spans = py.detach(|| captures_spans_text(engine, hay, pb));
                 Ok(spans.map(|sp| {
-                    let endpos_u = endpos.unwrap_or_else(|| s.chars().count());
                     Match::new(
                         re,
                         text.clone().unbind(),
                         pos,
-                        endpos_u,
+                        Endpos::from_opt(endpos),
                         spans_to_py(s, &sp),
-                        names_of(engine),
+                        slf.names.clone(),
                         false,
                     )
                 }))
@@ -436,14 +457,13 @@ impl Regex {
                 let hay = &b[..eb];
                 let spans = py.detach(|| captures_spans_bytes(engine, hay, pb));
                 Ok(spans.map(|sp| {
-                    let endpos_u = endpos.unwrap_or(b.len());
                     Match::new(
                         re,
                         text.clone().unbind(),
                         pos,
-                        endpos_u,
+                        Endpos::from_opt(endpos),
                         sp,
-                        names_of_bytes(engine),
+                        slf.names.clone(),
                         true,
                     )
                 }))
@@ -466,7 +486,15 @@ impl Regex {
         // guarantees the match there is found first when it exists.
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let start = match extract_hay(bytes_mode, text)? {
-            Hay::Text(s) => pos.min(s.chars().count()),
+            // `pos == 0` skips the walk: counting every character of a
+            // large text is O(n) and 0 is the answer anyway.
+            Hay::Text(s) => {
+                if pos == 0 {
+                    0
+                } else {
+                    pos.min(s.chars().count())
+                }
+            }
             Hay::Bytes(b) => pos.min(b.len()),
         };
         let m = Self::search(slf, py, text, pos, endpos)?;
@@ -486,11 +514,7 @@ impl Regex {
         let re = py_handle(&slf, py);
         match extract_hay(bytes_mode, text)? {
             Hay::Text(s) => {
-                let Some((pb, eb)) = window(
-                    char_to_byte(s, pos),
-                    endpos.map(|e| char_to_byte(s, e)),
-                    s.len(),
-                ) else {
+                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(None);
                 };
                 let hay = &s[pb..eb];
@@ -499,14 +523,13 @@ impl Regex {
                         let spans = py.detach(|| captures_spans_text(engine, hay, 0));
                         Ok(spans.map(|sp| {
                             let sp = offset_spans(sp, pb);
-                            let endpos_u = endpos.unwrap_or_else(|| s.chars().count());
                             Match::new(
                                 re,
                                 text.clone().unbind(),
                                 pos,
-                                endpos_u,
+                                Endpos::from_opt(endpos),
                                 spans_to_py(s, &sp),
-                                names_of(engine),
+                                slf.names.clone(),
                                 false,
                             )
                         }))
@@ -520,14 +543,13 @@ impl Regex {
                         let whole = &s[..eb];
                         let spans = py.detach(|| captures_spans_text(engine, whole, pb));
                         Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|sp| {
-                            let endpos_u = endpos.unwrap_or_else(|| s.chars().count());
                             Match::new(
                                 re,
                                 text.clone().unbind(),
                                 pos,
-                                endpos_u,
+                                Endpos::from_opt(endpos),
                                 spans_to_py(s, &sp),
-                                names_of(engine),
+                                slf.names.clone(),
                                 false,
                             )
                         }))
@@ -544,14 +566,13 @@ impl Regex {
                         let spans = py.detach(|| captures_spans_bytes(engine, hay, 0));
                         Ok(spans.map(|sp| {
                             let sp = offset_spans(sp, pb);
-                            let endpos_u = endpos.unwrap_or(b.len());
                             Match::new(
                                 re,
                                 text.clone().unbind(),
                                 pos,
-                                endpos_u,
+                                Endpos::from_opt(endpos),
                                 sp,
-                                names_of_bytes(engine),
+                                slf.names.clone(),
                                 true,
                             )
                         }))
@@ -564,14 +585,13 @@ impl Regex {
                         let whole = &b[..eb];
                         let spans = py.detach(|| captures_spans_bytes(engine, whole, pb));
                         Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|sp| {
-                            let endpos_u = endpos.unwrap_or(b.len());
                             Match::new(
                                 re,
                                 text.clone().unbind(),
                                 pos,
-                                endpos_u,
+                                Endpos::from_opt(endpos),
                                 sp,
-                                names_of_bytes(engine),
+                                slf.names.clone(),
                                 true,
                             )
                         }))
@@ -591,31 +611,9 @@ impl Regex {
         endpos: Option<usize>,
     ) -> PyResult<FindIter> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let (window_ok, endpos_u, names) = match extract_hay(bytes_mode, text)? {
-            Hay::Text(s) => {
-                let ok = window(
-                    char_to_byte(s, pos),
-                    endpos.map(|e| char_to_byte(s, e)),
-                    s.len(),
-                );
-                let engine = match &slf.inner {
-                    Inner::Text(re) => re,
-                    Inner::Bytes(_) => unreachable!(),
-                };
-                (
-                    ok,
-                    endpos.unwrap_or_else(|| s.chars().count()),
-                    names_of(engine),
-                )
-            }
-            Hay::Bytes(b) => {
-                let ok = window(pos, endpos, b.len());
-                let engine = match &slf.inner {
-                    Inner::Bytes(re) => re,
-                    Inner::Text(_) => unreachable!(),
-                };
-                (ok, endpos.unwrap_or(b.len()), names_of_bytes(engine))
-            }
+        let (window_ok, names) = match extract_hay(bytes_mode, text)? {
+            Hay::Text(s) => (window_bytes(s, pos, endpos), slf.names.clone()),
+            Hay::Bytes(b) => (window(pos, endpos, b.len()), slf.names.clone()),
         };
         // An invalid window (endpos < pos after clamping) yields an
         // exhausted iterator immediately.
@@ -627,7 +625,7 @@ impl Regex {
             re: py_handle(&slf, py),
             string: text.clone().unbind(),
             pos,
-            endpos: endpos_u,
+            endpos: Endpos::from_opt(endpos),
             scan,
             end_b,
             chars_seen: 0,
@@ -641,6 +639,12 @@ impl Regex {
     /// All matches as values: whole-match strings without groups, the
     /// single group with one, tuples otherwise. Unmatched groups yield
     /// the empty string, like `re.findall`.
+    ///
+    /// Dedicated path: all matches are scanned and their spans
+    /// collected in one GIL-released Rust loop, then only the returned
+    /// values are constructed — no `Match` objects, no per-match
+    /// span-to-character conversion (byte-unit slices produce the same
+    /// strings).
     #[pyo3(signature = (text, pos = 0, endpos = None))]
     fn findall<'py>(
         slf: PyRef<'_, Self>,
@@ -649,26 +653,32 @@ impl Regex {
         pos: usize,
         endpos: Option<usize>,
     ) -> PyResult<Bound<'py, PyList>> {
-        let mut iter = Self::finditer(slf, py, text, pos, endpos)?;
-        let mut items = Vec::new();
-        while let Some(m) = iter.step(py)? {
-            let value = if m.group_count() == 0 {
-                m.piece(py, 0)?.expect("group 0 always matches")
-            } else if m.group_count() == 1 {
-                m.piece(py, 1)?
-                    .unwrap_or_else(|| PyString::new(py, "").into_any())
-            } else {
-                let parts: Vec<Bound<'_, PyAny>> = (1..=m.group_count())
-                    .map(|i| {
-                        m.piece(py, i)
-                            .map(|p| p.unwrap_or_else(|| PyString::new(py, "").into_any()))
-                    })
-                    .collect::<PyResult<_>>()?;
-                PyTuple::new(py, parts)?.into_any()
-            };
-            items.push(value);
+        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
+        match (extract_hay(bytes_mode, text)?, &slf.inner) {
+            (Hay::Text(s), Inner::Text(engine)) => {
+                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
+                    return Ok(PyList::empty(py));
+                };
+                let all_spans = py.detach(|| scan_all_text(engine, s, pb, eb));
+                let mut items = Vec::with_capacity(all_spans.len());
+                for spans in &all_spans {
+                    items.push(findall_item_text(py, s, slf.groups, spans)?);
+                }
+                Ok(PyList::new(py, items)?)
+            }
+            (Hay::Bytes(b), Inner::Bytes(engine)) => {
+                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
+                    return Ok(PyList::empty(py));
+                };
+                let all_spans = py.detach(|| scan_all_bytes(engine, b, pb, eb));
+                let mut items = Vec::with_capacity(all_spans.len());
+                for spans in &all_spans {
+                    items.push(findall_item_bytes(py, b, slf.groups, spans)?);
+                }
+                Ok(PyList::new(py, items)?)
+            }
+            _ => unreachable!(),
         }
-        PyList::new(py, items)
     }
 
     /// Split `text` on matches, including capture groups in the result
@@ -829,6 +839,115 @@ fn captures_spans_text(
     })
 }
 
+/// Every match in the `[pb, eb)` byte window, as byte-unit group
+/// spans — pure Rust, safe under a released GIL. Mirrors
+/// `FindIter::step`'s advance rule for empty matches.
+fn scan_all_text(
+    re: &regex::Regex,
+    s: &str,
+    pb: usize,
+    eb: usize,
+) -> Vec<Vec<Option<(usize, usize)>>> {
+    let hay = &s[..eb];
+    let mut out = Vec::new();
+    let mut scan = pb;
+    while scan <= eb {
+        let Some(caps) = re.captures_at(hay, scan) else {
+            break;
+        };
+        let spans: Vec<Option<(usize, usize)>> = (0..caps.len())
+            .map(|i| caps.get(i).map(|m| (m.start(), m.end())))
+            .collect();
+        let (sb, se) = spans[0].expect("group 0 always matches");
+        out.push(spans);
+        scan = if sb == se { next_boundary(s, se) } else { se };
+    }
+    out
+}
+
+fn scan_all_bytes(
+    re: &regex::bytes::Regex,
+    b: &[u8],
+    pb: usize,
+    eb: usize,
+) -> Vec<Vec<Option<(usize, usize)>>> {
+    let hay = &b[..eb];
+    let mut out = Vec::new();
+    let mut scan = pb;
+    while scan <= eb {
+        let Some(caps) = re.captures_at(hay, scan) else {
+            break;
+        };
+        let spans: Vec<Option<(usize, usize)>> = (0..caps.len())
+            .map(|i| caps.get(i).map(|m| (m.start(), m.end())))
+            .collect();
+        let (sb, se) = spans[0].expect("group 0 always matches");
+        out.push(spans);
+        scan = if sb == se { se + 1 } else { se };
+    }
+    out
+}
+
+/// One `findall` result value from byte-unit spans: the whole-match
+/// string without groups, the single group's string with one, a tuple
+/// of group strings otherwise (empty string for non-participating
+/// groups, like `re.findall`).
+fn findall_item_text<'py>(
+    py: Python<'py>,
+    s: &str,
+    groups: usize,
+    spans: &[Option<(usize, usize)>],
+) -> PyResult<Bound<'py, PyAny>> {
+    Ok(match groups {
+        0 => {
+            let (a, b) = spans[0].expect("group 0 always matches");
+            PyString::new(py, &s[a..b]).into_any()
+        }
+        1 => match spans[1] {
+            Some((a, b)) => PyString::new(py, &s[a..b]).into_any(),
+            None => PyString::new(py, "").into_any(),
+        },
+        _ => {
+            let parts: Vec<Bound<'py, PyAny>> = spans[1..=groups]
+                .iter()
+                .map(|sp| match sp {
+                    Some((a, b)) => PyString::new(py, &s[*a..*b]).into_any(),
+                    None => PyString::new(py, "").into_any(),
+                })
+                .collect();
+            PyTuple::new(py, parts)?.into_any()
+        }
+    })
+}
+
+fn findall_item_bytes<'py>(
+    py: Python<'py>,
+    b: &[u8],
+    groups: usize,
+    spans: &[Option<(usize, usize)>],
+) -> PyResult<Bound<'py, PyAny>> {
+    Ok(match groups {
+        0 => {
+            let (a, e) = spans[0].expect("group 0 always matches");
+            PyBytes::new(py, &b[a..e]).into_any()
+        }
+        1 => match spans[1] {
+            Some((a, e)) => PyBytes::new(py, &b[a..e]).into_any(),
+            None => PyBytes::new(py, b"").into_any(),
+        },
+        _ => {
+            let parts: Vec<Bound<'py, PyAny>> = spans[1..=groups]
+                .iter()
+                .map(|sp| match sp {
+                    Some((a, e)) => PyBytes::new(py, &b[*a..*e]).into_any(),
+                    None => PyBytes::new(py, b"").into_any(),
+                })
+                .collect();
+            PyTuple::new(py, parts)?.into_any()
+        }
+    })
+}
+
 fn captures_spans_bytes(
     re: &regex::bytes::Regex,
     hay: &[u8],
@@ -894,7 +1013,7 @@ fn substitute(
 
     match (extract_hay(bytes_mode, text)?, &reg.inner) {
         (Hay::Text(s), Inner::Text(engine)) => {
-            let names = names_of(engine);
+            let names = reg.names.clone();
             let mut out = String::new();
             let mut prev = 0usize;
             let mut scan = 0usize;
@@ -921,7 +1040,7 @@ fn substitute(
                             this.clone_ref(py),
                             text.clone().unbind(),
                             0,
-                            s.chars().count(),
+                            Endpos::Eof(OnceLock::new()),
                             spans_to_py(s, &spans),
                             names.clone(),
                             false,
@@ -944,7 +1063,7 @@ fn substitute(
             Ok((PyString::new(py, &out).into_any().unbind(), n))
         }
         (Hay::Bytes(b), Inner::Bytes(engine)) => {
-            let names = names_of_bytes(engine);
+            let names = reg.names.clone();
             let mut out = Vec::new();
             let mut prev = 0usize;
             let mut scan = 0usize;
@@ -967,7 +1086,7 @@ fn substitute(
                             this.clone_ref(py),
                             text.clone().unbind(),
                             0,
-                            b.len(),
+                            Endpos::Eof(OnceLock::new()),
                             spans.clone(),
                             names.clone(),
                             true,
@@ -1022,7 +1141,7 @@ pub struct FindIter {
     re: Py<Regex>,
     string: Py<PyAny>,
     pos: usize,
-    endpos: usize,
+    endpos: Endpos,
     /// Byte scan position.
     scan: usize,
     /// Byte end bound.
@@ -1030,7 +1149,7 @@ pub struct FindIter {
     /// Chars before `bytes_seen` (text mode only).
     chars_seen: usize,
     bytes_seen: usize,
-    names: Vec<Option<String>>,
+    names: Arc<Vec<Option<String>>>,
     bytes_mode: bool,
     done: bool,
 }
@@ -1079,7 +1198,7 @@ impl FindIter {
                     self.re.clone_ref(py),
                     self.string.clone_ref(py),
                     self.pos,
-                    self.endpos,
+                    self.endpos.replicate(),
                     py_spans,
                     self.names.clone(),
                     false,
@@ -1100,7 +1219,7 @@ impl FindIter {
                     self.re.clone_ref(py),
                     self.string.clone_ref(py),
                     self.pos,
-                    self.endpos,
+                    self.endpos.replicate(),
                     spans.clone(),
                     self.names.clone(),
                     true,

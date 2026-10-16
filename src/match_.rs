@@ -1,6 +1,7 @@
 //! The `Match` type returned by the matching methods.
 
 use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 
 use pyo3::exceptions::{PyIndexError, PyTypeError};
 use pyo3::prelude::*;
@@ -10,6 +11,38 @@ use crate::error;
 use crate::regex::Regex;
 use crate::template;
 
+/// The `endpos` value reported by a `Match`.
+///
+/// `Eof` (the overwhelmingly common `endpos=None` case) is resolved
+/// lazily: counting the characters of a large text is O(n) in the
+/// text, `endpos` is rarely read, and paying that cost on every
+/// match made `search` linear in the whole haystack even when the
+/// match sat in the first bytes. The first read counts (bytes mode:
+/// measures) and caches the value.
+#[derive(Debug)]
+pub(crate) enum Endpos {
+    Given(usize),
+    Eof(OnceLock<usize>),
+}
+
+impl Endpos {
+    pub(crate) fn from_opt(endpos: Option<usize>) -> Endpos {
+        match endpos {
+            Some(e) => Endpos::Given(e),
+            None => Endpos::Eof(OnceLock::new()),
+        }
+    }
+
+    /// A fresh equivalent value for another `Match` (the lazy cache
+    /// is per-match, so it is not shared).
+    pub(crate) fn replicate(&self) -> Endpos {
+        match self {
+            Endpos::Given(n) => Endpos::Given(*n),
+            Endpos::Eof(_) => Endpos::Eof(OnceLock::new()),
+        }
+    }
+}
+
 /// The result of a successful match: spans are pre-converted to Python
 /// units (character offsets for `str`, byte offsets for `bytes`), so no
 /// conversion work happens after construction.
@@ -18,24 +51,25 @@ pub struct Match {
     re: Py<Regex>,
     string: Py<PyAny>,
     pos: usize,
-    endpos: usize,
+    endpos: Endpos,
     /// Group spans in Python units; index 0 is the whole match.
     spans_py: Vec<Option<(usize, usize)>>,
-    /// Capture names by group index (index 0 is unnamed).
-    names: Vec<Option<String>>,
+    /// Capture names by group index (index 0 is unnamed). Shared with
+    /// the Regex and every other Match it produced: cloning is a
+    /// refcount bump, not a deep copy.
+    names: Arc<Vec<Option<String>>>,
     bytes_mode: bool,
 }
 
 impl Match {
     #[allow(clippy::too_many_arguments)]
-    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         re: Py<Regex>,
         string: Py<PyAny>,
         pos: usize,
-        endpos: usize,
+        endpos: Endpos,
         spans_py: Vec<Option<(usize, usize)>>,
-        names: Vec<Option<String>>,
+        names: Arc<Vec<Option<String>>>,
         bytes_mode: bool,
     ) -> Self {
         Match {
@@ -108,8 +142,18 @@ impl Match {
     /// The `endpos` value passed to the matching method (or the text
     /// length when not given).
     #[getter]
-    fn endpos(&self) -> usize {
-        self.endpos
+    fn endpos(&self, py: Python<'_>) -> usize {
+        match &self.endpos {
+            Endpos::Given(n) => *n,
+            Endpos::Eof(lock) => *lock.get_or_init(|| {
+                let s = self.string.bind(py);
+                if self.bytes_mode {
+                    s.extract::<&[u8]>().map_or(0, <[u8]>::len)
+                } else {
+                    s.extract::<&str>().map_or(0, |s| s.chars().count())
+                }
+            }),
+        }
     }
 
     /// The index of the last group to close, or None.
@@ -308,20 +352,6 @@ impl Match {
     /// Start of group 0 in Python units (internal use).
     pub(crate) fn start0(&self) -> isize {
         self.spans_py[0].map_or(-1, |(s, _)| s as isize)
-    }
-
-    /// Number of capture groups (excluding group 0).
-    pub(crate) fn group_count(&self) -> usize {
-        self.spans_py.len() - 1
-    }
-
-    /// The matched text of one group (internal use).
-    pub(crate) fn piece<'py>(
-        &self,
-        py: Python<'py>,
-        index: usize,
-    ) -> PyResult<Option<Bound<'py, PyAny>>> {
-        self.group_value(py, index)
     }
 
     /// Resolve an optional group argument: None means group 0.

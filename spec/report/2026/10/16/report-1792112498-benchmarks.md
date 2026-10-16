@@ -42,10 +42,14 @@ Ad-hoc work (owner-directed; plan approved after one round).
 - [open] Charts were generated blind (model cannot render PNGs);
   owner reviewing visuals — label placement/color tweaks are
   one-line changes in make_charts.py followed by a re-run.
-- [open] Match-heavy regime is the known gap (per-match Python-level
+- [acted] Match-heavy regime is the known gap (per-match Python-level
   slicing in Match construction); a future optimization pass (direct
   Rust-side string slicing, batched span conversion) could close it —
   would change benchmark outcomes and require re-measuring this page.
+  — Resolved 2026-10-16 by that pass: `findall` now scans in one
+  GIL-released Rust loop and slices directly; dense-extraction Tests
+  3/4 flipped to rurex ahead (×1.4 at 80/KB; parity at 160/KB); page
+  re-measured.
 
 ### Tooling/process
 
