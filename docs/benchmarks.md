@@ -20,9 +20,9 @@ per operation** on Y.
 - **Test 5 — Pathological:** `re` never finishes; rurex answers in
   **~240 ns** at any size.
 
-A rendered, standalone HTML twin of this page (images embedded) lives
-at [`benchmarks.html`](benchmarks.html) — open it directly in a
-browser.
+A standalone HTML twin of this page (images embedded) can be rendered
+locally for browser viewing: `python benchmarks/make_charts.py --html`
+writes `docs/benchmarks.html`.
 
 ## Methodology
 
