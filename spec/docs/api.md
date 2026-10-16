@@ -219,6 +219,10 @@ CPPython quirk is preserved: an unknown name in `\g<name>` raises
 
 ## Errors
 
+Error messages and positions follow the Python 3.13+ `re` wording
+on every interpreter version rurex supports (including the
+3.11+ rule that global inline flags must lead the pattern).
+
 `rurex.error` subclasses `Exception` like `re.error` and carries the
 same attribute set: `msg` (short reason), `pattern` (the pattern that
 failed), `pos`, `lineno`, `colno`. The exception class's canonical name is

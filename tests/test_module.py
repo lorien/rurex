@@ -26,11 +26,14 @@ def test_error_subclasses_exception():
 def test_patternerror_is_the_class_error_the_alias():
     # Exactly like re (3.13+): one exception class whose canonical
     # name is PatternError; `error` is the module-level legacy alias.
+    # (Pre-3.13 stdlib has no PatternError at all, so the cross-check
+    # with stdlib runs only where the name exists.)
     import re as stdre
 
     assert rurex.error is rurex.PatternError
     assert rurex.PatternError.__name__ == "PatternError"
-    assert rurex.PatternError.__name__ == stdre.PatternError.__name__
+    if hasattr(stdre, "PatternError"):
+        assert rurex.PatternError.__name__ == stdre.PatternError.__name__
     try:
         rurex.compile("(")
     except rurex.error as e:

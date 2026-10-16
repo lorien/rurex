@@ -349,11 +349,21 @@ fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     def __repr__(self):
         module = 'rurex'
-        if self._name_ is None:
-            return f'{module}.RegexFlag({self._value_!r})'
-        return '|'.join(
-            f'{module}.{n}' for n in self.name.split('|')
-        )
+        if self._name_ is not None:
+            return '|'.join(
+                f'{module}.{n}' for n in self.name.split('|')
+            )
+        # Pre-3.11 enum machinery: composite values carry no computed
+        # name -- decompose into canonical members instead.
+        cls = type(self)
+        value = self._value_
+        names = [
+            n for n, m in cls.__members__.items()
+            if m._name_ == n and m._value_ and value & m._value_ == m._value_
+        ]
+        if not names:
+            return f'{module}.RegexFlag({value!r})'
+        return '|'.join(f'{module}.{n}' for n in names)
 
     __str__ = __repr__
     "#,
