@@ -11,15 +11,14 @@ per operation** on Y.
   and both engines scale linearly.
 - **Test 2 — Scan vs needle position:** with the needle in the very
   first bytes both engines answer in well under a microsecond (`re`
-  168 ns, rurex 455 ns); from a quarter of the text onward rurex is
-  ×7.3–13.5 faster.
+  179 ns, rurex 471 ns); from a quarter of the text onward rurex is
+  ×7.4–12.7 faster.
 - **Test 3 — Extraction vs haystack size:** rurex ahead ~×1.4 at
   match-dense fixed density.
 - **Test 4 — Extraction vs match density:** rurex ahead at every
-  measured density — ×6.2 when matches are sparse, narrowing to
-  parity (×1.00) at the densest.
+  measured density — ×6.3 when matches are sparse, ×1.2–1.3 at the densest.
 - **Test 5 — Pathological:** `re` never finishes; rurex answers in
-  **~250 ns** at any size.
+  **~270 ns** at any size.
 
 A standalone HTML twin of this page (images embedded) can be rendered
 locally for browser viewing: `python benchmarks/make_charts.py --html`
@@ -84,11 +83,11 @@ amet node lazy fox alpha the the-needle-string …
 
 | Size | `re` | rurex | Speedup |
 |---:|---:|---:|---:|
-| 64 KB | 78 µs | 6.0 µs | rurex ×13.0 |
-| 256 KB | 312 µs | 23 µs | rurex ×13.4 |
-| 1 MB | 1.24 ms | 93 µs | rurex ×13.4 |
-| 4 MB | 5.00 ms | 407 µs | rurex ×12.3 |
-| 16 MB | 20.5 ms | 3.12 ms | rurex ×6.6 |
+| 64 KB | 82 µs | 6.3 µs | rurex ×13.0 |
+| 256 KB | 329 µs | 25 µs | rurex ×13.0 |
+| 1 MB | 1.32 ms | 101 µs | rurex ×13.0 |
+| 4 MB | 5.34 ms | 498 µs | rurex ×10.7 |
+| 16 MB | 21.9 ms | 3.37 ms | rurex ×6.5 |
 
 Both engines scale linearly; rurex' constant is several times smaller.
 The advantage narrows at 16 MB as scanning becomes memory-bound — the
@@ -120,16 +119,16 @@ from the first bytes (0%) to the very end (100%). Position 0% favors
 
 | Needle at | `re` | rurex | Speedup |
 |---:|---:|---:|---:|
-| 0% | 168 ns | 455 ns | `re` ×2.7 |
-| 25% | 2.51 ms | 186 µs | rurex ×13.5 |
-| 50% | 5.02 ms | 423 µs | rurex ×11.9 |
-| 75% | 7.59 ms | 863 µs | rurex ×8.8 |
-| 100% | 10.2 ms | 1.40 ms | rurex ×7.3 |
+| 0% | 179 ns | 471 ns | `re` ×2.6 |
+| 25% | 2.65 ms | 208 µs | rurex ×12.7 |
+| 50% | 5.53 ms | 538 µs | rurex ×10.3 |
+| 75% | 8.10 ms | 1.01 ms | rurex ×8.0 |
+| 100% | 11.1 ms | 1.49 ms | rurex ×7.4 |
 
 The closest point of the race is a needle in the very first bytes:
 `re`'s fast path answers in 170 ns and rurex in 436 ns — both well
 under a microsecond, both invisible to any real workload. Past the
-first quarter of the text, rurex' scan speed dominates by ×7.3–13.5.
+first quarter of the text, rurex' scan speed dominates by ×7.4–12.7.
 (An earlier build showed a ~0.7 ms floor here — every `search` call
 was counting the characters of the whole haystack to fill
 `Match.endpos` even when the match sat in the first bytes; `endpos` is
@@ -161,10 +160,10 @@ alpha word value value node al …
 
 | Size | `re` | rurex | Speedup |
 |---:|---:|---:|---:|
-| 64 KB | 1.41 ms | 1.00 ms | rurex ×1.41 |
-| 256 KB | 5.90 ms | 4.13 ms | rurex ×1.43 |
-| 1 MB | 25.8 ms | 18.3 ms | rurex ×1.41 |
-| 4 MB | 105.9 ms | 75.8 ms | rurex ×1.40 |
+| 64 KB | 1.66 ms | 1.14 ms | rurex ×1.45 |
+| 256 KB | 6.59 ms | 4.59 ms | rurex ×1.44 |
+| 1 MB | 30.1 ms | 21.5 ms | rurex ×1.40 |
+| 4 MB | 119.4 ms | 88.1 ms | rurex ×1.36 |
 
 At this density rurex is steadily ~×1.4 ahead: `findall` builds only
 the returned values (strings, or one string per group) in one pass —
@@ -195,15 +194,16 @@ r"\d{3,4}"
 
 | Density | `re` | rurex | Speedup |
 |---:|---:|---:|---:|
-| 5 /KB | 16.8 ms | 2.70 ms | rurex ×6.2 |
-| 20 /KB | 18.2 ms | 5.41 ms | rurex ×3.4 |
-| 80 /KB | 25.0 ms | 18.2 ms | rurex ×1.4 |
-| 160 /KB | 34.1 ms | 33.9 ms | rurex ×1.00 |
+| 5 /KB | 19.8 ms | 3.12 ms | rurex ×6.3 |
+| 20 /KB | 24.1 ms | 6.21 ms | rurex ×3.9 |
+| 80 /KB | 30.3 ms | 24.3 ms | rurex ×1.2 |
+| 160 /KB | 48.0 ms | 38.0 ms | rurex ×1.3 |
 
-With sparse matches, scanning dominates and rurex is up to 6.2×
+With sparse matches, scanning dominates and rurex is up to 6.3×
 faster; as matches multiply, the per-match cost of building the
 returned values takes over and `re` closes the gap — at the densest
-measured point the two engines are effectively even (×1.00).
+measured points the two engines are within ~×1.3 of each other
+(run-to-run noise on this machine moves this band by ±0.3).
 
 ---
 
@@ -233,13 +233,13 @@ xxxxxxxxxxxxxxxxxxxxxxxx    (n = 24 of the sweep; no y — nothing matches)
 
 | n | `re` | rurex |
 |---:|---:|---:|
-| 8 | 21.9 µs | 233 ns |
-| 12 | 248 µs | 234 ns |
-| 16 | 3.64 ms | 236 ns |
-| 20 | 61.9 ms | 242 ns |
-| 24 | 982 ms | 250 ns |
-| 26 | *≥ 2 s — still running at the timeout* | 250 ns |
-| 28 | — | 252 ns |
+| 8 | 26.4 µs | 261 ns |
+| 12 | 243 µs | 261 ns |
+| 16 | 3.89 ms | 265 ns |
+| 20 | 63.4 ms | 267 ns |
+| 24 | 1.04 s | 269 ns |
+| 26 | *≥ 2 s — still running at the timeout* | 269 ns |
+| 28 | — | 313 ns |
 
 Extrapolating `re`'s doubling curve, n=40 would take longer than the
 age of the universe. rurex answers every input in well under half of a
