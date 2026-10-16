@@ -46,6 +46,7 @@ def _cmp_search_family(pattern, text):
     for ours, theirs in [
         (ours_rx.search(text), theirs_rx.search(text)),
         (ours_rx.prefixmatch(text), theirs_rx.match(text)),
+        (ours_rx.match(text), theirs_rx.match(text)),
         (ours_rx.fullmatch(text), theirs_rx.fullmatch(text)),
     ]:
         assert (ours is None) == (theirs is None), (pattern, text)
@@ -163,6 +164,11 @@ def test_pos_endpos_matrix():
                     if t is not None:
                         assert o.span() == t.span(), (pattern, text, pos, endpos)
                     o = ours_rx.prefixmatch(text, pos, endpos)
+                    t = _std(theirs_rx.match, text, pos, endpos)
+                    assert (o is None) == (t is None), (pattern, text, pos, endpos)
+                    if t is not None:
+                        assert o.span() == t.span(), (pattern, text, pos, endpos)
+                    o = ours_rx.match(text, pos, endpos)
                     t = _std(theirs_rx.match, text, pos, endpos)
                     assert (o is None) == (t is None), (pattern, text, pos, endpos)
                     if t is not None:

@@ -471,10 +471,35 @@ impl Regex {
         }
     }
 
-    /// Match anchored at the start of the `[pos, endpos)` window
-    /// (`re.match` under its Python 3.15 name).
+    /// Match anchored at the start of the `[pos, endpos)` window.
+    /// The Python 3.15 preferred name (ADR-0007); `re.match` under its
+    /// historic name — both expose the same behavior, like CPython.
     #[pyo3(signature = (text, pos = 0, endpos = None))]
     fn prefixmatch<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        text: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        Self::match_impl(slf, py, text, pos, endpos)
+    }
+
+    /// The historic name for `prefixmatch`, soft deprecated in
+    /// CPython 3.15 but kept for compatibility — exactly like `re`.
+    #[pyo3(name = "match", signature = (text, pos = 0, endpos = None))]
+    fn match_<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        text: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        Self::match_impl(slf, py, text, pos, endpos)
+    }
+
+    /// Shared `match`/`prefixmatch` implementation.
+    fn match_impl<'py>(
         slf: PyRef<'_, Self>,
         py: Python<'py>,
         text: &Bound<'py, PyAny>,

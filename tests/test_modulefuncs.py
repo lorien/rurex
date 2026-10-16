@@ -12,6 +12,7 @@ def test_search_family_match_re():
     for rurex_fn, re_fn in [
         (rurex.search, stdre.search),
         (rurex.prefixmatch, stdre.match),
+        (rurex.match, stdre.match),
         (rurex.fullmatch, stdre.fullmatch),
     ]:
         for pattern, text in [
@@ -26,6 +27,18 @@ def test_search_family_match_re():
             if theirs:
                 assert ours.span() == theirs.span()
                 assert ours.group() == theirs.group()
+
+
+def test_match_and_prefixmatch_are_one_method():
+    # CPython 3.15 keeps both names with identical behavior; so do we.
+    rx = rurex.compile(r"\w+")
+    for text in ("ab 12", "  ab", ""):
+        assert (rx.match(text) is None) == (rx.prefixmatch(text) is None)
+        m1, m2 = rx.match(text), rx.prefixmatch(text)
+        if m1:
+            assert m1.span() == m2.span()
+    assert rurex.match(r"\w+", "ab 12").span() == (0, 2)
+    assert rurex.match(r"\w+", "  ab") is None
 
 
 def test_findall_finditer_match_re():

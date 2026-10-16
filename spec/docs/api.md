@@ -20,10 +20,11 @@ implementation is written against.
   `Exception`, exactly like `re.error`.
 
 Module-level convenience functions mirror `re`'s, with
-`prefixmatch` where `re` has `match`:
+`prefixmatch` alongside the historic `match` (both, exactly like
+Python 3.15):
 
 - `search(pattern, text, flags=0)`, `prefixmatch(...)`,
-  `fullmatch(...)`, `findall(...)`, `finditer(...)`
+  `match(...)`, `fullmatch(...)`, `findall(...)`, `finditer(...)`
 - `split(pattern, text, maxsplit=0, flags=0)`
 - `sub(pattern, repl, text, count=0, flags=0)`,
   `subn(pattern, repl, text, count=0, flags=0)`
@@ -82,8 +83,9 @@ translated to engine byte offsets internally.
 - `search(text, pos=0, endpos=None) -> Match | None` — first match
   anywhere in the window.
 - `prefixmatch(text, pos=0, endpos=None) -> Match | None` — match
-  anchored at the start of the window. This is `re.match` under its
-  Python 3.15 name; no `match` alias is provided.
+  anchored at the start of the window. The Python 3.15 preferred
+  name; `match(...)` is the historic soft-deprecated name for the
+  same method, exactly as in `re` (ADR-0007).
 - `fullmatch(text, pos=0, endpos=None) -> Match | None` — the whole
   window must match.
 - `is_match(text) -> bool` — cheap existence check, no Match built.
@@ -197,8 +199,8 @@ the Rust extension and never leaks (the rure-python lesson).
 
 - No backreferences and no lookaround: patterns using them fail to
   compile with `rurex.error`.
-- `prefixmatch` instead of `match` (Python 3.15's name); no `match`
-  alias.
+- `prefixmatch` is the preferred name for `re.match`, which also
+  ships as `match` (soft deprecated, like Python 3.15; ADR-0007).
 - `fullmatch` with `pos > 0` on patterns containing an explicit
   `^`/`\A` anchors at the window start instead of failing (the
   anchored fallback variant operates on the window); plain

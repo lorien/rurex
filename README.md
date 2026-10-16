@@ -21,8 +21,8 @@ Read this before porting:
 - **No backreferences, no lookaround.** The engine cannot express them
   in linear time; patterns using them fail to compile with
   `rurex.error`.
-- `prefixmatch()` instead of `match()` (Python 3.15's new name; no
-  `match` alias).
+- `prefixmatch()` is the Python 3.15 preferred name for `match()`;
+  both ship with identical behavior, exactly like Python 3.15.
 - The absolute-end anchor is `\z` (`re` spells it `\Z`), and `$`
   matches at the end of the haystack only — not before a trailing
   newline.
@@ -69,6 +69,7 @@ rx = rurex.compile(r"(?P<year>\d{4})-(\d{2})", rurex.IGNORECASE)
 
 rx.search("released 2024-10-07")        # first match anywhere
 rx.prefixmatch("2024-10-07: log")       # anchored at the start (re.match)
+rx.match("2024-10-07: log")             # same method, historic name
 rx.fullmatch("2024-10-07")              # the whole string
 
 m = rx.search("released 2024-10-07")

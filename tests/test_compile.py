@@ -171,10 +171,13 @@ def test_deviation_locale_rejected_everywhere():
         rurex.compile(rb"a", stdre.L)
 
 
-def test_no_match_alias():
-    assert not hasattr(rurex, "match")
-    assert not hasattr(rurex.Regex, "match")
+def test_match_and_prefixmatch_both_ship():
+    # ADR-0007: mirror Python 3.15 — both names, same behavior.
+    assert hasattr(rurex, "match")
+    assert hasattr(rurex.Regex, "match")
     assert hasattr(rurex, "prefixmatch")
+    rx = rurex.compile(r"ab")
+    assert rx.match("abc").span() == rx.prefixmatch("abc").span()
 
 
 def test_swap_greed_inline_flag():

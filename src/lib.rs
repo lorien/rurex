@@ -155,7 +155,7 @@ fn search<'py>(
         .extract()?)
 }
 
-/// `re.match` under its Python 3.15 name.
+/// `re.prefixmatch` — the Python 3.15 preferred name for `match`.
 #[pyfunction]
 #[pyo3(signature = (pattern, text, flags = 0))]
 fn prefixmatch<'py>(
@@ -169,6 +169,20 @@ fn prefixmatch<'py>(
         .bind(py)
         .call_method("prefixmatch", (text,), None)?
         .extract()?)
+}
+
+/// The historic name for `prefixmatch`, soft deprecated in CPython
+/// 3.15 but kept for compatibility — exactly like `re`.
+#[pyfunction]
+#[pyo3(name = "match", signature = (pattern, text, flags = 0))]
+fn py_match<'py>(
+    py: Python<'py>,
+    pattern: &Bound<'py, PyAny>,
+    text: &Bound<'py, PyAny>,
+    flags: u32,
+) -> PyResult<Option<Py<Match>>> {
+    let rx = cached_compile(py, pattern, flags)?;
+    Ok(rx.bind(py).call_method("match", (text,), None)?.extract()?)
 }
 
 #[pyfunction]
@@ -265,6 +279,7 @@ fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(purge, m)?)?;
     m.add_function(wrap_pyfunction!(search, m)?)?;
     m.add_function(wrap_pyfunction!(prefixmatch, m)?)?;
+    m.add_function(wrap_pyfunction!(py_match, m)?)?;
     m.add_function(wrap_pyfunction!(fullmatch, m)?)?;
     m.add_function(wrap_pyfunction!(findall, m)?)?;
     m.add_function(wrap_pyfunction!(finditer, m)?)?;

@@ -33,6 +33,7 @@ def test_public_surface():
             "purge",
             "search",
             "prefixmatch",
+            "match",
             "fullmatch",
             "findall",
             "finditer",

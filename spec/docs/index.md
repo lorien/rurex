@@ -34,6 +34,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
 - [adr/0006-module-functions-and-cache.md](adr/0006-module-functions-and-cache.md) —
   `re`-style module-level functions backed by a bounded FIFO pattern
   cache; supersedes ADR-0004 decision 1.
+- [adr/0007-match-method.md](adr/0007-match-method.md) —
+  `match` ships alongside `prefixmatch` with identical behavior,
+  mirroring Python 3.15's dual naming; supersedes ADR-0004
+  decision 2's "no `match` alias" clause.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.
