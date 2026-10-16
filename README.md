@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/lorien/rurex/actions/workflows/ci.yml/badge.svg)](https://github.com/lorien/rurex/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/rurex.svg)](https://pypi.org/project/rurex/)
-[![Python versions](https://img.shields.io/pypi/pyversions/rurex.svg)](https://pypi.org/project/rurex/)
 
 Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
 crate: linear-time matching — catastrophic backtracking (ReDoS)
