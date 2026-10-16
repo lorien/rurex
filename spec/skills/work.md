@@ -41,6 +41,18 @@ their direction. Do not write any failure files and do not change the
 task's status; a task leaves `spec/docs/plan.md` only when its work is
 complete and committed.
 
+## Missing instruments
+
+When a task needs an instrument that is not installed — a profiler,
+debugger, build tool, or CLI utility (`perf`, `py-spy`, `valgrind`,
+`make`, ...) — stop the moment the need is identified and ask the
+user to install it: name the tool, say why it is needed, and give the
+exact install command. Do not improvise a substitute measurement or
+keep digging by hand (black-box timing loops, source reading in place
+of profiling, ad-hoc scripts) when a proper instrument exists — that
+burns the session's time and produces weaker evidence. The same rule
+applies to Python packages and Rust crates needed for the work.
+
 ## Documentation Sync
 
 This project is documentation-driven: the `spec/docs/` documents describe

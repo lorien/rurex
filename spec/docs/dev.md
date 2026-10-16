@@ -10,6 +10,12 @@
       source .venv/bin/activate
       pip install maturin pytest
 
+  or simply `make venv`, which creates `.venv` with the full dev set
+  (maturin, pytest, matplotlib, markdown, py-spy).
+- Missing a tool you need (profiler, debugger, utility)? Ask the
+  owner to install it — see "Missing instruments" in
+  `spec/skills/work.md`. Do not improvise substitutes.
+
 ## Build and run
 
 The extension is built into the active environment with maturin:
