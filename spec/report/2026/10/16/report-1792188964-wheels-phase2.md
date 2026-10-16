@@ -41,9 +41,13 @@
 - [open] Phase 3 (owner actions): register the PyPI trusted
   publisher, tag v0.1.0, delete the 0.0.1 release after 0.1.0 is
   live, flip the README note + badge.
-- [open] The 2_28/aarch64/cross cells of release.yml have never
+- [acted] The 2_28/aarch64/cross cells of release.yml have never
   executed — first `workflow_dispatch` dry-run (no publish) is the
   verification step; run it before tagging v0.1.0.
+  — resolved 2026-10-16 (commit 29ed34c): dry run green, 19 artifacts,
+  every wheel tagged manylinux_2_28 on both arches, a CI-built wheel
+  suite-tested locally. Two fixes were needed along the way (see the
+  wheels-phase2b report).
 - [open] Thread-hammer suite for t-builds still pending (smoke only).
 
 ### Tooling/process
