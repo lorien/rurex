@@ -1,0 +1,207 @@
+{
+  "environment": {
+    "cpu": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+    "python": "CPython 3.13.5",
+    "os": "Linux 6.12.101+deb13-amd64",
+    "rurex": "0.1.0",
+    "stdre": "re (re) from stdlib",
+    "build": "maturin develop --release (opt-level=3, LTO=fat)"
+  },
+  "cases": [
+    {
+      "name": "is_match-literal-10MB",
+      "regime": "scan",
+      "method": "is_match",
+      "pattern": "the-needle-string",
+      "what": "Literal existence check, 10 MB, match at the end",
+      "re_s": 0.012615524395368994,
+      "rurex_s": 0.0008760688593611121,
+      "speedup": 14.400151609736563
+    },
+    {
+      "name": "search-literal-10MB",
+      "regime": "scan",
+      "method": "search",
+      "pattern": "the-needle-string",
+      "what": "Literal search, 10 MB, match at the end",
+      "re_s": 0.012655983096919954,
+      "rurex_s": 0.0032089802995324134,
+      "speedup": 3.943926704306686
+    },
+    {
+      "name": "search-rare-word-10MB",
+      "regime": "scan",
+      "method": "search",
+      "pattern": "zebra\\d{4}",
+      "what": "Class+digits pattern, 10 MB, one match near the end",
+      "re_s": 0.004339112448506057,
+      "rurex_s": 0.002779395068064332,
+      "speedup": 1.5611715291442776
+    },
+    {
+      "name": "search-anchor-end-10MB",
+      "regime": "scan",
+      "method": "search",
+      "pattern": "xyzzy$",
+      "what": "Anchored pattern, 10 MB, match at the end",
+      "re_s": 0.004629948958754539,
+      "rurex_s": 0.001955653114710003,
+      "speedup": 2.367469426929069
+    },
+    {
+      "name": "findall-digits-1MB",
+      "regime": "match-heavy",
+      "method": "findall",
+      "pattern": "\\d{3,4}",
+      "what": "findall over ~120k matches, 1 MB",
+      "re_s": 0.03939346820116043,
+      "rurex_s": 0.08613245682790875,
+      "speedup": 0.4573591611332757
+    },
+    {
+      "name": "finditer-consume-1MB",
+      "regime": "match-heavy",
+      "method": "finditer",
+      "pattern": "\\w+",
+      "what": "finditer fully consumed (span() per match), 1 MB",
+      "re_s": 0.06862651985138654,
+      "rurex_s": 0.10392240080982447,
+      "speedup": 0.6603631105190828
+    },
+    {
+      "name": "sub-template-1MB",
+      "regime": "match-heavy",
+      "method": "sub",
+      "pattern": "(\\d{3})-(\\d{4})",
+      "repl": "\\1.\\2",
+      "what": "sub with a group template over ~40k matches, 1 MB",
+      "re_s": 0.04715844457969069,
+      "rurex_s": 0.042917016241699454,
+      "speedup": 1.0988285931646418
+    },
+    {
+      "name": "search-short-64B",
+      "regime": "overhead",
+      "method": "search",
+      "pattern": "\\d+",
+      "what": "search on a 55-byte text (call overhead bound)",
+      "re_s": 8.920430578291416e-07,
+      "rurex_s": 5.877038817852735e-07,
+      "speedup": 1.5178444204237245
+    },
+    {
+      "name": "findall-unicode-1MB",
+      "regime": "unicode",
+      "method": "findall",
+      "pattern": "\\w+",
+      "what": "\\w+ over multilingual (Greek/Cyrillic/CJK/Latin) text",
+      "re_s": 0.025895727099850774,
+      "rurex_s": 0.04848072165623307,
+      "speedup": 0.5341448356208908
+    },
+    {
+      "name": "findall-greek-1MB",
+      "regime": "unicode",
+      "method": "findall",
+      "pattern": "[\u03b1-\u03c9]+",
+      "what": "Greek-range class over multilingual text",
+      "re_s": 0.014743970055133105,
+      "rurex_s": 0.019617065554484725,
+      "speedup": 0.7515889679923323
+    },
+    {
+      "name": "findall-bytes-1MB",
+      "regime": "bytes",
+      "method": "findall",
+      "pattern": "b'\\\\d+'",
+      "mode": "bytes",
+      "what": "bytes-mode findall over digits, 1 MB",
+      "re_s": 0.038595930114388464,
+      "rurex_s": 0.08747278014197946,
+      "speedup": 0.44123360491963737
+    },
+    {
+      "name": "compile-simple",
+      "regime": "compile",
+      "pattern": "\\d{4}-\\d{2}-\\d{2}",
+      "what": "Simple date pattern",
+      "re_s": 3.7886644387617704e-05,
+      "rurex_s": 0.00030967436730861664,
+      "speedup": 0.1223434949327287
+    },
+    {
+      "name": "compile-url",
+      "regime": "compile",
+      "pattern": "https?://[a-z0-9.-]+/[\\w./-]*",
+      "what": "URL-ish pattern",
+      "re_s": 5.851936265826225e-05,
+      "rurex_s": 0.0003849261808209121,
+      "speedup": 0.1520274940339497
+    },
+    {
+      "name": "compile-datetime",
+      "regime": "compile",
+      "pattern": "(?P<year>\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})",
+      "what": "ISO datetime with named and numbered groups",
+      "re_s": 0.00010218008304946124,
+      "rurex_s": 0.0005520932814106345,
+      "speedup": 0.18507757020405036
+    },
+    {
+      "name": "module-search-cache-hit",
+      "regime": "overhead",
+      "pattern": "\\d+",
+      "what": "Module-level search(), pattern cache hit on both sides",
+      "re_s": 6.486885501071811e-07,
+      "rurex_s": 7.903546364977956e-07,
+      "speedup": 0.820756303754524
+    }
+  ],
+  "pathological": {
+    "pattern": "(x+x+)+y",
+    "re_series": [
+      [
+        8,
+        0.00010698288679122925
+      ],
+      [
+        10,
+        6.52894377708435e-05
+      ],
+      [
+        12,
+        0.0002457122318446636
+      ],
+      [
+        14,
+        0.0009638178162276745
+      ],
+      [
+        16,
+        0.003958854358643293
+      ],
+      [
+        18,
+        0.015637731179594994
+      ],
+      [
+        20,
+        0.06276451982557774
+      ],
+      [
+        22,
+        0.24842313583940268
+      ],
+      [
+        24,
+        1.0148378177545965
+      ],
+      [
+        26,
+        null
+      ]
+    ],
+    "rurex_s_28": 2.560082450509071e-07,
+    "timeout_s": 2.0
+  }
+}

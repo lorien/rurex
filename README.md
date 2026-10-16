@@ -130,6 +130,9 @@ lookaround — are not offered.
 
 ## Development
 
+See [docs/benchmarks.md](docs/benchmarks.md) for benchmark results and
+methodology (rurex vs `re`, measured end to end).
+
 ```
 python -m venv .venv && source .venv/bin/activate
 pip install maturin pytest
