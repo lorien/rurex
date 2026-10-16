@@ -42,6 +42,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   the compiled class is `Pattern` (no `Regex` in the public surface),
   with `re.Pattern` value semantics: equality/hash, weakref, typing
   subscription, read-only `groupindex`, `scanner`.
+- [adr/0009-scanner-and-conformance-suite.md](adr/0009-scanner-and-conformance-suite.md) —
+  `rurex.Scanner` mirrors `re.Scanner`; CPython's `test_re.py`
+  vendored (pinned v3.13.5) as a conformance harness with an
+  EXPECTED ledger accounting for every test.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

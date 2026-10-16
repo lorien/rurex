@@ -158,7 +158,7 @@ impl Match {
 
     /// The index of the last group to close, or None.
     #[getter]
-    fn lastindex(&self) -> Option<usize> {
+    pub(crate) fn lastindex(&self) -> Option<usize> {
         let mut best: Option<usize> = None;
         for (i, span) in self.spans_py.iter().enumerate().skip(1) {
             let Some((_, end)) = span else { continue };
@@ -183,6 +183,17 @@ impl Match {
     #[getter]
     fn lastgroup(&self) -> Option<String> {
         self.lastindex().and_then(|i| self.names[i].clone())
+    }
+
+    /// Legacy span table: a tuple of `(start, end)` per group, group
+    /// 0 first; `(-1, -1)` for groups that did not participate. Kept
+    /// for `re` compatibility (`SRE_Match.regs`).
+    #[getter]
+    fn regs(&self) -> Vec<(isize, isize)> {
+        self.spans_py
+            .iter()
+            .map(|sp| sp.map_or((-1, -1), |(s, e)| (s as isize, e as isize)))
+            .collect()
     }
 
     /// Return one or more subgroups of the match.
@@ -309,6 +320,16 @@ impl Match {
                     out.extend_from_slice(&template_bytes[range.clone()])
                 }
                 template::Piece::Byte(b) => out.push(*b),
+                template::Piece::Char(v) => {
+                    if self.bytes_mode {
+                        out.push(*v as u8);
+                    } else {
+                        let mut buf = [0u8; 4];
+                        if let Some(ch) = char::from_u32(*v) {
+                            out.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
+                        }
+                    }
+                }
                 template::Piece::Group(index) => {
                     if let Some(value) = self.group_value(py, *index)? {
                         if self.bytes_mode {
@@ -341,6 +362,14 @@ impl Match {
         item: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, pyo3::types::PyGenericAlias>> {
         pyo3::types::PyGenericAlias::new(cls.py(), cls.as_any(), item)
+    }
+
+    fn __copy__<'a>(slf: PyRef<'a, Self>) -> PyRef<'a, Self> {
+        slf
+    }
+
+    fn __deepcopy__<'a>(slf: PyRef<'a, Self>, _memo: &Bound<'_, PyAny>) -> PyRef<'a, Self> {
+        slf
     }
 
     fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {

@@ -160,3 +160,109 @@ mod tests {
         );
     }
 }
+
+/// Scan pattern text (skipping escapes and character classes) and:
+///
+/// - fold leading global inline groups `(?imsxa)` into extra flag
+///   bits (CPython reports them via `Pattern.flags`) — the engine
+///   handles `imsx` natively; a global `(?a)` is stripped and turned
+///   into the `ASCII` bit, which the builder cannot see as text;
+/// - rewrite scoped `(?a:...)` groups to the engine's `(?-u:...)`
+///   (same shape, non-capturing, ASCII semantics inside).
+///
+/// Byte-for-byte, positions are preserved except for stripped global
+/// `(?a)` groups.
+pub fn inline_adjust(text: &str) -> (String, u32) {
+    let b = text.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(b.len());
+    let mut extra: u32 = 0;
+    let mut leading = true;
+    let mut i = 0usize;
+
+    const FLAG_CHARS: &[u8] = b"aimsxuUL-";
+
+    while i < b.len() {
+        let c = b[i];
+        if c == b'\\' {
+            leading = false;
+            out.push(c);
+            if i + 1 < b.len() {
+                out.push(b[i + 1]);
+                i += 1;
+            }
+            i += 1;
+            continue;
+        }
+        if c == b'[' {
+            leading = false;
+            let start = i;
+            i += 1;
+            if i < b.len() && b[i] == b'^' {
+                i += 1;
+            }
+            if i < b.len() && b[i] == b']' {
+                i += 1;
+            }
+            while i < b.len() && b[i] != b']' {
+                if b[i] == b'\\' {
+                    i += 1;
+                }
+                i += 1;
+            }
+            i = (i + 1).min(b.len());
+            out.extend_from_slice(&b[start..i]);
+            continue;
+        }
+        if c == b'(' && i + 1 < b.len() && b[i + 1] == b'?' {
+            // Try to parse `(?flags)` or `(?flags:` with flags from
+            // FLAG_CHARS only; anything else is copied verbatim.
+            let mut j = i + 2;
+            while j < b.len() && FLAG_CHARS.contains(&b[j]) {
+                j += 1;
+            }
+            if j > i + 2 && j < b.len() && (b[j] == b')' || b[j] == b':') {
+                let flags = &b[i + 2..j];
+                let scoped = b[j] == b':';
+                if !scoped
+                    && leading
+                    && flags
+                        .iter()
+                        .all(|f| matches!(f, b'a' | b'i' | b'm' | b's' | b'x'))
+                {
+                    // Leading global group: fold into flags, strip.
+                    for &f in flags {
+                        extra |= match f {
+                            b'a' => ASCII,
+                            b'i' => IGNORECASE,
+                            b'm' => MULTILINE,
+                            b's' => DOTALL,
+                            b'x' => VERBOSE,
+                            _ => 0,
+                        };
+                    }
+                    i = j + 1;
+                    continue;
+                }
+                if scoped && flags.len() == 1 && flags[0] == b'a' {
+                    // `(?a:` -> `(?-u:` (same length).
+                    out.extend_from_slice(b"(?-u:");
+                    i = j + 1;
+                    continue;
+                }
+            }
+            leading = false;
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if c != b'(' {
+            leading = false;
+        }
+        out.push(c);
+        i += 1;
+    }
+    (
+        String::from_utf8(out).unwrap_or_else(|_| text.to_string()),
+        extra,
+    )
+}

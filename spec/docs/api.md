@@ -110,10 +110,11 @@ translated to engine byte offsets internally.
   `re` template syntax (`\1`, `\g<name>`, `\g<0>`) or a callable
   receiving each `Match`.
 - `subn(repl, text, count=0) -> (str, int)`.
-- `scanner(text, pos=0, endpos=None) -> Scanner` — successive
-  `match()`/`search()` over one text, like `re.Pattern.scanner`.
-  The scanner exposes `.pattern`, `.search()` (next unanchored
-  match) and `.match()` (next match anchored at the cursor).
+- `scanner(text, pos=0, endpos=None) -> SRE_Scanner` — successive
+  `match()`/`search()` over one text, like `re.Pattern.scanner`
+  (CPython's `_sre.SRE_Scanner`). The scanner exposes `.pattern`,
+  `.search()` (next unanchored match) and `.match()` (next match
+  anchored at the cursor).
   `SRE_Scanner` parity quirk preserved: a `match()` miss consumes
   the match it rejected — the cursor advances on every call.
 
@@ -124,6 +125,19 @@ non-default.
 
 Zero-width matches: iteration and substitution advance one character
 past an empty match, matching Python 3.7+ `re` behavior.
+
+## Scanner objects
+
+`rurex.Scanner(lexicon, flags=0)` mirrors `re.Scanner` (ADR-0009):
+`lexicon` is a sequence of `(pattern, action)` pairs combined into
+one compound pattern `"(p1)|(p2)|..."`. `scan(string)` walks
+anchored matches and applies the action of the branch that matched
+(`m.lastindex - 1`): callable actions are invoked as
+`action(scanner, token)` with the matched text (the last such match
+is available as `scanner.match`), non-callable actions are used
+as-is, `None` results are dropped, and a zero-width match stops the
+scan. `scan` returns `(results, rest)`. Attributes: `scanner` (the
+compiled compound `Pattern`), `lexicon`, `match`.
 
 ## Bytes mode
 
@@ -162,7 +176,8 @@ raises `rurex.error` with the full attribute set — `pattern` and
 
 Attributes: `re` (the Pattern), `string` (the original scanned text —
 the Python object, not a re-encoded copy), `pos`, `endpos`,
-`lastindex`, `lastgroup`.
+`lastindex`, `lastgroup`, `regs` (legacy span table: `(start, end)`
+per group, `(-1, -1)` for non-participating).
 
 Methods and accessors:
 
@@ -190,7 +205,9 @@ CPPython quirk is preserved: an unknown name in `\g<name>` raises
 
 `rurex.error` subclasses `Exception` like `re.error` and carries the
 same attribute set: `msg` (short reason), `pattern` (the pattern that
-failed), `pos`, `lineno`, `colno`. Positions are character indices for
+failed), `pos`, `lineno`, `colno`. `rurex.PatternError` is the same
+exception, like `re.PatternError` (Python 3.13+). Positions are
+character indices for
 `str` patterns and byte indices for `bytes` patterns, exactly as in
 `re`. The exception message mirrors `re`'s formatting:
 `"{msg} at position {pos}"`, with `(line L, column C)` for multi-line
@@ -230,6 +247,17 @@ the Rust extension and never leaks (the rure-python lesson).
 - Pattern text must be valid UTF-8, including for `bytes` patterns
   (raw non-UTF-8 bytes in the pattern are rejected; `\xNN` escapes
   produce raw-byte matching under the ASCII default).
+- Under `VERBOSE`, the engine ignores Unicode whitespace (e.g.
+  `\x85`, `\xa0`); `re` ignores ASCII whitespace only.
+- Stacked quantifiers (`a**`, `a*+`) are accepted by the engine as
+  nested repetition; `re` rejects them as `multiple repeat` and
+  reserves `a*+` for possessive quantifiers (unsupported here).
+- Capture groups inside an unbounded loop report the engine's last
+  successful iteration; `re` can re-enter a loop body for a final
+  empty iteration (`^((x|y)*)*` group 1 is `""` in `re`, `"xyy"`
+  here).
+- Methods take the `re` keyword names (`string`, `pos`, `endpos`,
+  `maxsplit`, `repl`, `count`) so keyword call sites port directly.
 - `LOCALE` is unsupported on both pattern types (the engine has no
   locale mode); `re` allows it on bytes.
 - Unicode is always on for `str` patterns; `\p{...}` Unicode classes

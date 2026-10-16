@@ -3,7 +3,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
-use pyo3::exceptions::PyTypeError;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyBytes, PyString};
 
@@ -15,7 +15,7 @@ mod regexset;
 mod template;
 
 use match_::Match;
-use regex::{FindIter, Regex};
+use regex::{FindIter, Regex, Scanner};
 use regexset::RegexSet;
 
 /// Maximum entries in the module pattern cache, like `re._MAXCACHE`.
@@ -48,6 +48,16 @@ static CACHE: std::sync::LazyLock<Mutex<CacheState>> = std::sync::LazyLock::new(
 /// FIFO eviction at 512 entries, keyed by pattern type, text, and
 /// flags.
 fn cached_compile(py: Python<'_>, pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Py<Regex>> {
+    // Like re: an already-compiled pattern is returned as-is (flags
+    // are rejected — they cannot be combined with a compiled pattern).
+    if let Ok(rx) = pattern.extract::<PyRef<'_, Regex>>() {
+        if flags != 0 {
+            return Err(PyValueError::new_err(
+                "cannot process flags argument with a compiled pattern",
+            ));
+        }
+        return Ok(rx.into_pyobject(py).expect("infallible").unbind());
+    }
     let key: CacheKey = if let Ok(s) = pattern.cast::<PyString>() {
         (
             false,
@@ -86,20 +96,20 @@ fn cached_compile(py: Python<'_>, pattern: &Bound<'_, PyAny>, flags: u32) -> PyR
 /// Escape all regex metacharacters in `text` (str or bytes, like
 /// `re.escape`).
 #[pyfunction]
-fn escape<'py>(py: Python<'py>, text: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
-    if let Ok(s) = text.cast::<PyString>() {
+fn escape<'py>(py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    if let Ok(s) = string.cast::<PyString>() {
         let escaped = escape_bytes(
             s.to_str()
                 .map_err(|_| PyTypeError::new_err("invalid str argument"))?
                 .as_bytes(),
         );
         Ok(PyString::new(py, &String::from_utf8_lossy(&escaped)).into_any())
-    } else if let Ok(b) = text.cast::<PyBytes>() {
+    } else if let Ok(b) = string.cast::<PyBytes>() {
         Ok(PyBytes::new(py, &escape_bytes(b.as_bytes())).into_any())
     } else {
         Err(PyTypeError::new_err(format!(
             "escape() argument must be str or bytes, not {}",
-            text.get_type()
+            string.get_type()
         )))
     }
 }
@@ -119,11 +129,20 @@ fn escape_bytes(bytes: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Compile a regular expression into a `rurex.Pattern`.
+/// Compile a regular expression into a `rurex.Pattern`. An already
+/// compiled pattern is returned unchanged, like `re.compile`.
 #[pyfunction]
 #[pyo3(signature = (pattern, flags = 0))]
-fn compile(pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Regex> {
-    Regex::build(pattern, flags)
+fn compile(py: Python<'_>, pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Py<Regex>> {
+    if let Ok(rx) = pattern.extract::<PyRef<'_, Regex>>() {
+        if flags != 0 {
+            return Err(PyValueError::new_err(
+                "cannot process flags argument with a compiled pattern",
+            ));
+        }
+        return Ok(rx.into_pyobject(py).expect("infallible").unbind());
+    }
+    Py::new(py, Regex::build(pattern, flags)?)
 }
 
 /// Compile many patterns into a `rurex.RegexSet` that scans for all of
@@ -141,132 +160,135 @@ fn purge() {
 }
 
 #[pyfunction]
-#[pyo3(signature = (pattern, text, flags = 0))]
+#[pyo3(signature = (pattern, string, flags = 0))]
 fn search<'py>(
     py: Python<'py>,
     pattern: &Bound<'py, PyAny>,
-    text: &Bound<'py, PyAny>,
+    string: &Bound<'py, PyAny>,
     flags: u32,
 ) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
     Ok(rx
         .bind(py)
-        .call_method("search", (text,), None)?
+        .call_method("search", (string,), None)?
         .extract()?)
 }
 
 /// `re.prefixmatch` — the Python 3.15 preferred name for `match`.
 #[pyfunction]
-#[pyo3(signature = (pattern, text, flags = 0))]
+#[pyo3(signature = (pattern, string, flags = 0))]
 fn prefixmatch<'py>(
     py: Python<'py>,
     pattern: &Bound<'py, PyAny>,
-    text: &Bound<'py, PyAny>,
+    string: &Bound<'py, PyAny>,
     flags: u32,
 ) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
     Ok(rx
         .bind(py)
-        .call_method("prefixmatch", (text,), None)?
+        .call_method("prefixmatch", (string,), None)?
         .extract()?)
 }
 
 /// The historic name for `prefixmatch`, soft deprecated in CPython
 /// 3.15 but kept for compatibility — exactly like `re`.
 #[pyfunction]
-#[pyo3(name = "match", signature = (pattern, text, flags = 0))]
+#[pyo3(name = "match", signature = (pattern, string, flags = 0))]
 fn py_match<'py>(
     py: Python<'py>,
     pattern: &Bound<'py, PyAny>,
-    text: &Bound<'py, PyAny>,
-    flags: u32,
-) -> PyResult<Option<Py<Match>>> {
-    let rx = cached_compile(py, pattern, flags)?;
-    Ok(rx.bind(py).call_method("match", (text,), None)?.extract()?)
-}
-
-#[pyfunction]
-#[pyo3(signature = (pattern, text, flags = 0))]
-fn fullmatch<'py>(
-    py: Python<'py>,
-    pattern: &Bound<'py, PyAny>,
-    text: &Bound<'py, PyAny>,
+    string: &Bound<'py, PyAny>,
     flags: u32,
 ) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
     Ok(rx
         .bind(py)
-        .call_method("fullmatch", (text,), None)?
+        .call_method("match", (string,), None)?
         .extract()?)
 }
 
 #[pyfunction]
-#[pyo3(signature = (pattern, text, flags = 0))]
-fn findall<'py>(
+#[pyo3(signature = (pattern, string, flags = 0))]
+fn fullmatch<'py>(
     py: Python<'py>,
     pattern: &Bound<'py, PyAny>,
-    text: &Bound<'py, PyAny>,
+    string: &Bound<'py, PyAny>,
     flags: u32,
-) -> PyResult<Bound<'py, PyAny>> {
+) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
-    rx.bind(py).call_method("findall", (text,), None)
+    Ok(rx
+        .bind(py)
+        .call_method("fullmatch", (string,), None)?
+        .extract()?)
 }
 
 #[pyfunction]
-#[pyo3(signature = (pattern, text, flags = 0))]
+#[pyo3(signature = (pattern, string, flags = 0))]
+fn findall<'py>(
+    py: Python<'py>,
+    pattern: &Bound<'py, PyAny>,
+    string: &Bound<'py, PyAny>,
+    flags: u32,
+) -> PyResult<Bound<'py, PyAny>> {
+    let rx = cached_compile(py, pattern, flags)?;
+    rx.bind(py).call_method("findall", (string,), None)
+}
+
+#[pyfunction]
+#[pyo3(signature = (pattern, string, flags = 0))]
 fn finditer(
     py: Python<'_>,
     pattern: &Bound<'_, PyAny>,
-    text: &Bound<'_, PyAny>,
+    string: &Bound<'_, PyAny>,
     flags: u32,
 ) -> PyResult<Py<FindIter>> {
     let rx = cached_compile(py, pattern, flags)?;
     Ok(rx
         .bind(py)
-        .call_method("finditer", (text,), None)?
+        .call_method("finditer", (string,), None)?
         .extract()?)
 }
 
 #[pyfunction]
-#[pyo3(signature = (pattern, text, maxsplit = 0, flags = 0))]
+#[pyo3(signature = (pattern, string, maxsplit = 0, flags = 0))]
 fn split<'py>(
     py: Python<'py>,
     pattern: &Bound<'py, PyAny>,
-    text: &Bound<'py, PyAny>,
+    string: &Bound<'py, PyAny>,
     maxsplit: usize,
     flags: u32,
 ) -> PyResult<Bound<'py, PyAny>> {
     let rx = cached_compile(py, pattern, flags)?;
-    rx.bind(py).call_method("split", (text, maxsplit), None)
+    rx.bind(py).call_method("split", (string, maxsplit), None)
 }
 
 #[pyfunction]
-#[pyo3(signature = (pattern, repl, text, count = 0, flags = 0))]
+#[pyo3(signature = (pattern, repl, string, count = 0, flags = 0))]
 fn sub<'py>(
     py: Python<'py>,
     pattern: &Bound<'py, PyAny>,
     repl: &Bound<'py, PyAny>,
-    text: &Bound<'py, PyAny>,
+    string: &Bound<'py, PyAny>,
     count: usize,
     flags: u32,
 ) -> PyResult<Bound<'py, PyAny>> {
     let rx = cached_compile(py, pattern, flags)?;
-    rx.bind(py).call_method("sub", (repl, text, count), None)
+    rx.bind(py).call_method("sub", (repl, string, count), None)
 }
 
 #[pyfunction]
-#[pyo3(signature = (pattern, repl, text, count = 0, flags = 0))]
+#[pyo3(signature = (pattern, repl, string, count = 0, flags = 0))]
 fn subn(
     py: Python<'_>,
     pattern: &Bound<'_, PyAny>,
     repl: &Bound<'_, PyAny>,
-    text: &Bound<'_, PyAny>,
+    string: &Bound<'_, PyAny>,
     count: usize,
     flags: u32,
 ) -> PyResult<(Py<PyAny>, usize)> {
     let rx = cached_compile(py, pattern, flags)?;
     rx.bind(py)
-        .call_method("subn", (repl, text, count), None)?
+        .call_method("subn", (repl, string, count), None)?
         .extract()
 }
 
@@ -287,10 +309,13 @@ fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sub, m)?)?;
     m.add_function(wrap_pyfunction!(subn, m)?)?;
     m.add_class::<Regex>()?;
+    m.add_class::<Scanner>()?;
     m.add_class::<RegexSet>()?;
     m.add_class::<Match>()?;
     m.add_class::<FindIter>()?;
     m.add("error", m.py().get_type::<error::Error>())?;
+    // CPython 3.13+ alias.
+    m.add("PatternError", m.py().get_type::<error::Error>())?;
     // Flag constants at stdlib `re` bit values (ADR-0004, revised).
     for (name, value) in [
         ("I", flags::IGNORECASE),

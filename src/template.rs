@@ -13,8 +13,11 @@ use std::ops::Range;
 pub(crate) enum Piece {
     /// Literal bytes, as a range into the original template.
     Lit(Range<usize>),
-    /// A literal byte computed from an escape (octal, `\n`, ...).
+    /// A literal byte computed from a simple escape (`\n`, `\\`, ...).
     Byte(u8),
+    /// A code point from an octal escape: UTF-8 encoded for `str`
+    /// templates (like `re`), a raw byte for `bytes` templates.
+    Char(u32),
     /// A group reference.
     Group(usize),
 }
@@ -148,7 +151,7 @@ pub(crate) fn parse(
                     ));
                 }
                 flush(&mut pieces, i, lit_start);
-                pieces.push(Piece::Byte(value as u8));
+                pieces.push(Piece::Char(value));
                 lit_start = j;
                 i = j;
             }
@@ -172,7 +175,7 @@ pub(crate) fn parse(
                             ));
                         }
                         flush(&mut pieces, i, lit_start);
-                        pieces.push(Piece::Byte(value as u8));
+                        pieces.push(Piece::Char(value));
                         lit_start = digits_end + 1;
                         i = digits_end + 1;
                         continue;
@@ -224,12 +227,23 @@ pub(crate) fn expand(
     template_bytes: &[u8],
     spans: &[Option<(usize, usize)>],
     haystack: &[u8],
+    text_mode: bool,
     out: &mut Vec<u8>,
 ) {
     for piece in &template.pieces {
         match piece {
             Piece::Lit(range) => out.extend_from_slice(&template_bytes[range.clone()]),
             Piece::Byte(b) => out.push(*b),
+            Piece::Char(v) => {
+                if text_mode {
+                    let mut buf = [0u8; 4];
+                    if let Some(ch) = char::from_u32(*v) {
+                        out.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
+                    }
+                } else {
+                    out.push(*v as u8);
+                }
+            }
             Piece::Group(index) => {
                 if let Some((start, end)) = spans.get(*index).copied().flatten() {
                     out.extend_from_slice(&haystack[start..end]);
@@ -324,7 +338,7 @@ mod tests {
         let spans = vec![Some((0, 4)), Some((1, 3))];
         let hay = b"wxyzw";
         let mut out = Vec::new();
-        expand(&t, b"a\\g<x>b\\1", &spans, hay, &mut out);
+        expand(&t, b"a\\g<x>b\\1", &spans, hay, true, &mut out);
         assert_eq!(out, b"axybxy");
     }
 }

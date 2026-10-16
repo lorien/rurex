@@ -39,3 +39,23 @@ CI runs the same checks on every push and PR to `main`
 job builds the extension with `maturin develop` and runs `pytest`
 across Python 3.10–3.15. Runs and logs:
 https://github.com/lorien/rurex/actions
+
+## CPython conformance harness
+
+Run:
+
+    .venv/bin/python -m pytest tests/cpython/vendored_test_re.py -q
+
+CPython's own `test_re.py` (plus its `re_tests.py` data), vendored
+verbatim from the `v3.13.5` tag with a provenance header (ADR-0009).
+`tests/cpython/conftest.py` installs a shim so `import re` resolves
+to rurex (`__name__="re"`, `Pattern`/`Match`/`Scanner`, module
+functions, `_compile`) and stubs the `test.support` helpers the file
+imports. Not collected by a plain `pytest` run — invoke explicitly.
+
+Every test either passes or is listed in the `EXPECTED` ledger in the
+conftest with a bucketed reason: by-design (citing ADR/api.md),
+CPython internals, harness artifacts, or a named follow-up task
+(error-message parity, buffer-protocol haystacks). Closing a gap
+means removing the ledger entry in the same commit. When bumping the
+vendored tag, re-triage and refresh the ledger.

@@ -41,10 +41,12 @@ def test_public_surface():
             "sub",
             "subn",
             "Pattern",
+            "Scanner",
             "RegexSet",
             "Match",
             "FindIter",
             "error",
+            "PatternError",
         ]
         + ["I", "IGNORECASE", "M", "MULTILINE", "S", "DOTALL"]
         + ["U", "UNICODE", "X", "VERBOSE", "A", "ASCII"]

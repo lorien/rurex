@@ -3,6 +3,35 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
+## Accept buffer-protocol haystacks for bytes patterns
+
+Status: new
+Priority: 2
+
+`re` accepts any bytes-like object (bytearray, memoryview, array,
+bytes subclasses) wherever a bytes pattern scans; rurex accepts
+exact `bytes` only. Largest conformance cluster after the by-design
+skips (see the EXPECTED ledger in `tests/cpython/conftest.py`,
+bucket "buffer types"). Accept the buffer protocol in `extract_hay`
+(copy for one-shot methods; a held export for iterators if the
+BufferError semantics of `test_keep_buffer` are worth mirroring),
+plus bytes-like `repl`. Then re-triage and remove the ledger entries.
+
+## CPython error-message and position parity
+
+Status: new
+Priority: 2
+
+`checkPatternError` asserts exact CPython message text and position;
+rurex currently reports the engine's own wording. Map the tested
+messages in `validate_pattern`/error mapping: `unterminated
+character set`, `nothing to repeat`, `bad escape (end of pattern)`,
+`missing ), unterminated subpattern`, `missing >, unterminated
+name`, `multiple repeat` (needs rejection of stacked quantifiers),
+the unbalanced-parenthesis position, and inline-flag error texts.
+Then drop the "error-message parity" ledger entries (the largest
+bucket after buffers).
+
 ## Build and publish wheels
 
 Status: new
