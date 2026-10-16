@@ -64,6 +64,14 @@ jobs:
           # --seed bootstraps pip into the venv (uv venvs ship without
           # it; the shared build step invokes .venv/bin/pip).
           uv venv .venv --seed --python "${{ matrix.python-version }}"
+      - name: Diagnostics
+        run: |
+          python -VV || true
+          .venv/bin/python -VV || true
+          .venv/bin/python -c "import sys; print('gil enabled:', sys._is_gil_enabled())" || true
+          .venv/bin/python -c "import rurex; print('plain import:', rurex.__version__)" || true
+          .venv/bin/python -X gil=1 -c "import rurex; print('import with gil:', rurex.__version__)" || true
+          .venv/bin/python -m pytest --version || true
       - name: Build extension and run tests
         run: |
           # Free-threaded cells arrive with .venv already created from
