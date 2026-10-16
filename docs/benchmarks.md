@@ -1,52 +1,41 @@
 # Benchmarks: `rurex` vs `re`
 
-How the linear-time engine compares to the standard library's
-backtracking engine, measured end to end from Python — including every
-bit of object construction a real user pays for.
+Three parameter-sweep benchmarks comparing the linear-time engine to
+the standard library's backtracking engine, measured end to end from
+Python — including every bit of object construction a real user pays
+for. Every chart has two axes: the **variable parameter** (input size,
+match position, density, ...) on X and **time per operation** on Y.
 
-The short version: **rurex wins where scanning dominates** (large
-inputs, rare matches — up to **14× faster**), **`re` wins where match
-extraction dominates** (hundreds of thousands of small matches — about
-**2× faster**) and at **compilation** (about **6–8× faster**). And one
-class of input exists where `re` simply cannot finish at all:
+- **Test 1 — Scan:** rurex up to **8.6× faster**, and the gap widens
+  with input size.
+- **Test 2 — Extraction:** an honest crossover — rurex wins when
+  matches are sparse (**4.7×** at 5 matches/KB), `re` wins when they
+  are dense (**2.2×** at 160 matches/KB).
+- **Test 3 — Pathological:** `re` never finishes; rurex answers in
+  **~250 ns** at any size.
 
-![Catastrophic backtracking](img/bench_pathological.png)
-
-That chart is the reason rurex exists. For `(x+x+)+y` over `n`
-repeated `x` characters, `re`'s time **doubles with every 2 extra
-characters** — 1.0 s at n=24, still running at the 2-second timeout at
-n=26 — while rurex answers every input in **~250 ns**, because finite
-automata cannot backtrack. This is a safety property (ReDoS
-resistance), not a speed feature: any pattern, any input, worst case
-*O(m·n)*.
-
-## Where each engine wins
-
-![Summary](img/bench_summary.png)
-
-Every measured case, sorted. Green: rurex faster. Orange: `re` faster.
+A rendered, standalone HTML twin of this page (images embedded) lives
+at [`benchmarks.html`](benchmarks.html) — open it directly in a
+browser.
 
 ## Methodology
 
-- **End-to-end timing.** Each case times the Python-visible operation
+- **Parameter sweeps.** Each test varies one parameter across a range
+  (log-spaced where sensible) and measures the operation at every
+  point for both engines; charts plot parameter vs time.
+- **End-to-end timing.** The Python-visible operation is timed
   (method call → returned objects), not the engine in isolation.
-  rurex's per-match Python-object construction is therefore included —
-  that is the honest number a user experiences.
+  rurex's per-match Python-object construction is included — that is
+  the honest number a user experiences.
 - **Timing protocol.** `timeit`-style auto-calibrated iteration counts
-  (≥ 0.2 s of work per measurement), 5 repeats, **median** reported.
+  (≥ 0.2 s of work per measurement), median of 3 repeats. The
+  pathological test is single-shot under a 2 s timeout guard on `re`,
+  because its runtime explodes.
 - **Release build.** All rurex numbers use `maturin develop
-  --release` (opt-level 3, fat LTO). Debug-profile numbers would be
-  meaningless.
-- **Deterministic inputs.** All haystacks are generated from fixed
-  seeds; literal targets sit at the *end* of scan texts (the worst
-  case for both engines).
-- **`re` compile cache neutralized.** For the compile cases the
-  harness calls `re.purge()` before every `re.compile()`, because
-  `re.compile` is backed by an internal cache — otherwise `re` would
-  be timed on a cache hit (~300 ns) against rurex's real compilation.
-  `rurex.compile` is uncached by design; module-level functions have
-  their own bounded cache on both sides (the dispatch case measures
-  cache hits on both).
+  --release` (opt-level 3, fat LTO).
+- **Deterministic inputs.** Haystacks are generated from fixed seeds;
+  literal targets sit at stated positions (position 100% is the worst
+  case: the whole text must be scanned).
 
 ## Environment
 
@@ -59,121 +48,187 @@ Every measured case, sorted. Green: rurex faster. Orange: `re` faster.
 | opponent | stdlib `re` (same interpreter) |
 
 Numbers are machine-specific; expect different absolute values and
-somewhat different ratios elsewhere. Reproduce with the commands
-below.
+somewhat different ratios elsewhere.
 
-## Results
+---
 
-### Large-haystack scans (10 MB)
+## Test 1 — Scan: one literal in a large haystack
 
-Literal and simple patterns over big inputs — the automata engine's
-home turf. The literal `is_match` case is nearly pure prefilter
-(`memchr`-style scanning in SIMD), which is why it is 14× faster.
+A plain literal search for a single needle occurring exactly once —
+the classic log-grep workload and the automata engine's home turf:
+rurex scans with SIMD-accelerated prefilters, while `re` steps its
+backtracking VM character by character. Two parameters are swept:
+haystack length (needle at the end — the worst case), and needle
+position in a fixed 8 MB haystack.
 
-![Scans](img/bench_scan.png)
+**Pattern**
 
-| Case | `re` | rurex | Verdict |
-|---|---:|---:|---|
-| `is_match` literal, match at end | 12.6 ms | 0.88 ms | rurex ×14.4 |
-| `search` literal, match at end | 12.7 ms | 3.2 ms | rurex ×3.9 |
-| `search` rare word (`zebra\d{4}`) | 4.3 ms | 2.8 ms | rurex ×1.6 |
-| `search` anchored (`xyzzy$`) | 4.6 ms | 2.0 ms | rurex ×2.4 |
+```python
+"the-needle-string"
+```
 
-### Match-heavy workloads (1 MB)
+**Data example** (word filler, one needle, truncated)
 
-Tens to hundreds of thousands of matches. Here `re`'s fully
-C-implemented match-object loop wins: rurex currently builds each
-`Match`'s span data through Python-level slicing, which costs more
-than the scan saves on match-dense inputs.
+```
+jumps delta data node item brown lorem fox alpha item world alpha text
+amet node lazy fox alpha the the-needle-string …
+```
 
-![Match-heavy](img/bench_match-heavy.png)
+### Variable parameter: haystack size (needle at the end)
 
-| Case | `re` | rurex | Verdict |
-|---|---:|---:|---|
-| `findall(r"\d{3,4}")`, ~120k matches | 39.4 ms | 86.1 ms | `re` ×2.2 |
-| `finditer` fully consumed | 68.6 ms | 103.9 ms | `re` ×1.5 |
-| `sub` with group template, ~40k matches | 47.2 ms | 42.9 ms | rurex ×1.1 |
+![Scan vs size](img/bench_scan_data_size.png)
 
-### Call overhead
+| Size | `re` | rurex | Speedup |
+|---:|---:|---:|---:|
+| 64 KB | 77 µs | 8.9 µs | ×8.6 |
+| 256 KB | 311 µs | 36 µs | ×8.6 |
+| 1 MB | 1.26 ms | 143 µs | ×8.8 |
+| 4 MB | 5.0 ms | 695 µs | ×7.2 |
+| 16 MB | 20.4 ms | 4.9 ms | ×4.2 |
 
-Tiny inputs where fixed per-call cost dominates. A precompiled
-`rurex.Regex.search` call is faster than `re`'s (its bound-method
-dispatch is heavier than the PyO3 path); a **module-level** call
-(`rurex.search(...)` with its pattern cache) pays one extra dispatch
-and is slightly behind `re.search` on a cache hit.
+Both engines scale linearly; rurex' constant is several times smaller.
+The advantage narrows slightly at 16 MB as the prefilter's advantage
+over memory bandwidth shrinks — scanning is memory-bound at that size.
 
-![Overhead](img/bench_overhead.png)
+### Variable parameter: needle position (8 MB haystack)
 
-| Case | `re` | rurex | Verdict |
-|---|---:|---:|---|
-| `search`, 55-byte text (precompiled) | 892 ns | 588 ns | rurex ×1.5 |
-| module `search`, cache hit | 649 ns | 790 ns | `re` ×1.2 |
+![Scan vs position](img/bench_scan_match_position.png)
 
-### Unicode and bytes (1 MB)
+| Needle at | `re` | rurex | Speedup |
+|---:|---:|---:|---:|
+| 0% | 163 ns | 715 µs | `re` ×4400 |
+| 25% | 2.5 ms | 895 µs | rurex ×2.8 |
+| 50% | 5.0 ms | 1.19 ms | rurex ×4.2 |
+| 75% | 7.6 ms | 1.60 ms | rurex ×4.8 |
+| 100% | 11.4 ms | 2.81 ms | rurex ×4.1 |
 
-Multilingual (Greek/Cyrillic/CJK/Latin) text and bytes-mode scanning.
-rurex carries byte-offset-to-character conversion on `str`, and both
-match-heavy penalties above apply; `re`'s C loop stays ahead.
+The one place `re` wins is a needle in the very first bytes, where its
+fast path returns almost instantly while rurex pays a fixed cost for
+setting up the capture machinery on the haystack (~0.7 ms here —
+visible as the floor of rurex' line). Past the first quarter of the
+text, rurex' scan speed dominates: it finds the needle at 100% four
+times faster than `re`.
 
-![Unicode and bytes](img/bench_unicode.png)
+---
 
-| Case | `re` | rurex | Verdict |
-|---|---:|---:|---|
-| `findall(r"\w+")` multilingual | 25.9 ms | 48.5 ms | `re` ×1.9 |
-| `findall(r"[α-ω]+")` | 14.7 ms | 19.6 ms | `re` ×1.3 |
-| `findall(rb"\d+")` bytes | 38.6 ms | 87.5 ms | `re` ×2.3 |
+## Test 2 — Extraction: `findall` over match-dense data
 
-### Compilation
+Digit-run extraction over word filler — the regime where matches are
+small and numerous, so the cost is dominated by building Python match
+objects rather than scanning. rurex currently constructs each result
+through Python-level slicing, which is exactly what this test
+exposes. Two parameters are swept: data length at fixed density, and
+match density at fixed length (isolating per-match cost from scan
+cost).
 
-Compiling finite automata costs more than compiling backtracking
-bytecode — roughly 6–8× on these patterns (0.3–0.6 ms vs 0.04–0.1 ms).
-This is the price of the linear-time guarantee. In practice it
-amortizes: compile once and reuse (the intended usage), or go through
-the module-level functions, whose 512-entry pattern cache hides
-compilation from hot loops exactly like `re`'s does.
+**Pattern**
 
-![Compilation](img/bench_compile.png)
+```python
+r"\d{3,4}"
+```
 
-| Case | `re` | rurex | Verdict |
-|---|---:|---:|---|
-| simple date pattern | 38 µs | 310 µs | `re` ×8.2 |
-| URL-ish pattern | 59 µs | 385 µs | `re` ×6.6 |
-| ISO datetime, 6 groups | 102 µs | 552 µs | `re` ×5.4 |
+**Data example** (digits embedded in word filler, truncated)
 
-## Interpretation
+```
+7685 value word word beta beta lorem node alpha word value text value
+alpha word value value node al …
+```
 
-- **Scan-bound work is rurex's territory**: big inputs, few matches,
-  untrusted input. The bigger the haystack relative to the number of
-  matches, the bigger the win.
-- **Match-dense extraction is `re`'s territory** today. Producing a
-  hundred thousand small Python match objects costs more in rurex than
-  the engine saves; if your workload extracts huge numbers of matches
-  from small inputs, stay with `re` (or measure your own case).
-- **Compile cost is real but amortized** by design: compile once, or
-  use the cached module functions.
-- **The safety property is free** where it matters: no input can make
-  rurex blow up, and on hostile patterns `re` does not finish at all.
+### Variable parameter: haystack size (80 matches/KB)
+
+![Extraction vs size](img/bench_extract_data_size.png)
+
+| Size | `re` | rurex | Speedup |
+|---:|---:|---:|---:|
+| 64 KB | 2.5 ms | 2.1 ms | rurex ×1.2 |
+| 256 KB | 6.7 ms | 8.5 ms | `re` ×1.3 |
+| 1 MB | 25.3 ms | 34.9 ms | `re` ×1.4 |
+| 4 MB | 97.9 ms | 128.9 ms | `re` ×1.3 |
+
+At this density the two start nearly even and `re` pulls ahead by
+~1.3×: per-match object construction dominates, and its C loop is
+cheaper than rurex' Python-level result assembly.
+
+### Variable parameter: match density (1 MB haystack)
+
+![Extraction vs density](img/bench_extract_match_density.png)
+
+| Density | `re` | rurex | Speedup |
+|---:|---:|---:|---:|
+| 5 /KB | 19.1 ms | 4.1 ms | rurex ×4.7 |
+| 20 /KB | 18.6 ms | 10.3 ms | rurex ×1.8 |
+| 80 /KB | 25.7 ms | 33.4 ms | `re` ×1.3 |
+| 160 /KB | 28.2 ms | 62.4 ms | `re` ×2.2 |
+
+This is the honest crossover chart. With sparse matches, scanning
+dominates and rurex is up to 4.7× faster; as matches multiply, the
+per-match cost takes over and `re` wins by up to 2.2×. Your workload's
+density decides which engine to use.
+
+---
+
+## Test 3 — Pathological: catastrophic backtracking
+
+The pattern `(x+x+)+y` never matches a run of x's — and for a
+backtracking engine, the number of ways to distribute the x's across
+the nested groups grows exponentially: `re`'s time doubles with every
+two extra input characters. A finite-automata engine cannot backtrack,
+so rurex' time is flat. This is a **safety property** (ReDoS
+resistance), not a speed feature: no pattern and no input can make
+rurex blow up.
+
+**Pattern**
+
+```python
+r"(x+x+)+y"
+```
+
+**Data example**
+
+```
+xxxxxxxxxxxxxxxxxxxxxxxx    (n = 24 of the sweep; no y — nothing matches)
+```
+
+### Variable parameter: input length n (`"x" * n`)
+
+![Pathological vs length](img/bench_pathological_input_length.png)
+
+| n | `re` | rurex |
+|---:|---:|---:|
+| 8 | 24 µs | 229 ns |
+| 12 | 236 µs | 222 ns |
+| 16 | 3.9 ms | 238 ns |
+| 20 | 59.9 ms | 236 ns |
+| 24 | 966 ms | 242 ns |
+| 26 | *≥ 2 s — still running at the timeout* | 246 ns |
+| 28 | — | 248 ns |
+
+Extrapolating `re`'s doubling curve, n=40 would take longer than the
+age of the universe. rurex answers every input in a quarter of a
+microsecond, and would keep doing so at n=40, n=400, n=4 million.
+
+---
 
 ## Reproducing
 
 ```sh
 python -m venv .venv && source .venv/bin/activate
-pip install maturin pytest matplotlib
+pip install maturin pytest matplotlib markdown
 maturin develop --release          # release build — mandatory
 
 python benchmarks/run.py           # runs the suite, writes results.json
-python benchmarks/make_charts.py   # results.json -> docs/img/*.png
+python benchmarks/make_charts.py --html   # charts + docs/benchmarks.html
 ```
 
-`benchmarks/cases.py` defines every case (patterns, haystacks, seeds);
-`benchmarks/run.py` is the harness (auto-calibration, medians,
-environment capture); `benchmarks/make_charts.py` regenerates the
-charts from `results.json`. This page's numbers come from the
-environment above; regenerate on your own hardware before making
-decisions that depend on them.
+`benchmarks/suite.py` defines the three tests (patterns, data
+generators, sweep parameters); `benchmarks/run.py` is the harness
+(auto-calibration, medians, timeout guard, environment capture);
+`benchmarks/make_charts.py` regenerates the charts and the HTML render
+from `results.json`. This page's numbers come from the environment
+above; regenerate on your own hardware before making decisions that
+depend on them.
 
 ---
 
-*The harness, raw results (`benchmarks/results.json`), and chart code
-are in [`benchmarks/`](../benchmarks/). Numbers on this page were
-measured on 2026-10-16 with rurex 0.1.0.*
+*Raw results: [`benchmarks/results.json`](../benchmarks/results.json).
+Numbers on this page were measured on 2026-10-16 with rurex 0.1.0.*

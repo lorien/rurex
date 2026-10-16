@@ -131,7 +131,9 @@ lookaround — are not offered.
 ## Development
 
 See [docs/benchmarks.md](docs/benchmarks.md) for benchmark results and
-methodology (rurex vs `re`, measured end to end).
+methodology (rurex vs `re`, parameter sweeps measured end to end), or
+the rendered [HTML](docs/benchmarks.html) to view it directly in a
+browser.
 
 ```
 python -m venv .venv && source .venv/bin/activate

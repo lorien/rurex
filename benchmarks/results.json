@@ -4,204 +4,219 @@
     "python": "CPython 3.13.5",
     "os": "Linux 6.12.101+deb13-amd64",
     "rurex": "0.1.0",
-    "stdre": "re (re) from stdlib",
-    "build": "maturin develop --release (opt-level=3, LTO=fat)"
-  },
-  "cases": [
-    {
-      "name": "is_match-literal-10MB",
-      "regime": "scan",
-      "method": "is_match",
-      "pattern": "the-needle-string",
-      "what": "Literal existence check, 10 MB, match at the end",
-      "re_s": 0.012615524395368994,
-      "rurex_s": 0.0008760688593611121,
-      "speedup": 14.400151609736563
-    },
-    {
-      "name": "search-literal-10MB",
-      "regime": "scan",
-      "method": "search",
-      "pattern": "the-needle-string",
-      "what": "Literal search, 10 MB, match at the end",
-      "re_s": 0.012655983096919954,
-      "rurex_s": 0.0032089802995324134,
-      "speedup": 3.943926704306686
-    },
-    {
-      "name": "search-rare-word-10MB",
-      "regime": "scan",
-      "method": "search",
-      "pattern": "zebra\\d{4}",
-      "what": "Class+digits pattern, 10 MB, one match near the end",
-      "re_s": 0.004339112448506057,
-      "rurex_s": 0.002779395068064332,
-      "speedup": 1.5611715291442776
-    },
-    {
-      "name": "search-anchor-end-10MB",
-      "regime": "scan",
-      "method": "search",
-      "pattern": "xyzzy$",
-      "what": "Anchored pattern, 10 MB, match at the end",
-      "re_s": 0.004629948958754539,
-      "rurex_s": 0.001955653114710003,
-      "speedup": 2.367469426929069
-    },
-    {
-      "name": "findall-digits-1MB",
-      "regime": "match-heavy",
-      "method": "findall",
-      "pattern": "\\d{3,4}",
-      "what": "findall over ~120k matches, 1 MB",
-      "re_s": 0.03939346820116043,
-      "rurex_s": 0.08613245682790875,
-      "speedup": 0.4573591611332757
-    },
-    {
-      "name": "finditer-consume-1MB",
-      "regime": "match-heavy",
-      "method": "finditer",
-      "pattern": "\\w+",
-      "what": "finditer fully consumed (span() per match), 1 MB",
-      "re_s": 0.06862651985138654,
-      "rurex_s": 0.10392240080982447,
-      "speedup": 0.6603631105190828
-    },
-    {
-      "name": "sub-template-1MB",
-      "regime": "match-heavy",
-      "method": "sub",
-      "pattern": "(\\d{3})-(\\d{4})",
-      "repl": "\\1.\\2",
-      "what": "sub with a group template over ~40k matches, 1 MB",
-      "re_s": 0.04715844457969069,
-      "rurex_s": 0.042917016241699454,
-      "speedup": 1.0988285931646418
-    },
-    {
-      "name": "search-short-64B",
-      "regime": "overhead",
-      "method": "search",
-      "pattern": "\\d+",
-      "what": "search on a 55-byte text (call overhead bound)",
-      "re_s": 8.920430578291416e-07,
-      "rurex_s": 5.877038817852735e-07,
-      "speedup": 1.5178444204237245
-    },
-    {
-      "name": "findall-unicode-1MB",
-      "regime": "unicode",
-      "method": "findall",
-      "pattern": "\\w+",
-      "what": "\\w+ over multilingual (Greek/Cyrillic/CJK/Latin) text",
-      "re_s": 0.025895727099850774,
-      "rurex_s": 0.04848072165623307,
-      "speedup": 0.5341448356208908
-    },
-    {
-      "name": "findall-greek-1MB",
-      "regime": "unicode",
-      "method": "findall",
-      "pattern": "[\u03b1-\u03c9]+",
-      "what": "Greek-range class over multilingual text",
-      "re_s": 0.014743970055133105,
-      "rurex_s": 0.019617065554484725,
-      "speedup": 0.7515889679923323
-    },
-    {
-      "name": "findall-bytes-1MB",
-      "regime": "bytes",
-      "method": "findall",
-      "pattern": "b'\\\\d+'",
-      "mode": "bytes",
-      "what": "bytes-mode findall over digits, 1 MB",
-      "re_s": 0.038595930114388464,
-      "rurex_s": 0.08747278014197946,
-      "speedup": 0.44123360491963737
-    },
-    {
-      "name": "compile-simple",
-      "regime": "compile",
-      "pattern": "\\d{4}-\\d{2}-\\d{2}",
-      "what": "Simple date pattern",
-      "re_s": 3.7886644387617704e-05,
-      "rurex_s": 0.00030967436730861664,
-      "speedup": 0.1223434949327287
-    },
-    {
-      "name": "compile-url",
-      "regime": "compile",
-      "pattern": "https?://[a-z0-9.-]+/[\\w./-]*",
-      "what": "URL-ish pattern",
-      "re_s": 5.851936265826225e-05,
-      "rurex_s": 0.0003849261808209121,
-      "speedup": 0.1520274940339497
-    },
-    {
-      "name": "compile-datetime",
-      "regime": "compile",
-      "pattern": "(?P<year>\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})",
-      "what": "ISO datetime with named and numbered groups",
-      "re_s": 0.00010218008304946124,
-      "rurex_s": 0.0005520932814106345,
-      "speedup": 0.18507757020405036
-    },
-    {
-      "name": "module-search-cache-hit",
-      "regime": "overhead",
-      "pattern": "\\d+",
-      "what": "Module-level search(), pattern cache hit on both sides",
-      "re_s": 6.486885501071811e-07,
-      "rurex_s": 7.903546364977956e-07,
-      "speedup": 0.820756303754524
-    }
-  ],
-  "pathological": {
-    "pattern": "(x+x+)+y",
-    "re_series": [
-      [
-        8,
-        0.00010698288679122925
-      ],
-      [
-        10,
-        6.52894377708435e-05
-      ],
-      [
-        12,
-        0.0002457122318446636
-      ],
-      [
-        14,
-        0.0009638178162276745
-      ],
-      [
-        16,
-        0.003958854358643293
-      ],
-      [
-        18,
-        0.015637731179594994
-      ],
-      [
-        20,
-        0.06276451982557774
-      ],
-      [
-        22,
-        0.24842313583940268
-      ],
-      [
-        24,
-        1.0148378177545965
-      ],
-      [
-        26,
-        null
-      ]
-    ],
-    "rurex_s_28": 2.560082450509071e-07,
+    "build": "maturin develop --release (opt-level=3, LTO=fat)",
     "timeout_s": 2.0
-  }
+  },
+  "tests": [
+    {
+      "name": "scan",
+      "title": "Test 1 \u2014 Scan: one literal in a large haystack",
+      "description": "A plain literal search for a single needle that occurs once. This is the classic log-grep workload and the automata engine's home turf: rurex scans with SIMD-accelerated prefilters, `re` steps its backtracking VM byte by byte. Two parameters are swept: haystack length, and where in the haystack the needle sits (position 100% is the worst case: the whole text must be scanned).",
+      "pattern": "the-needle-string",
+      "data_example": "jumps delta data node item brown lorem fox alpha item world alpha text amet node lazy fox alpha the the-needle-string \u2026",
+      "op": "search",
+      "sweeps": [
+        {
+          "param": "data_size",
+          "unit": "KB",
+          "label": "haystack size (needle at the end)",
+          "points": [
+            {
+              "value": 64,
+              "re_s": 7.668020296841859e-05,
+              "rurex_s": 8.949201777577401e-06
+            },
+            {
+              "value": 256,
+              "re_s": 0.00031136500416323543,
+              "rurex_s": 3.634646190330386e-05
+            },
+            {
+              "value": 1024,
+              "re_s": 0.001262084529735148,
+              "rurex_s": 0.0001431663460098207
+            },
+            {
+              "value": 4096,
+              "re_s": 0.005012273360043764,
+              "rurex_s": 0.0006950022717937827
+            },
+            {
+              "value": 16384,
+              "re_s": 0.020378563599660993,
+              "rurex_s": 0.0048758845031261445
+            }
+          ]
+        },
+        {
+          "param": "match_position",
+          "unit": "%",
+          "label": "needle position in an 8 MB haystack",
+          "points": [
+            {
+              "value": 0,
+              "re_s": 1.6279747802764177e-07,
+              "rurex_s": 0.0007151770200580359
+            },
+            {
+              "value": 25,
+              "re_s": 0.002493431130424142,
+              "rurex_s": 0.0008949031000956893
+            },
+            {
+              "value": 50,
+              "re_s": 0.005044916598126292,
+              "rurex_s": 0.0011943958699703217
+            },
+            {
+              "value": 75,
+              "re_s": 0.0076253052428364755,
+              "rurex_s": 0.0016021839459426702
+            },
+            {
+              "value": 100,
+              "re_s": 0.011444429680705071,
+              "rurex_s": 0.0028083710372447967
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "extract",
+      "title": "Test 2 \u2014 Extraction: findall over match-dense data",
+      "description": "Digit-run extraction (`findall`) over word filler \u2014 the regime where `re` wins today: matches are small and everywhere, so the cost is dominated by building Python match objects, and rurex currently constructs each result through Python-level slicing. Two parameters are swept: data length at fixed density, and match density at fixed length (isolating the per-match cost from the scan cost).",
+      "pattern": "\\d{3,4}",
+      "data_example": "7685 value word word beta beta lorem node alpha word value text value alpha word value value node alpha node text beta node text node text beta beta beta alpha alpha beta value lorem value alpha lorem node text lorem node alpha word beta node beta node lorem text alpha lorem word beta text word word lorem alpha beta node alpha text alpha text lorem text beta alpha beta text node lorem alpha value",
+      "op": "findall",
+      "sweeps": [
+        {
+          "param": "data_size",
+          "unit": "KB",
+          "label": "haystack size (fixed density, 80 matches/KB)",
+          "points": [
+            {
+              "value": 64,
+              "re_s": 0.002481192848645151,
+              "rurex_s": 0.0020820548478513957
+            },
+            {
+              "value": 256,
+              "re_s": 0.006663022162392736,
+              "rurex_s": 0.008454789938405156
+            },
+            {
+              "value": 1024,
+              "re_s": 0.02531346878968179,
+              "rurex_s": 0.034874804224818944
+            },
+            {
+              "value": 4096,
+              "re_s": 0.09792613256722689,
+              "rurex_s": 0.1288550840690732
+            }
+          ]
+        },
+        {
+          "param": "match_density",
+          "unit": "matches/KB",
+          "label": "match density in a 1 MB haystack",
+          "points": [
+            {
+              "value": 5,
+              "re_s": 0.01910777185112238,
+              "rurex_s": 0.004071761057712137
+            },
+            {
+              "value": 20,
+              "re_s": 0.018634147406555713,
+              "rurex_s": 0.01025129745248705
+            },
+            {
+              "value": 80,
+              "re_s": 0.025701625598594548,
+              "rurex_s": 0.033419466391205785
+            },
+            {
+              "value": 160,
+              "re_s": 0.02819337658584118,
+              "rurex_s": 0.06237956816330552
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pathological",
+      "title": "Test 3 \u2014 Pathological: catastrophic backtracking",
+      "description": "The pattern `(x+x+)+y` never matches a run of x's, and for a backtracking engine the number of ways to distribute the x's across the groups grows exponentially: `re`'s time doubles with every two extra characters. A finite-automata engine cannot backtrack, so rurex's time grows linearly with input length \u2014 at n=28 it answers in nanoseconds where `re` would run for longer than the universe's age. This is a safety property (ReDoS resistance), not a speed feature.",
+      "pattern": "(x+x+)+y",
+      "data_example": "xxxxxxxxxxxxxxxxxxxxxxxx  (n=24 of the sweep; no y, so nothing ever matches)",
+      "op": "guarded_search",
+      "sweeps": [
+        {
+          "param": "input_length",
+          "unit": "chars",
+          "label": "input length n, text = \"x\" * n",
+          "points": [
+            {
+              "value": 8,
+              "re_s": 2.3563392460346222e-05,
+              "rurex_s": 2.289812918752432e-07
+            },
+            {
+              "value": 10,
+              "re_s": 7.121730595827103e-05,
+              "rurex_s": 2.199143897742033e-07
+            },
+            {
+              "value": 12,
+              "re_s": 0.00023610005155205727,
+              "rurex_s": 2.220942978747189e-07
+            },
+            {
+              "value": 14,
+              "re_s": 0.0009256871417164803,
+              "rurex_s": 2.3153873905539513e-07
+            },
+            {
+              "value": 16,
+              "re_s": 0.003867825958877802,
+              "rurex_s": 2.3806502483785152e-07
+            },
+            {
+              "value": 18,
+              "re_s": 0.014786041341722012,
+              "rurex_s": 2.3021109402179717e-07
+            },
+            {
+              "value": 20,
+              "re_s": 0.059869336895644665,
+              "rurex_s": 2.3640243196859957e-07
+            },
+            {
+              "value": 22,
+              "re_s": 0.2384863467887044,
+              "rurex_s": 2.3736362298950554e-07
+            },
+            {
+              "value": 24,
+              "re_s": 0.9656408429145813,
+              "rurex_s": 2.421864261850715e-07
+            },
+            {
+              "value": 26,
+              "re_s": null,
+              "rurex_s": 2.456546411849558e-07
+            },
+            {
+              "value": 28,
+              "re_s": null,
+              "rurex_s": 2.4770818743854763e-07
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
