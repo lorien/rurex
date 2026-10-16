@@ -8,9 +8,9 @@ import rurex
 
 
 def test_compile_returns_regex():
-    assert isinstance(rurex.compile("a+"), rurex.Regex)
-    assert isinstance(rurex.Regex("a+"), rurex.Regex)
-    assert isinstance(rurex.Regex("a+", rurex.I), rurex.Regex)
+    assert isinstance(rurex.compile("a+"), rurex.Pattern)
+    assert isinstance(rurex.Pattern("a+"), rurex.Pattern)
+    assert isinstance(rurex.Pattern("a+", rurex.I), rurex.Pattern)
 
 
 def test_attributes():
@@ -40,9 +40,9 @@ def test_flag_constants_match_re():
 
 def test_stdlib_flags_interoperate():
     # re's constants work directly (bit-compatible design).
-    assert isinstance(rurex.compile("a", stdre.I | stdre.M), rurex.Regex)
-    assert isinstance(rurex.compile("a", stdre.A), rurex.Regex)
-    assert isinstance(rurex.compile("a", stdre.U | stdre.X), rurex.Regex)
+    assert isinstance(rurex.compile("a", stdre.I | stdre.M), rurex.Pattern)
+    assert isinstance(rurex.compile("a", stdre.A), rurex.Pattern)
+    assert isinstance(rurex.compile("a", stdre.U | stdre.X), rurex.Pattern)
 
 
 def test_flags_normalization_like_re():
@@ -125,15 +125,15 @@ def test_non_utf8_bytes_pattern():
     # Raw non-UTF-8 bytes cannot be pattern text; \xNN escapes work.
     with pytest.raises(rurex.error, match="not valid UTF-8"):
         rurex.compile(b"a\xffb")
-    assert isinstance(rurex.compile(rb"a\xffb"), rurex.Regex)
+    assert isinstance(rurex.compile(rb"a\xffb"), rurex.Pattern)
 
 
 def test_bytes_unicode_superset_optin():
     # Default: ASCII classes (like re). (?u:...) opts into UTF-8-aware
     # matching for a region — an engine capability re lacks.
-    assert isinstance(rurex.compile(rb"\w+"), rurex.Regex)
-    assert isinstance(rurex.compile(rb"(?u:\w+)"), rurex.Regex)
-    assert isinstance(rurex.compile(rb"(?-u)\x7b\xa9(?u:(.*))"), rurex.Regex)
+    assert isinstance(rurex.compile(rb"\w+"), rurex.Pattern)
+    assert isinstance(rurex.compile(rb"(?u:\w+)"), rurex.Pattern)
+    assert isinstance(rurex.compile(rb"(?-u)\x7b\xa9(?u:(.*))"), rurex.Pattern)
 
 
 def test_verbose_flag_parses():
@@ -174,7 +174,7 @@ def test_deviation_locale_rejected_everywhere():
 def test_match_and_prefixmatch_both_ship():
     # ADR-0007: mirror Python 3.15 — both names, same behavior.
     assert hasattr(rurex, "match")
-    assert hasattr(rurex.Regex, "match")
+    assert hasattr(rurex.Pattern, "match")
     assert hasattr(rurex, "prefixmatch")
     rx = rurex.compile(r"ab")
     assert rx.match("abc").span() == rx.prefixmatch("abc").span()

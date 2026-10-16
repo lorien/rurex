@@ -40,7 +40,7 @@ def test_public_surface():
             "split",
             "sub",
             "subn",
-            "Regex",
+            "Pattern",
             "RegexSet",
             "Match",
             "FindIter",

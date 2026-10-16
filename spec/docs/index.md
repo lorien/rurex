@@ -38,6 +38,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   `match` ships alongside `prefixmatch` with identical behavior,
   mirroring Python 3.15's dual naming; supersedes ADR-0004
   decision 2's "no `match` alias" clause.
+- [adr/0008-pattern-class-name.md](adr/0008-pattern-class-name.md) —
+  the compiled class is `Pattern` (no `Regex` in the public surface),
+  with `re.Pattern` value semantics: equality/hash, weakref, typing
+  subscription, read-only `groupindex`, `scanner`.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

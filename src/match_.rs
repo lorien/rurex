@@ -334,6 +334,15 @@ impl Match {
         })
     }
 
+    /// Typing subscription (`rurex.Match[str]`), like `re.Match`.
+    #[classmethod]
+    fn __class_getitem__<'py>(
+        cls: &Bound<'py, pyo3::types::PyType>,
+        item: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyGenericAlias>> {
+        pyo3::types::PyGenericAlias::new(cls.py(), cls.as_any(), item)
+    }
+
     fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
         let (start, end) = self.spans_py[0].unwrap_or((0, 0));
         let piece = self.group_value(py, 0)?;

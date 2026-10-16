@@ -8,7 +8,7 @@ implementation is written against.
 ## Module attributes and functions
 
 - `rurex.__version__` — package version (from Cargo metadata).
-- `rurex.compile(pattern, flags=0) -> Regex` — validate and compile
+- `rurex.compile(pattern, flags=0) -> Pattern` — validate and compile
   once. The pattern's type selects the mode: `str` compiles a Unicode
   regex, `bytes` compiles a bytes regex.
 - `rurex.compile_set(patterns, flags=0) -> RegexSet` — compile many
@@ -58,18 +58,27 @@ a `str` pattern raises CPython's message. Bits the engine cannot honor
 are rejected loudly: `LOCALE` with `bytes` (`LOCALE is not supported
 by the rurex engine`), `TEMPLATE` (1), `DEBUG` (128), and any unknown
 bits (`unknown flag bits: 0x…`). `ASCII` on `bytes` is a no-op, as in
-`re`. `Regex.flags` reports the normalized value like `re` does:
+`re`. `Pattern.flags` reports the normalized value like `re` does:
 `UNICODE` is forced on for `str` patterns compiled without `ASCII`.
 
 There is no `SWAP_GREED` flag: swapped greediness is pattern syntax,
 `(?U)a+?` (ADR-0004, revised).
 
-## Regex objects
+## Pattern objects
 
-`Regex(pattern, flags=0)` is equivalent to `rurex.compile`.
+`Pattern(pattern, flags=0)` is equivalent to `rurex.compile`.
 
 Attributes: `pattern`, `flags`, `groups` (number of capture groups),
-`groupindex` (name -> number mapping).
+`groupindex` (name -> number mapping, read-only `mappingproxy` like
+`re.Pattern.groupindex`).
+
+Patterns compare by value — equal iff the pattern text (str vs bytes
+distinguished) and the flags are equal — with a consistent `__hash__`,
+so they work as dict keys exactly like `re.Pattern`. They are
+weakref-able and typing-subscriptable (`rurex.Pattern[str]`,
+`rurex.Match[str]`), like `re.Pattern`/`re.Match`. Unlike
+`re.Pattern` (which cannot be instantiated directly),
+`rurex.Pattern(...)` is public and equivalent to `rurex.compile`.
 
 Methods. The five text methods accept `pos`/`endpos` logical bounds.
 Exactly like `re`: `pos` only moves where the scan starts (`^`/`\A`
@@ -101,8 +110,14 @@ translated to engine byte offsets internally.
   `re` template syntax (`\1`, `\g<name>`, `\g<0>`) or a callable
   receiving each `Match`.
 - `subn(repl, text, count=0) -> (str, int)`.
+- `scanner(text, pos=0, endpos=None) -> Scanner` — successive
+  `match()`/`search()` over one text, like `re.Pattern.scanner`.
+  The scanner exposes `.pattern`, `.search()` (next unanchored
+  match) and `.match()` (next match anchored at the cursor).
+  `SRE_Scanner` parity quirk preserved: a `match()` miss consumes
+  the match it rejected — the cursor advances on every call.
 
-`Regex` supports `copy`/`deepcopy` and pickling via `__reduce__`
+`Pattern` supports `copy`/`deepcopy` and pickling via `__reduce__`
 (recompiles from `pattern` + `flags`; a compiled program is not
 pickled). `repr(rx)` renders as `rurex.compile('a+')`, with flags when
 non-default.
@@ -139,13 +154,13 @@ membership only (ADR-0004):
 - `matches(text) -> list[bool]` — one boolean per pattern, in order.
 
 No offsets, captures, or `pos`/`endpos` in v0. Text arguments follow
-the same mode-mismatch `TypeError`s as `Regex`, and a bad pattern
+the same mode-mismatch `TypeError`s as `Pattern`, and a bad pattern
 raises `rurex.error` with the full attribute set — `pattern` and
 `pos` refer to the individual failing pattern.
 
 ## Match objects
 
-Attributes: `re` (the Regex), `string` (the original scanned text —
+Attributes: `re` (the Pattern), `string` (the original scanned text —
 the Python object, not a re-encoded copy), `pos`, `endpos`,
 `lastindex`, `lastgroup`.
 

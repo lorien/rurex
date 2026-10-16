@@ -119,7 +119,7 @@ fn escape_bytes(bytes: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Compile a regular expression into a `rurex.Regex`.
+/// Compile a regular expression into a `rurex.Pattern`.
 #[pyfunction]
 #[pyo3(signature = (pattern, flags = 0))]
 fn compile(pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Regex> {

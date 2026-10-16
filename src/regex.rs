@@ -6,7 +6,8 @@ use std::sync::{Arc, OnceLock};
 
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyBytes, PyDict, PyList, PyString, PyTuple};
+use pyo3::types::PyGenericAlias;
+use pyo3::types::{PyAny, PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
 
 use crate::error;
 use crate::flags;
@@ -24,8 +25,10 @@ enum Pattern {
 }
 
 /// A compiled regular expression; construct via `rurex.compile` (or
-/// `Regex(...)` directly).
-#[pyclass(name = "Regex", module = "rurex", frozen)]
+/// `rurex.Pattern(...)` directly). Mirrors `re.Pattern` (ADR-0008):
+/// value equality on pattern text + flags, weakref-able, typing-
+/// subscriptable, with a `scanner` for successive match/search.
+#[pyclass(name = "Pattern", module = "rurex", frozen, weakref)]
 pub struct Regex {
     inner: Inner,
     pattern: Pattern,
@@ -334,6 +337,35 @@ impl Regex {
             })
             .as_ref()
     }
+
+    /// Shared `match`/`prefixmatch` implementation (kept out of
+    /// `#[pymethods]` so it is not exposed as a Python method).
+    pub(crate) fn match_impl<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        text: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        // Same scan as `search`, accepted only if the match starts
+        // exactly at the (length-clamped) window start; leftmost-first
+        // guarantees the match there is found first when it exists.
+        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
+        let start = match extract_hay(bytes_mode, text)? {
+            // `pos == 0` skips the walk: counting every character of a
+            // large text is O(n) and 0 is the answer anyway.
+            Hay::Text(s) => {
+                if pos == 0 {
+                    0
+                } else {
+                    pos.min(s.chars().count())
+                }
+            }
+            Hay::Bytes(b) => pos.min(b.len()),
+        };
+        let m = Self::search(slf, py, text, pos, endpos)?;
+        Ok(m.filter(|m| m.start0() == start as isize))
+    }
 }
 
 #[pymethods]
@@ -367,9 +399,10 @@ impl Regex {
         self.groups
     }
 
-    /// A mapping of group name to group number.
+    /// A mapping of group name to group number, read-only like
+    /// `re.Pattern.groupindex` (a `types.MappingProxyType` view).
     #[getter]
-    fn groupindex<'py>(&self, py: Python<'py>) -> Bound<'py, PyDict> {
+    fn groupindex<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let dict = PyDict::new(py);
         match &self.inner {
             Inner::Text(re) => {
@@ -387,7 +420,8 @@ impl Regex {
                 }
             }
         }
-        dict
+        let proxy = py.import("types")?.getattr("MappingProxyType")?;
+        Ok(proxy.call1((dict,))?.into_any())
     }
 
     /// True if the pattern matches anywhere in `text`.
@@ -498,32 +532,32 @@ impl Regex {
         Self::match_impl(slf, py, text, pos, endpos)
     }
 
-    /// Shared `match`/`prefixmatch` implementation.
-    fn match_impl<'py>(
+    /// A scanner for successive `match`/`search` calls over one text,
+    /// like `re.Pattern.scanner` (`re.Scanner`-style iteration).
+    #[pyo3(signature = (text, pos = 0, endpos = None))]
+    fn scanner<'py>(
         slf: PyRef<'_, Self>,
         py: Python<'py>,
         text: &Bound<'py, PyAny>,
         pos: usize,
         endpos: Option<usize>,
-    ) -> PyResult<Option<Match>> {
-        // Same scan as `search`, accepted only if the match starts
-        // exactly at the (length-clamped) window start; leftmost-first
-        // guarantees the match there is found first when it exists.
-        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let start = match extract_hay(bytes_mode, text)? {
-            // `pos == 0` skips the walk: counting every character of a
-            // large text is O(n) and 0 is the answer anyway.
-            Hay::Text(s) => {
-                if pos == 0 {
-                    0
-                } else {
-                    pos.min(s.chars().count())
-                }
-            }
-            Hay::Bytes(b) => pos.min(b.len()),
-        };
-        let m = Self::search(slf, py, text, pos, endpos)?;
-        Ok(m.filter(|m| m.start0() == start as isize))
+    ) -> PyResult<Scanner> {
+        // Same window computation as finditer; the scanner owns its
+        // advancing cursor from there.
+        let it = Self::finditer(slf, py, text, pos, endpos)?;
+        Ok(Scanner {
+            re: it.re,
+            string: it.string,
+            pos: it.pos,
+            endpos: it.endpos,
+            scan: it.scan,
+            end_b: it.end_b,
+            chars_seen: it.chars_seen,
+            bytes_seen: it.bytes_seen,
+            names: it.names,
+            bytes_mode: it.bytes_mode,
+            done: it.done,
+        })
     }
 
     /// The whole `[pos, endpos)` window must match.
@@ -797,6 +831,55 @@ impl Regex {
         count: usize,
     ) -> PyResult<(Py<PyAny>, usize)> {
         substitute(slf, py, repl, text, count)
+    }
+
+    /// Value equality like `re.Pattern`: same pattern text (str vs
+    /// bytes distinguished) and same flags.
+    fn __eq__<'py>(slf: PyRef<'_, Self>, other: &Bound<'py, PyAny>) -> PyResult<Py<PyAny>> {
+        let py = other.py();
+        if let Ok(other) = other.extract::<PyRef<'_, Self>>() {
+            let same_text = match (&slf.pattern, &other.pattern) {
+                (Pattern::Text(a), Pattern::Text(b)) => a == b,
+                (Pattern::Bytes(a), Pattern::Bytes(b)) => a == b,
+                _ => false,
+            };
+            let eq = same_text && slf.flags == other.flags;
+            Ok(eq
+                .into_pyobject(py)
+                .expect("infallible")
+                .to_owned()
+                .unbind()
+                .into_any())
+        } else {
+            Ok(py.NotImplemented())
+        }
+    }
+
+    /// Consistent with `__eq__`: hash of (mode, pattern text, flags).
+    fn __hash__(&self) -> isize {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        match &self.pattern {
+            Pattern::Text(s) => {
+                0u8.hash(&mut h);
+                s.hash(&mut h);
+            }
+            Pattern::Bytes(b) => {
+                1u8.hash(&mut h);
+                b.hash(&mut h);
+            }
+        }
+        self.flags.hash(&mut h);
+        h.finish() as isize
+    }
+
+    /// Typing subscription (`rurex.Pattern[str]`), like `re.Pattern`.
+    #[classmethod]
+    fn __class_getitem__<'py>(
+        cls: &Bound<'py, PyType>,
+        item: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyGenericAlias>> {
+        PyGenericAlias::new(cls.py(), cls.as_any(), item)
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
@@ -1255,5 +1338,135 @@ impl FindIter {
                 Ok(None)
             }
         }
+    }
+}
+
+/// Successive `match`/`search` over one text, like `re.Pattern`'s
+/// `scanner` (`_sre.SRE_Scanner`). Owns its scan state (same shape as
+/// `FindIter`); `match` accepts only a match starting exactly at the
+/// cursor, and — matching CPython — a failed `match` still consumes
+/// the rejected match.
+#[pyclass(name = "Scanner", module = "rurex")]
+pub struct Scanner {
+    re: Py<Regex>,
+    string: Py<PyAny>,
+    pos: usize,
+    endpos: Endpos,
+    scan: usize,
+    end_b: usize,
+    chars_seen: usize,
+    bytes_seen: usize,
+    names: Arc<Vec<Option<String>>>,
+    bytes_mode: bool,
+    done: bool,
+}
+
+impl Scanner {
+    /// Produce the next match; `anchored` requires it to start exactly
+    /// at the cursor (byte offset `self.scan`), and a failed anchored
+    /// call advances nothing.
+    fn next(&mut self, py: Python<'_>, anchored: bool) -> PyResult<Option<Match>> {
+        if self.done || self.scan > self.end_b {
+            self.done = true;
+            return Ok(None);
+        }
+        let re_ref = self.re.bind(py).get();
+        match (&re_ref.inner, self.bytes_mode) {
+            (Inner::Text(engine), false) => {
+                let s = self.string.bind(py).extract::<&str>()?;
+                let hay = &s[..self.end_b];
+                let scan = self.scan;
+                let spans = py.detach(|| captures_spans_text(engine, hay, scan));
+                let Some(spans) = spans else {
+                    self.done = true;
+                    return Ok(None);
+                };
+                let (sb, se) = spans[0].expect("group 0 always matches");
+                // Character offset of the cursor before this step (for
+                // the anchored filter). Like CPython's SRE_Scanner, a
+                // failed anchored call still consumes the match it
+                // rejected — the state always advances.
+                let cursor = if anchored {
+                    Some(self.chars_seen + s[self.bytes_seen..scan].chars().count())
+                } else {
+                    None
+                };
+                let mut py_spans = Vec::with_capacity(spans.len());
+                for span in &spans {
+                    py_spans.push(span.map(|(a, b)| {
+                        let base = self.chars_seen + s[self.bytes_seen..a].chars().count();
+                        (base, base + s[a..b].chars().count())
+                    }));
+                }
+                self.chars_seen += s[self.bytes_seen..se].chars().count();
+                self.bytes_seen = se;
+                self.scan = if sb == se { next_boundary(s, se) } else { se };
+                let m = Match::new(
+                    self.re.clone_ref(py),
+                    self.string.clone_ref(py),
+                    self.pos,
+                    self.endpos.replicate(),
+                    py_spans,
+                    self.names.clone(),
+                    false,
+                );
+                Ok(match cursor {
+                    Some(c) if m.start0() != c as isize => None,
+                    _ => Some(m),
+                })
+            }
+            (Inner::Bytes(engine), true) => {
+                let b = self.string.bind(py).extract::<&[u8]>()?;
+                let hay = &b[..self.end_b];
+                let scan = self.scan;
+                let spans = py.detach(|| captures_spans_bytes(engine, hay, scan));
+                let Some(spans) = spans else {
+                    self.done = true;
+                    return Ok(None);
+                };
+                let (sb, se) = spans[0].expect("group 0 always matches");
+                // SRE_Scanner parity: an anchored miss still consumes.
+                let reject = anchored && sb != scan;
+                self.scan = if sb == se { se + 1 } else { se };
+                if reject {
+                    return Ok(None);
+                }
+                Ok(Some(Match::new(
+                    self.re.clone_ref(py),
+                    self.string.clone_ref(py),
+                    self.pos,
+                    self.endpos.replicate(),
+                    spans,
+                    self.names.clone(),
+                    true,
+                )))
+            }
+            _ => {
+                self.done = true;
+                Ok(None)
+            }
+        }
+    }
+}
+
+#[pymethods]
+impl Scanner {
+    /// The pattern this scanner was created from.
+    #[getter]
+    fn pattern<'py>(&self, py: Python<'py>) -> Bound<'py, PyAny> {
+        self.re.clone_ref(py).into_bound(py).into_any()
+    }
+
+    /// Next match from the cursor (unanchored).
+    fn search(&mut self, py: Python<'_>) -> PyResult<Option<Match>> {
+        self.next(py, false)
+    }
+
+    /// Next match anchored at the cursor. Like `SRE_Scanner.match`,
+    /// a miss consumes the match it rejected — the cursor always
+    /// advances by one call.
+    #[pyo3(name = "match")]
+    fn match_(&mut self, py: Python<'_>) -> PyResult<Option<Match>> {
+        self.next(py, true)
     }
 }
