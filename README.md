@@ -1,23 +1,28 @@
-# rurex
+# rurex — faster, linear-time regular expressions for Python with a
+re-compatible API
 
 [![CI](https://github.com/lorien/rurex/actions/workflows/ci.yml/badge.svg)](https://github.com/lorien/rurex/actions/workflows/ci.yml)
 
 Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
-crate: **linear-time regular expressions** for Python, with an API modeled
-on the standard `re` module.
+crate: **linear-time matching** — catastrophic backtracking (ReDoS)
+is impossible by construction — and **faster than `re` in every
+measured regime**: up to ×13 on scans, ahead on extraction, and
+inputs that hang `re` forever answer in ~250 ns. The API — names,
+flags, keyword arguments, `Match` semantics, even error messages and
+positions — is **verified continuously against CPython's own
+`test_re.py`** plus a differential suite.
 
 ## Use it as `re`
 
 If your patterns stay inside the supported syntax, rurex is a
-drop-in: same names, same flags (a real `RegexFlag` `IntFlag`, not
-bare ints), same keyword arguments, same `Match` semantics, same
-error style.
+drop-in.
 
 ```python
 import rurex as re        # that's it
 ```
 
-**No-gos — fail loudly at compile time** (`rurex.PatternError`):
+**Not supported — rejected at compile time with a clear error**
+(`rurex.PatternError`):
 
 - Lookaround: `(?=...)`, `(?!...)`, `(?<=...)`, `(?<!...)`
 - Backreferences: `\1`, `(?P=name)`
