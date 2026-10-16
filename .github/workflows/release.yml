@@ -55,7 +55,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          key: x86_64
+          # Matrix-aware: a shared per-arch key let one cell's target/
+          # (stale pyo3 build config) leak into cells for other
+          # interpreters - the same cross-contamination that broke
+          # CI's 3.14t cell before its key became python-aware.
+          key: py-${{ matrix.py }}-x86_64
       - uses: astral-sh/setup-uv@v7
       - name: Build wheel
         run: |
@@ -100,7 +104,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          key: aarch64
+          key: py-${{ matrix.py }}-aarch64
       - uses: astral-sh/setup-uv@v7
       - name: Build wheel
         run: |
