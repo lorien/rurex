@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v7
+      - run: uv python install 3.13
+      - run: uvx --from maturin[uv] maturin sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: target/wheels/*.tar.gz
+
+  wheels:
+    runs-on: ubuntu-latest
+    # The manylinux_2_28 image sets the glibc floor (RHEL 8, 2019+);
+    # it ships the aarch64 cross-toolchain used by the arm cells.
+    container: ghcr.io/rust-manylinux/rust-manylinux_2_28:x86_64
+    strategy:
+      fail-fast: false
+      matrix:
+        # 18 cells: {x86_64, aarch64} x {cp310..cp315 version-specific
+        # (12), abi3 fallback (2), cp314t/cp315t free-threaded (4)}
+        # (ADR-0005); + sdist from the job above = 19 artifacts.
+        include:
+          # x86_64, version-specific
+          - { py: "3.10", rust-target: "" }
+          - { py: "3.11", rust-target: "" }
+          - { py: "3.12", rust-target: "" }
+          - { py: "3.13", rust-target: "" }
+          - { py: "3.14", rust-target: "" }
+          - { py: "3.15", rust-target: "" }
+          # aarch64 (cross-compiled), version-specific
+          - { py: "3.10", rust-target: aarch64-unknown-linux-gnu }
+          - { py: "3.11", rust-target: aarch64-unknown-linux-gnu }
+          - { py: "3.12", rust-target: aarch64-unknown-linux-gnu }
+          - { py: "3.13", rust-target: aarch64-unknown-linux-gnu }
+          - { py: "3.14", rust-target: aarch64-unknown-linux-gnu }
+          - { py: "3.15", rust-target: aarch64-unknown-linux-gnu }
+          # abi3-py310 fallback (ADR-0005)
+          - { py: "3.10", rust-target: "", features: abi3 }
+          - { py: "3.10", rust-target: aarch64-unknown-linux-gnu, features: abi3 }
+          # free-threaded (always version-specific, never abi3)
+          - { py: "3.14t", rust-target: "" }
+          - { py: "3.15t", rust-target: "" }
+          - { py: "3.14t", rust-target: aarch64-unknown-linux-gnu }
+          - { py: "3.15t", rust-target: aarch64-unknown-linux-gnu }
+    name: wheel ${{ matrix.py }} ${{ matrix.rust-target || 'x86_64' }} ${{ matrix.features && '(abi3)' || '' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.rust-target }}
+      - uses: astral-sh/setup-uv@v7
+      - name: Provision target interpreter
+        run: uv python install "${{ matrix.py }}"
+      - name: Build wheel
+        env:
+          PYO3_CROSS_PYTHON_VERSION: ${{ matrix.py }}
+        run: |
+          FEATURES="${{ matrix.features }}"
+          TARGET_ARGS=""
+          if [ -n "${{ matrix.rust-target }}" ]; then
+            TARGET_ARGS="--target ${{ matrix.rust-target }}"
+          fi
+          # The t in "3.14t" confuses maturin's interpreter discovery;
+          # point it at the uv-managed interpreter explicitly.
+          PY="$(uv python find '${{ matrix.py }}')"
+          if [ -n "$FEATURES" ]; then
+            maturin build --release --interpreter "$PY" $TARGET_ARGS --features "$FEATURES" --out dist
+          else
+            maturin build --release --interpreter "$PY" $TARGET_ARGS --out dist
+          fi
+      - name: Show artifacts
+        run: ls -la dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.py }}-${{ matrix.rust-target || 'x86_64' }}-${{ matrix.features || 'native' }}
+          path: dist/*.whl
+
+  publish:
+    # Trusted publishing (OIDC): no PyPI token is stored anywhere.
+    # Requires the one-time registration on pypi.org pointing at
+    # lorien/rurex + this workflow's "publish" job.
+    needs: [sdist, wheels]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # PyPI trusted publishing
+      contents: write # GitHub release assets
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+      - name: List artifacts
+        run: find dist -type f | sort
+      - name: Count check
+        run: |
+          COUNT=$(find dist -type f | wc -l)
+          echo "artifacts: $COUNT"
+          test "$COUNT" -eq 19
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+      - name: Attach to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

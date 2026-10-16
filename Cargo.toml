@@ -5,6 +5,16 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 description = "Python bindings to the Rust regex crate"
+# sdist allowlist: maturin honors cargo package semantics for the
+# source distribution. Anything NOT listed never ships — new repo
+# files are excluded by default and must be added here deliberately
+# (verified: untracked files ride along without this).
+include = [
+    "src/**",
+    "tests/**",
+    "/LICENSE",
+    "/README.md",
+]
 
 [lib]
 name = "rurex"

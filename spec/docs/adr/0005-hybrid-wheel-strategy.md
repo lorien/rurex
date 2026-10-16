@@ -43,3 +43,14 @@ abi3.
   hit source builds in every new-CPython gap window.
 - **Raising the abi3 floor (py311/py312)** — buys nothing we use and
   narrows compatibility.
+
+## Revision (2026-10-16)
+
+The open free-threaded question was decided with the owner: ship
+`cp314t` and `cp315t` free-threaded wheels for both x86_64 and
+aarch64, always version-specific (never abi3), and test both t-builds
+in the regular CI matrix. Release-platform decisions recorded the
+same day: glibc floor manylinux_2_28 (RHEL 8+), aarch64 via
+cross-compilation inside the same manylinux job, musllinux deferred
+(adding wheels to an already-published PyPI version needs no new
+release).
