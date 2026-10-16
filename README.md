@@ -1,5 +1,4 @@
-# rurex — faster, linear-time regular expressions for Python with a
-re-compatible API
+# rurex — faster, linear-time regular expressions for Python with a re-compatible API
 
 [![CI](https://github.com/lorien/rurex/actions/workflows/ci.yml/badge.svg)](https://github.com/lorien/rurex/actions/workflows/ci.yml)
 
