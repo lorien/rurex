@@ -1,6 +1,8 @@
 # rurex — faster, linear-time regular expressions for Python with a re-compatible API
 
 [![CI](https://github.com/lorien/rurex/actions/workflows/ci.yml/badge.svg)](https://github.com/lorien/rurex/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/rurex.svg)](https://pypi.org/project/rurex/)
+[![Python versions](https://img.shields.io/pypi/pyversions/rurex.svg)](https://pypi.org/project/rurex/)
 
 Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
 crate: linear-time matching — catastrophic backtracking (ReDoS)
@@ -89,8 +91,10 @@ Beyond `re`:
 pip install rurex
 ```
 
-> The first binary release (0.1.0) is pending; until it ships, install
-> from source — you will need a [Rust toolchain](https://rustup.rs):
+Binary wheels ship for Linux (x86_64 and aarch64, glibc 2.28+) across
+CPython 3.10–3.15, plus `abi3` fallback and free-threaded (`3.14t`,
+`3.15t`) wheels. Other platforms install from source and need a
+[Rust toolchain](https://rustup.rs):
 
 ```
 git clone https://github.com/lorien/rurex

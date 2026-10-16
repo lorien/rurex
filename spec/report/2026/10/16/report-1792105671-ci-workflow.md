@@ -40,7 +40,9 @@ Add a GitHub Actions workflow running `cargo fmt --check`,
   and re-add when supported (observe on the first CI run).
   (Verified on the maiden run 38821913820: all six Python versions
   including 3.15 passed.)
-- [open] Free-threaded entries (3.14t/3.15t) belong with the publish
+- [acted] Free-threaded entries (3.14t/3.15t) belong with the publish
+  — resolved 2026-10-16: 3.14t/3.15t added to the CI matrix (Phase 2)
+  and ship as release wheels.
   task's wheel-strategy decision, not CI; revisit there.
 
 ### Tooling/process

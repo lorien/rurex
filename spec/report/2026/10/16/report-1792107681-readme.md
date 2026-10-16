@@ -35,7 +35,9 @@ HTML A/B comparison of quickstart scope).
 
 ### Future-task notes
 
-- [open] At 0.1.0 publish time: add the PyPI badge and drop the
+- [acted] At 0.1.0 publish time: add the PyPI badge and drop the
+  — resolved 2026-10-16: PyPI + version badges added, install-from-
+  source note rewritten for the published state.
   "pending first release" note from the Installation section (owned
   by the publish task).
 

@@ -44,7 +44,9 @@ Ad-hoc work (user-directed; not from `spec/docs/plan.md`).
 
 ### Future-task notes
 
-- [open] The public PyPI page carries the minimal placeholder README;
+- [acted] The public PyPI page carries the minimal placeholder README;
+  — resolved 2026-10-16: 0.1.0 published; the PyPI page now renders the
+  real README.
   the first real release (plan.md "Build and publish wheels") should
   ship the project README and proper metadata.
 
