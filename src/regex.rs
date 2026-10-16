@@ -142,9 +142,17 @@ pub(crate) fn validate_pattern(
         // enum is non_exhaustive, so anything else falls back to a
         // position-less error.
         let (msg, offset) = match &err {
-            regex_syntax::Error::Parse(e) => (e.kind().to_string(), Some(e.span().start.offset)),
+            regex_syntax::Error::Parse(e) => {
+                match error::cppythonize_ast(e.kind(), e.span(), text) {
+                    Some((msg, at)) => (msg, Some(at)),
+                    None => (e.kind().to_string(), Some(e.span().start.offset)),
+                }
+            }
             regex_syntax::Error::Translate(e) => {
-                (e.kind().to_string(), Some(e.span().start.offset))
+                match error::cppythonize_hir(e.kind(), e.span(), text) {
+                    Some((msg, at)) => (msg, Some(at)),
+                    None => (e.kind().to_string(), Some(e.span().start.offset)),
+                }
             }
             _ => (err.to_string(), None),
         };
@@ -303,12 +311,59 @@ impl Regex {
                 pattern.get_type()
             )));
         };
-        // Fold leading global inline flags into the flag bits and
-        // rewrite scoped `(?a:` groups; the user-visible pattern text
-        // is unchanged (see `src`).
+        // Fold leading global inline flags into the flag bits,
+        // rewrite scoped `(?a:` groups, and reject the two constructs
+        // CPython rejects but the engine would accept (mid-pattern
+        // global flags, stacked quantifiers). The user-visible
+        // pattern text is unchanged (see `src`).
+        let adjusted = |text: &str| -> PyResult<(String, u32)> {
+            let (rewritten, extra) = flags::inline_adjust(text, flags & flags::VERBOSE != 0)
+                .map_err(|at| {
+                    let pos = error::byte_offset_to_char(text, at);
+                    let (l, c) = error::line_col_text(text, pos);
+                    error::make_error(
+                        py,
+                        "global flags not at the start of the expression",
+                        pattern,
+                        Some(pos),
+                        Some(l),
+                        Some(c),
+                    )
+                    .unwrap_or_else(|_| {
+                        error::PatternError::new_err(
+                            "global flags not at the start of the expression",
+                        )
+                    })
+                })?;
+            if let Some((msg, at)) = flags::group_name_check(&rewritten) {
+                let pos = error::byte_offset_to_char(&rewritten, at);
+                let (l, c) = error::line_col_text(&rewritten, pos);
+                return Err(error::make_error(
+                    py,
+                    &msg,
+                    pattern,
+                    Some(pos),
+                    Some(l),
+                    Some(c),
+                )?);
+            }
+            if let Some(at) = flags::multiple_repeat(&rewritten, extra & flags::VERBOSE != 0) {
+                let pos = error::byte_offset_to_char(&rewritten, at);
+                let (l, c) = error::line_col_text(&rewritten, pos);
+                return Err(error::make_error(
+                    py,
+                    "multiple repeat",
+                    pattern,
+                    Some(pos),
+                    Some(l),
+                    Some(c),
+                )?);
+            }
+            Ok((rewritten, extra))
+        };
         let (src, extra) = match &pat {
             Pattern::Text(s) => {
-                let (rewritten, extra) = flags::inline_adjust(s);
+                let (rewritten, extra) = adjusted(s)?;
                 (Pattern::Text(rewritten), extra)
             }
             Pattern::Bytes(b) => {
@@ -317,7 +372,7 @@ impl Regex {
                 // checked before any rewriting.
                 match std::str::from_utf8(b) {
                     Ok(s) => {
-                        let (rewritten, extra) = flags::inline_adjust(s);
+                        let (rewritten, extra) = adjusted(s)?;
                         (Pattern::Bytes(rewritten.into_bytes()), extra)
                     }
                     Err(_) => {

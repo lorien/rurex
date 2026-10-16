@@ -34,7 +34,9 @@
 
 ### Future-task notes
 
-- [open] CPython `test_re.py` conformance harness: still blocked on
+- [acted] CPython `test_re.py` conformance harness: still blocked on
+  resolved 2026-10-16 (commit 200105b vendored the suite; 74e30d7
+  closed the buffers task).
   `sudo apt install python3-tests` (owner); shim now only needs the
   module-object mapping (`Pattern`/`Match` names, `match` all
   resolve natively).

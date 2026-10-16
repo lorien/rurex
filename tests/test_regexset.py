@@ -52,7 +52,7 @@ def test_syntax_error_attributes_point_at_failing_pattern():
         rurex.compile_set(["ok", "(a"])
     err = excinfo.value
     assert err.pattern == "(a"
-    assert err.msg == "unclosed group"
+    assert err.msg == "missing ), unterminated subpattern"
     assert err.pos == 0
 
 

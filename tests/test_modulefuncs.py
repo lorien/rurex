@@ -79,7 +79,7 @@ def test_errors_match_compile():
     with pytest.raises(rurex.error) as excinfo:
         rurex.search("(a", "a")
     err = excinfo.value
-    assert err.pattern == "(a" and err.msg == "unclosed group" and err.pos == 0
+    assert err.pattern == "(a" and err.msg == "missing ), unterminated subpattern" and err.pos == 0
     with pytest.raises(TypeError, match="pattern must be str or bytes"):
         rurex.search(42, "a")
 

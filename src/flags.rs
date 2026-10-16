@@ -172,7 +172,7 @@ mod tests {
 ///
 /// Byte-for-byte, positions are preserved except for stripped global
 /// `(?a)` groups.
-pub fn inline_adjust(text: &str) -> (String, u32) {
+pub fn inline_adjust(text: &str, verbose_arg: bool) -> Result<(String, u32), usize> {
     let b = text.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(b.len());
     let mut extra: u32 = 0;
@@ -181,8 +181,22 @@ pub fn inline_adjust(text: &str) -> (String, u32) {
 
     const FLAG_CHARS: &[u8] = b"aimsxuUL-";
 
+    // In verbose mode, leading whitespace and `#` comments are
+    // transparent for the "flags at the start" rule (CPython: both
+    // `(?x) a` and ` (?x) a` under VERBOSE compile).
+    let verbose_now = |extra: u32| verbose_arg || extra & VERBOSE != 0;
+
     while i < b.len() {
         let c = b[i];
+        if leading && verbose_now(extra) && (c.is_ascii_whitespace() || c == b'#') {
+            if c == b'#' {
+                while i < b.len() && b[i] != b'\n' {
+                    i += 1;
+                }
+            }
+            i += 1;
+            continue;
+        }
         if c == b'\\' {
             leading = false;
             out.push(c);
@@ -223,6 +237,13 @@ pub fn inline_adjust(text: &str) -> (String, u32) {
             if j > i + 2 && j < b.len() && (b[j] == b')' || b[j] == b':') {
                 let flags = &b[i + 2..j];
                 let scoped = b[j] == b':';
+                let all_global = flags
+                    .iter()
+                    .all(|f| matches!(f, b'a' | b'i' | b'm' | b's' | b'x' | b'u' | b'L'));
+                if !scoped && all_global && !leading {
+                    // CPython 3.11+: global flags must lead the pattern.
+                    return Err(i);
+                }
                 if !scoped
                     && leading
                     && flags
@@ -261,8 +282,153 @@ pub fn inline_adjust(text: &str) -> (String, u32) {
         out.push(c);
         i += 1;
     }
-    (
+    Ok((
         String::from_utf8(out).unwrap_or_else(|_| text.to_string()),
         extra,
-    )
+    ))
+}
+
+/// Reject stacked quantifiers the way CPython does (`a**`, `a*{1,2}`
+/// → `multiple repeat`), which the engine would silently accept as
+/// nested repetition. Returns the byte offset of the offending second
+/// operator. One `?` (lazy) or `+` (possessive) modifier after a
+/// quantifier is legal; `verbose` skips whitespace and `#` comments.
+pub fn multiple_repeat(pattern: &str, verbose: bool) -> Option<usize> {
+    let b = pattern.as_bytes();
+    let mut i = 0usize;
+    // quantified: a quantifier (and its optional single modifier) was
+    // just consumed; atom: a literal/escape/class/group was consumed.
+    let mut quantified = false;
+    let mut modifier_used = false;
+    let mut atom_seen = false;
+    while i < b.len() {
+        let c = b[i];
+        if verbose && (c == b'#' || c.is_ascii_whitespace()) {
+            if c == b'#' {
+                while i < b.len() && b[i] != b'\n' {
+                    i += 1;
+                }
+            } else {
+                i += 1;
+            }
+            continue;
+        }
+        if c == b'\\' {
+            i += 2;
+            (quantified, modifier_used) = (false, false);
+            atom_seen = true;
+            continue;
+        }
+        if c == b'[' {
+            let start = i;
+            i += 1;
+            if i < b.len() && b[i] == b'^' {
+                i += 1;
+            }
+            if i < b.len() && b[i] == b']' {
+                i += 1;
+            }
+            while i < b.len() && b[i] != b']' {
+                if b[i] == b'\\' {
+                    i += 1;
+                }
+                i += 1;
+            }
+            i = (i + 1).min(b.len());
+            let _ = start;
+            (quantified, modifier_used) = (false, false);
+            atom_seen = true;
+            continue;
+        }
+        let is_counted = c == b'{' && b.get(i + 1).is_some_and(u8::is_ascii_digit);
+        if c == b'*' || c == b'+' || c == b'?' || is_counted {
+            if quantified && (!matches!(c, b'?' | b'+') || modifier_used) {
+                return Some(i);
+            }
+            if quantified && matches!(c, b'?' | b'+') {
+                // The single lazy/possessive modifier.
+                modifier_used = true;
+                i += 1;
+                continue;
+            }
+            if atom_seen {
+                quantified = true;
+                modifier_used = false;
+            }
+            // else: a leading operator — the engine's own
+            // `nothing to repeat` reports it; not a stacking error.
+            if is_counted {
+                i += 1;
+                while i < b.len() && (b[i].is_ascii_digit() || matches!(b[i], b',' | b'}')) {
+                    i += 1;
+                }
+            } else {
+                i += 1;
+            }
+            continue;
+        }
+        // A literal or group character: `)` and `|` leave an atom
+        // boundary, everything else is (part of) an atom.
+        (quantified, modifier_used) = (false, false);
+        atom_seen = c != b'(' && c != b'|';
+        i += 1;
+    }
+    None
+}
+
+/// Validate `(?P<name>` group names the way CPython does: the engine
+/// accepts names the `re` parser rejects (e.g. `(?P<a.>)`). Returns
+/// the CPython message and byte offset of the first bad name.
+pub fn group_name_check(pattern: &str) -> Option<(String, usize)> {
+    let bytes = pattern.as_bytes();
+    // Snap forward to a char boundary (escapes may skip into a
+    // multi-byte character).
+    let snap = |i: usize| -> usize {
+        let mut i = i;
+        while i < pattern.len() && !pattern.is_char_boundary(i) {
+            i += 1;
+        }
+        i
+    };
+    let mut i = 0usize;
+    while i + 4 < bytes.len() {
+        if bytes[i] == b'\\' {
+            i = snap(i + 2);
+            continue;
+        }
+        if bytes[i] == b'[' {
+            while i < bytes.len() && bytes[i] != b']' {
+                if bytes[i] == b'\\' {
+                    i += 1;
+                }
+                i += 1;
+            }
+            i = snap(i + 1);
+            continue;
+        }
+        if bytes[i] == b'(' && pattern[i..].starts_with("(?P<") {
+            let name_start = i + 4;
+            // Only fully-closed, well-delimited names are checked
+            // here; unterminated or paren-cut names keep the engine's
+            // error path (mapped separately).
+            let Some(end) = pattern[name_start..].find('>').map(|e| name_start + e) else {
+                i = name_start;
+                continue;
+            };
+            let name = &pattern[name_start..end];
+            let valid = !name.is_empty()
+                && name
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_alphabetic() || c == '_')
+                && name.chars().all(|c| c.is_alphanumeric() || c == '_');
+            if !valid && !name.is_empty() {
+                return Some((format!("bad character in group name '{name}'"), name_start));
+            }
+            i = end + 1;
+            continue;
+        }
+        i += 1;
+    }
+    None
 }

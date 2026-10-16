@@ -226,7 +226,9 @@ position: `pos`/`lineno`/`colno` are `None` and the message carries the
 engine's text.
 
 The structured positions come from parsing the pattern with
-`regex-syntax` (the engine's own parser) before compilation; flag
+`regex-syntax` (the engine's own parser); messages and positions are
+rewritten to CPython's wording for every case its test suite asserts
+(`tests/test_error_parity.py` locks them differentially) before compilation; flag
 problems are `ValueError` (bad arguments), pattern problems are
 `rurex.error` — the same split `re` makes.
 
@@ -259,9 +261,13 @@ the Rust extension and never leaks (the rure-python lesson).
   produce raw-byte matching under the ASCII default).
 - Under `VERBOSE`, the engine ignores Unicode whitespace (e.g.
   `\x85`, `\xa0`); `re` ignores ASCII whitespace only.
-- Stacked quantifiers (`a**`, `a*+`) are accepted by the engine as
-  nested repetition; `re` rejects them as `multiple repeat` and
-  reserves `a*+` for possessive quantifiers (unsupported here).
+- Stacked quantifiers (`a**`, `a*{1,2}`) are rejected as
+  `multiple repeat`, like `re`. The one divergence: `a*+` is
+  possessive in `re` (3.11+) but compiles here as nested repetition
+  — possessive semantics are unsupported (ADR-0002).
+- Global inline flags must lead the pattern (`a(?i)b` raises
+  `global flags not at the start of the expression`, like
+  Python 3.11+); scoped groups (`(?i:...)`) are legal anywhere.
 - Capture groups inside an unbounded loop report the engine's last
   successful iteration; `re` can re-enter a loop body for a final
   empty iteration (`^((x|y)*)*` group 1 is `""` in `re`, `"xyy"`

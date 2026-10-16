@@ -27,7 +27,9 @@
 
 ### Future-task notes
 
-- [open] CPython `test_re.py` conformance harness (planned next):
+- [acted] CPython `test_re.py` conformance harness (planned next):
+  resolved 2026-10-16 (commit 200105b vendored the suite; 74e30d7
+  closed the buffers task).
   `match` now resolves unshimmed; remaining shim surface is
   `Pattern`/`Match` type aliases and the module object itself.
 - [open] Local interpreter is 3.13 (no `re.prefixmatch`); differential

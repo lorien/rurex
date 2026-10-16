@@ -3,21 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## CPython error-message and position parity
-
-Status: new
-Priority: 2
-
-`checkPatternError` asserts exact CPython message text and position;
-rurex currently reports the engine's own wording. Map the tested
-messages in `validate_pattern`/error mapping: `unterminated
-character set`, `nothing to repeat`, `bad escape (end of pattern)`,
-`missing ), unterminated subpattern`, `missing >, unterminated
-name`, `multiple repeat` (needs rejection of stacked quantifiers),
-the unbalanced-parenthesis position, and inline-flag error texts.
-Then drop the "error-message parity" ledger entries (the largest
-bucket after buffers).
-
 ## Build and publish wheels
 
 Status: new

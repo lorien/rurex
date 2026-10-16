@@ -110,9 +110,11 @@ pub(crate) fn parse(
                         .and_then(|s| s.parse().ok())
                         .unwrap_or(usize::MAX);
                     if index >= 100 {
+                        // CPython positions \g<...> reference errors
+                        // at the first character inside '<'.
                         return Err(TplError::error(
                             format!("invalid group reference {index}"),
-                            escape_pos + 1,
+                            i + 3,
                         ));
                     }
                     flush(&mut pieces, i, lit_start);
@@ -127,7 +129,7 @@ pub(crate) fn parse(
                         None => {
                             return Err(TplError {
                                 msg: format!("unknown group name '{name}'"),
-                                pos: escape_pos + 1,
+                                pos: i + 3,
                                 index_error: true,
                             });
                         }
@@ -145,8 +147,9 @@ pub(crate) fn parse(
                     j += 1;
                 }
                 if value > 0o377 {
+                    let lit = String::from_utf8_lossy(&template[i + 1..j]).into_owned();
                     return Err(TplError::error(
-                        "octal escape value outside of range 0-0o377".to_string(),
+                        format!("octal escape value \\{lit} outside of range 0-0o377"),
                         escape_pos,
                     ));
                 }
@@ -169,9 +172,11 @@ pub(crate) fn parse(
                             + u32::from(template[digits_end - 1] - b'0') * 8
                             + u32::from(template[digits_end] - b'0');
                         if value > 0o377 {
+                            let lit =
+                                String::from_utf8_lossy(&template[i + 1..=digits_end]).into_owned();
                             return Err(TplError::error(
-                                "octal escape value outside of range 0-0o377".to_string(),
-                                escape_pos + 1,
+                                format!("octal escape value \\{lit} outside of range 0-0o377"),
+                                escape_pos,
                             ));
                         }
                         flush(&mut pieces, i, lit_start);
