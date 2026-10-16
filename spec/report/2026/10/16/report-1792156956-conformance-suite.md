@@ -45,7 +45,8 @@
   resolved 2026-10-16 (commit 200105b vendored the suite; 74e30d7
   closed the buffers task).
   fixable cluster (~15 methods).
-- [open] plan.md "error-message and position parity" (priority 2).
+- [acted] plan.md "error-message and position parity" (priority 2).
+  — resolved 2026-10-16 by commit 729da30 (error parity task).
 - [open] Scoped `(?a:\W)`-style negated classes still hit the engine's
   UTF-8 safety check in str mode; noted in the ledger via
   test_scoped_flags — revisit only if a user hits it.

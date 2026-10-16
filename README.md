@@ -6,6 +6,42 @@ Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
 crate: **linear-time regular expressions** for Python, with an API modeled
 on the standard `re` module.
 
+## Use it as `re`
+
+If your patterns stay inside the supported syntax, rurex is a
+drop-in: same names, same flags (a real `RegexFlag` `IntFlag`, not
+bare ints), same keyword arguments, same `Match` semantics, same
+error style.
+
+```python
+import rurex as re        # that's it
+```
+
+**No-gos — fail loudly at compile time** (`rurex.PatternError`):
+
+- Lookaround: `(?=...)`, `(?!...)`, `(?<=...)`, `(?<!...)`
+- Backreferences: `\1`, `(?P=name)`
+- Conditional groups: `(?(1)yes|no)`
+- Atomic groups: `(?>...)`
+- `\Z` (spelled `\z` here); octal escapes (`\101`); `LOCALE`/`DEBUG`
+  flags
+
+**Divergences that compile anyway** (rare, but know them):
+
+- Possessive quantifiers (`a*+`) compile as nested repetition with
+  different semantics — grep your codebase for `*+`, `++`, `?+`
+  before swapping in rurex
+- `$` does not match before a trailing newline (use `\n?$` to
+  emulate `re`)
+- Capture groups in unbounded loops report the last non-empty
+  iteration: `^((x|y)*)*` gives `"xyy"` where `re` gives `""`
+- Under `VERBOSE`, Unicode whitespace is ignored too (`re` ignores
+  ASCII only)
+
+Compatibility is verified continuously against CPython's own
+`test_re.py` (vendored and pinned) plus a differential suite; every
+remaining gap falls into one of the categories above.
+
 - **Linear-time guarantee.** Worst-case *O(m·n)* matching — catastrophic
   backtracking is impossible by construction, so rurex is safe on
   untrusted patterns and untrusted input.

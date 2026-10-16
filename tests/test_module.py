@@ -61,9 +61,11 @@ def test_public_surface():
             "FindIter",
             "error",
             "PatternError",
+            "RegexFlag",
         ]
         + ["I", "IGNORECASE", "M", "MULTILINE", "S", "DOTALL"]
         + ["U", "UNICODE", "X", "VERBOSE", "A", "ASCII"]
+        + ["L", "LOCALE", "DEBUG"]
     )
     # PyO3 maintains __all__ on the extension module; maturin's package
     # shim re-exports the public names through it.
@@ -95,3 +97,28 @@ def test_escape_bytes_differential():
 def test_escape_type_error():
     with pytest.raises(TypeError, match="str or bytes"):
         rurex.escape(42)
+
+
+def test_regexflag_enum():
+    # Mirrors re (3.11+): an IntFlag with stdlib values, short names
+    # as aliases, module-prefixed str/repr, bidirectional interop with
+    # plain ints and stdlib re flags.
+    import enum
+    import re as stdre
+
+    assert isinstance(rurex.I, enum.IntFlag)
+    assert rurex.I is rurex.IGNORECASE
+    assert rurex.I.value == stdre.I.value == 2
+    assert str(rurex.I) == "rurex.IGNORECASE"
+    assert str(rurex.I | rurex.M) == "rurex.IGNORECASE|rurex.MULTILINE"
+    assert rurex.RegexFlag.__module__ == "rurex"
+    assert [f.name for f in rurex.RegexFlag] == [
+        "ASCII", "IGNORECASE", "LOCALE", "UNICODE",
+        "MULTILINE", "DOTALL", "VERBOSE", "DEBUG",
+    ]
+    # Deprecated-but-present constants, rejected on use like ours do.
+    assert str(rurex.LOCALE) == "rurex.LOCALE"
+    # IntFlag members work wherever ints do, both directions.
+    assert rurex.compile("a", rurex.I).flags == 34
+    assert rurex.compile("a", stdre.IGNORECASE).flags == 34
+    assert stdre.compile("a", rurex.I).flags == 34

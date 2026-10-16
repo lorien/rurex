@@ -117,7 +117,6 @@ EXPECTED = {
     "ReTests.test_constants": "LOCALE/L flag unsupported (ADR-0004)",
     "ReTests.test_dollar_matches_twice": "error-message/position parity (follow-up task)",
     "ReTests.test_empty_array": "error-message/position parity (follow-up task)",
-    "ReTests.test_enum": "flags are plain ints, not a RegexFlag enum (by-design)",
     "ReTests.test_error": "error-message/position parity (follow-up task)",
     "ReTests.test_fail": "lookaround unsupported (engine has no backtracking; ADR-0002)",
     "ReTests.test_findall_atomic_grouping": "atomic groups (?>...) unsupported (ADR-0002)",

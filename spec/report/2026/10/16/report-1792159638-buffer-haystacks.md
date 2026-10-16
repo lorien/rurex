@@ -52,7 +52,8 @@ plus bytes-like `repl`. Then re-triage and remove the ledger entries.
 
 ### Future-task notes
 
-- [open] plan.md "error-message and position parity" (priority 2) is
+- [acted] plan.md "error-message and position parity" (priority 2) is
+  — resolved 2026-10-16 by commit 729da30 (error parity task).
   now the largest remaining fixable conformance bucket.
 - [open] If `BufferError`-on-resize semantics ever matter, the
   snapshot fields in FindIter/SreScanner are the place to hold a

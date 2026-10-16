@@ -316,22 +316,72 @@ fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("error", m.py().get_type::<error::PatternError>())?;
     // CPython 3.13+ alias.
     m.add("PatternError", m.py().get_type::<error::PatternError>())?;
-    // Flag constants at stdlib `re` bit values (ADR-0004, revised).
-    for (name, value) in [
-        ("I", flags::IGNORECASE),
-        ("IGNORECASE", flags::IGNORECASE),
-        ("M", flags::MULTILINE),
-        ("MULTILINE", flags::MULTILINE),
-        ("S", flags::DOTALL),
-        ("DOTALL", flags::DOTALL),
-        ("U", flags::UNICODE),
-        ("UNICODE", flags::UNICODE),
-        ("X", flags::VERBOSE),
-        ("VERBOSE", flags::VERBOSE),
-        ("A", flags::ASCII),
-        ("ASCII", flags::ASCII),
+
+    // Flags as a `RegexFlag` IntFlag, mirroring `re` (Python 3.11+):
+    // same members, same values, short names as aliases, and the same
+    // module-prefixed repr (`str(rurex.I)` is `'rurex.IGNORECASE'`).
+    // `LOCALE` and `DEBUG` exist as constants like in `re`; using
+    // them still raises `ValueError` (see flags::translate). Rust
+    // internals keep taking plain u32s — IntFlag members convert
+    // transparently both ways.
+    let py = m.py();
+    let flag_globals = pyo3::types::PyDict::new(py);
+    flag_globals.set_item("__name__", "rurex")?;
+    flag_globals.set_item("IntFlag", py.import("enum")?.getattr("IntFlag")?)?;
+    py.run(
+        cr#"class RegexFlag(IntFlag):
+    ASCII = 256
+    IGNORECASE = 2
+    LOCALE = 4
+    UNICODE = 32
+    MULTILINE = 8
+    DOTALL = 16
+    VERBOSE = 64
+    DEBUG = 128
+
+    A = ASCII
+    I = IGNORECASE
+    L = LOCALE
+    M = MULTILINE
+    S = DOTALL
+    U = UNICODE
+    X = VERBOSE
+
+    def __repr__(self):
+        module = 'rurex'
+        if self._name_ is None:
+            return f'{module}.RegexFlag({self._value_!r})'
+        return '|'.join(
+            f'{module}.{n}' for n in self.name.split('|')
+        )
+
+    __str__ = __repr__
+    "#,
+        Some(&flag_globals),
+        None,
+    )?;
+    let flag_cls = flag_globals
+        .get_item("RegexFlag")?
+        .expect("RegexFlag defined above");
+    m.add("RegexFlag", flag_cls.clone())?;
+    for name in [
+        "A",
+        "ASCII",
+        "I",
+        "IGNORECASE",
+        "L",
+        "LOCALE",
+        "M",
+        "MULTILINE",
+        "S",
+        "DOTALL",
+        "U",
+        "UNICODE",
+        "X",
+        "VERBOSE",
+        "DEBUG",
     ] {
-        m.add(name, value)?;
+        m.add(name, flag_cls.getattr(name)?)?;
     }
     Ok(())
 }

@@ -19,6 +19,13 @@ implementation is written against.
 - `rurex.error` — exception raised for pattern errors; subclasses
   `Exception`, exactly like `re.error`.
 
+Flags are a `RegexFlag` `IntFlag` mirroring `re`'s (Python 3.11+):
+same members and values, short names (`I`, `M`, `S`, `U`, `X`, `A`,
+`L`) as aliases, and `str(rurex.I)` renders as `rurex.IGNORECASE`.
+`LOCALE` and `DEBUG` exist as constants like in `re` but raise
+`ValueError` when used. `Pattern.flags` returns a plain int, exactly
+like `re`'s.
+
 Module-level convenience functions mirror `re`'s, with
 `prefixmatch` alongside the historic `match` (both, exactly like
 Python 3.15):
