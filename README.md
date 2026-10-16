@@ -3,13 +3,13 @@
 [![CI](https://github.com/lorien/rurex/actions/workflows/ci.yml/badge.svg)](https://github.com/lorien/rurex/actions/workflows/ci.yml)
 
 Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
-crate: **linear-time matching** — catastrophic backtracking (ReDoS)
-is impossible by construction — and **faster than `re` in every
-measured regime**: up to ×13 on scans, ahead on extraction, and
+crate: linear-time matching — catastrophic backtracking (ReDoS)
+is impossible by construction — and faster than `re` in every
+measured regime: up to ×13 on scans, ahead on extraction, and
 inputs that hang `re` forever answer in ~250 ns. The API — names,
-flags, keyword arguments, `Match` semantics, even error messages and
-positions — is **verified continuously against CPython's own
-`test_re.py`** plus a differential suite.
+flags, keyword arguments, `Match` semantics, even error messages
+and positions — matches `re`, verified continuously against
+CPython's own test suite.
 
 ## Use it as `re`
 
@@ -42,8 +42,8 @@ import rurex as re        # that's it
 - Under `VERBOSE`, Unicode whitespace is ignored too (`re` ignores
   ASCII only)
 
-Compatibility is verified continuously against CPython's own
-`test_re.py` (vendored and pinned) plus a differential suite; every
+Compatibility is verified continuously against a vendored, pinned
+copy of CPython's `re` test suite plus a differential suite; every
 remaining gap falls into one of the categories above.
 
 - **Linear-time guarantee.** Worst-case *O(m·n)* matching — catastrophic
