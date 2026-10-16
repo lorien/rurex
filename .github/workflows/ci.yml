@@ -61,7 +61,9 @@ jobs:
         if: ${{ matrix.free-threaded }}
         run: |
           uv python install "${{ matrix.python-version }}"
-          uv venv .venv --python "${{ matrix.python-version }}"
+          # --seed bootstraps pip into the venv (uv venvs ship without
+          # it; the shared build step invokes .venv/bin/pip).
+          uv venv .venv --seed --python "${{ matrix.python-version }}"
       - name: Build extension and run tests
         run: |
           # Free-threaded cells arrive with .venv already created from
