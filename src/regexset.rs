@@ -144,7 +144,8 @@ pub(crate) fn build(py: Python<'_>, patterns: &Bound<'_, PyAny>, flags: u32) -> 
 impl RegexSet {
     /// True if any pattern in the set matches `text`.
     fn is_match(&self, py: Python<'_>, text: &Bound<'_, PyAny>) -> PyResult<bool> {
-        match extract_hay(self.bytes_mode, text)? {
+        let keep = extract_hay(self.bytes_mode, text)?;
+        match keep.hay()? {
             Hay::Text(s) => match &self.inner {
                 SetInner::Text(set) => Ok(py.detach(|| set.is_match(s))),
                 SetInner::Bytes(_) => unreachable!(),
@@ -162,7 +163,8 @@ impl RegexSet {
         py: Python<'py>,
         text: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyList>> {
-        let flags_vec: Vec<bool> = match extract_hay(self.bytes_mode, text)? {
+        let keep = extract_hay(self.bytes_mode, text)?;
+        let flags_vec: Vec<bool> = match keep.hay()? {
             Hay::Text(s) => match &self.inner {
                 SetInner::Text(set) => {
                     let found = py.detach(|| set.matches(s));

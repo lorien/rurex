@@ -113,8 +113,18 @@ impl Match {
         };
         // Python-level slicing of the stored string keeps lifetimes
         // simple; spans are already in the text's native units (chars
-        // for str, bytes for bytes).
+        // for str, bytes for bytes). For a bytes-like `string`
+        // (bytearray, array, ...) the slice is converted to plain
+        // bytes, exactly like `re.Match.group`.
         let slice = pyo3::types::PySlice::new(py, span.0 as isize, span.1 as isize, 1);
+        if self.bytes_mode && self.string.bind(py).cast::<pyo3::types::PyBytes>().is_err() {
+            // A bytes-like `string` (bytearray, array, ...): slicing
+            // the object itself is item-wise, not byte-wise, so slice
+            // a byte conversion of it instead — like `re.Match.group`.
+            let whole = crate::regex::bytes_like(py, &self.string.bind(py).clone().into_any())
+                .map_err(|_| PyTypeError::new_err("invalid piece"))?;
+            return Ok(Some(whole.get_item(&slice)?.into_any()));
+        }
         Ok(Some(self.string.bind(py).get_item(&slice)?))
     }
 }

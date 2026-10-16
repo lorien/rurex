@@ -174,28 +174,93 @@ fn py_handle(slf: &PyRef<'_, Regex>, py: Python<'_>) -> Py<Regex> {
         .unbind()
 }
 
+/// Copy a bytes-like object (bytearray, memoryview, array, ...) to
+/// fresh `bytes` via `builtins.bytes` — CPython's own buffer-protocol
+/// conversion, so contiguity and type errors come out exactly as in
+/// `re`. Exact `bytes` (and subclasses) never reach this helper; the
+/// caller borrows them zero-copy instead.
+pub(crate) fn bytes_like<'py>(
+    py: Python<'py>,
+    obj: &Bound<'py, PyAny>,
+) -> PyResult<Bound<'py, PyBytes>> {
+    // Reject non-buffers up front: `bytes(int)` would silently make
+    // NUL bytes. `memoryview(obj)` succeeding is the authoritative
+    // "supports the buffer protocol" check (and, unlike a raw buffer
+    // export, it is available under the abi3 build).
+    let mv = py.import("builtins")?.getattr("memoryview")?;
+    mv.call1((obj,)).map_err(|_| {
+        let type_name = obj
+            .get_type()
+            .name()
+            .map_or_else(|_| "?".to_string(), |n| n.to_string());
+        PyTypeError::new_err(format!(
+            "expected string or bytes-like object, got '{}'",
+            type_name
+        ))
+    })?;
+    drop(mv);
+    let converter = py.import("builtins")?.getattr("bytes")?;
+    let owned = converter.call1((obj,)).map_err(|_| {
+        let type_name = obj
+            .get_type()
+            .name()
+            .map_or_else(|_| "?".to_string(), |n| n.to_string());
+        PyTypeError::new_err(format!(
+            "expected string or bytes-like object, got '{}'",
+            type_name
+        ))
+    })?;
+    owned
+        .cast_into::<PyBytes>()
+        .map_err(|_| PyTypeError::new_err("expected string or bytes-like object"))
+}
+
+/// Owns the haystack source for one call: the original `str`/`bytes`
+/// object (borrowed zero-copy, subclasses included) or a `bytes` copy
+/// of a bytes-like input (bytearray, memoryview, array, ...). `hay()`
+/// derives the borrowed view, so call sites bind the `HayKeep` first.
+pub(crate) enum HayKeep<'py> {
+    Text(Bound<'py, PyString>),
+    /// `copied` is true when `bound` is a snapshot of a bytes-like
+    /// object rather than the input itself (iterators keep it).
+    Bytes {
+        bound: Bound<'py, PyBytes>,
+        copied: bool,
+    },
+}
+
+impl<'py> HayKeep<'py> {
+    pub(crate) fn hay(&self) -> PyResult<Hay<'_>> {
+        match self {
+            HayKeep::Text(s) => Ok(Hay::Text(s.to_str()?)),
+            HayKeep::Bytes { bound, .. } => Ok(Hay::Bytes(bound.as_bytes())),
+        }
+    }
+}
+
 pub(crate) fn extract_hay<'py>(
     bytes_mode: bool,
     obj: &'py Bound<'py, PyAny>,
-) -> PyResult<Hay<'py>> {
+) -> PyResult<HayKeep<'py>> {
     if bytes_mode {
-        let bytes_bound: &Bound<'py, PyBytes> = obj.cast::<PyBytes>().map_err(|_| {
-            // CPython distinguishes a str haystack (specific message)
-            // from any other wrong type (generic message).
-            if obj.cast::<PyString>().is_ok() {
-                PyTypeError::new_err("cannot use a bytes pattern on a string-like object")
-            } else {
-                let type_name = obj
-                    .get_type()
-                    .name()
-                    .map_or_else(|_| "?".to_string(), |n| n.to_string());
-                PyTypeError::new_err(format!(
-                    "expected string or bytes-like object, got '{}'",
-                    type_name
-                ))
-            }
-        })?;
-        Ok(Hay::Bytes(bytes_bound.as_bytes()))
+        if let Ok(bound) = obj.cast::<PyBytes>() {
+            return Ok(HayKeep::Bytes {
+                bound: bound.clone(),
+                copied: false,
+            });
+        }
+        // CPython distinguishes a str haystack (specific message) from
+        // any other wrong type (generic message).
+        if obj.cast::<PyString>().is_ok() {
+            return Err(PyTypeError::new_err(
+                "cannot use a bytes pattern on a string-like object",
+            ));
+        }
+        let owned = bytes_like(obj.py(), obj)?;
+        Ok(HayKeep::Bytes {
+            bound: owned,
+            copied: true,
+        })
     } else {
         let s = obj.cast::<PyString>().map_err(|_| {
             if obj.cast::<PyBytes>().is_ok() {
@@ -211,7 +276,7 @@ pub(crate) fn extract_hay<'py>(
                 ))
             }
         })?;
-        Ok(Hay::Text(s.to_str()?))
+        Ok(HayKeep::Text(s.clone()))
     }
 }
 
@@ -395,7 +460,9 @@ impl Regex {
         // exactly at the (length-clamped) window start; leftmost-first
         // guarantees the match there is found first when it exists.
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let start = match extract_hay(bytes_mode, string)? {
+        let keep = extract_hay(bytes_mode, string)?;
+        let hay = keep.hay()?;
+        let start = match hay {
             // `pos == 0` skips the walk: counting every character of a
             // large text is O(n) and 0 is the answer anyway.
             Hay::Text(s) => {
@@ -470,7 +537,9 @@ impl Regex {
 
     /// True if the pattern matches anywhere in `text`.
     fn is_match<'py>(&self, py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<bool> {
-        match extract_hay(matches!(self.inner, Inner::Bytes(_)), string)? {
+        let keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
+        let hay = keep.hay()?;
+        match hay {
             Hay::Text(s) => {
                 let re = match &self.inner {
                     Inner::Text(re) => re,
@@ -501,7 +570,9 @@ impl Regex {
     ) -> PyResult<Option<Match>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = py_handle(&slf, py);
-        match extract_hay(bytes_mode, string)? {
+        let keep = extract_hay(bytes_mode, string)?;
+        let hay = keep.hay()?;
+        match hay {
             Hay::Text(s) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(None);
@@ -592,6 +663,7 @@ impl Regex {
         Ok(SreScanner {
             re: it.re,
             string: it.string,
+            snapshot: it.snapshot,
             pos: it.pos,
             endpos: it.endpos,
             scan: it.scan,
@@ -615,7 +687,9 @@ impl Regex {
     ) -> PyResult<Option<Match>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = py_handle(&slf, py);
-        match extract_hay(bytes_mode, string)? {
+        let keep = extract_hay(bytes_mode, string)?;
+        let hay = keep.hay()?;
+        match hay {
             Hay::Text(s) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(None);
@@ -714,9 +788,26 @@ impl Regex {
         endpos: Option<usize>,
     ) -> PyResult<FindIter> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let (window_ok, names) = match extract_hay(bytes_mode, string)? {
-            Hay::Text(s) => (window_bytes(s, pos, endpos), slf.names.clone()),
-            Hay::Bytes(b) => (window(pos, endpos, b.len()), slf.names.clone()),
+        let keep = extract_hay(bytes_mode, string)?;
+        let hay = keep.hay()?;
+        // A bytes-like input (bytearray, memoryview, ...) is copied
+        // once here: the iterator sees a snapshot, like `re` sees a
+        // locked buffer (resize during iteration is invisible instead
+        // of raising `BufferError`).
+        let (window_ok, names, snapshot) = match (&hay, &keep) {
+            (Hay::Text(s), _) => (window_bytes(s, pos, endpos), slf.names.clone(), None),
+            (
+                Hay::Bytes(b),
+                HayKeep::Bytes {
+                    bound,
+                    copied: true,
+                },
+            ) => (
+                window(pos, endpos, b.len()),
+                slf.names.clone(),
+                Some(bound.clone().unbind()),
+            ),
+            (Hay::Bytes(b), _) => (window(pos, endpos, b.len()), slf.names.clone(), None),
         };
         // An invalid window (endpos < pos after clamping) yields an
         // exhausted iterator immediately.
@@ -727,6 +818,7 @@ impl Regex {
         Ok(FindIter {
             re: py_handle(&slf, py),
             string: string.clone().unbind(),
+            snapshot,
             pos,
             endpos: Endpos::from_opt(endpos),
             scan,
@@ -757,7 +849,9 @@ impl Regex {
         endpos: Option<usize>,
     ) -> PyResult<Bound<'py, PyList>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        match (extract_hay(bytes_mode, string)?, &slf.inner) {
+        let keep = extract_hay(bytes_mode, string)?;
+        let hay = keep.hay()?;
+        match (hay, &slf.inner) {
             (Hay::Text(s), Inner::Text(engine)) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(PyList::empty(py));
@@ -795,7 +889,9 @@ impl Regex {
     ) -> PyResult<Bound<'py, PyList>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut items: Vec<Bound<'_, PyAny>> = Vec::new();
-        match (extract_hay(bytes_mode, string)?, &slf.inner) {
+        let keep = extract_hay(bytes_mode, string)?;
+        let hay = keep.hay()?;
+        match (hay, &slf.inner) {
             (Hay::Text(s), Inner::Text(engine)) => {
                 let mut prev = 0usize;
                 let mut scan = 0usize;
@@ -1144,9 +1240,19 @@ fn substitute(
     let parsed = if repl.is_callable() {
         Repl::Callable(repl.clone().unbind())
     } else if bytes_mode {
-        let bytes = repl
-            .extract::<&[u8]>()
-            .map_err(|_| PyTypeError::new_err("repl must be bytes or callable, not str"))?;
+        // Bytes-like `repl` (bytearray, memoryview, ...) is accepted
+        // like `re` — copied to plain bytes for template parsing.
+        let repl_keep: Bound<'_, PyBytes> = if let Ok(b) = repl.cast::<PyBytes>() {
+            b.clone()
+        } else if repl.cast::<PyString>().is_ok() {
+            return Err(PyTypeError::new_err(
+                "repl must be bytes or callable, not str",
+            ));
+        } else {
+            bytes_like(py, repl)
+                .map_err(|_| PyTypeError::new_err("repl must be bytes or callable, not str"))?
+        };
+        let bytes = repl_keep.as_bytes();
         Repl::Template(
             bytes.to_vec(),
             template::parse(bytes, slf.groups, &names_map)
@@ -1163,7 +1269,9 @@ fn substitute(
         )
     };
 
-    match (extract_hay(bytes_mode, string)?, &reg.inner) {
+    let keep = extract_hay(bytes_mode, string)?;
+    let hay = keep.hay()?;
+    match (hay, &reg.inner) {
         (Hay::Text(s), Inner::Text(engine)) => {
             let names = reg.names.clone();
             let mut out = String::new();
@@ -1244,13 +1352,18 @@ fn substitute(
                             true,
                         );
                         let result = func.bind(py).call1((m,))?;
-                        let piece = result.extract::<&[u8]>().map_err(|_| {
-                            PyTypeError::new_err(format!(
-                                "expected bytes instance, {} found",
-                                result.get_type()
-                            ))
+                        // A bytes-like return (bytearray, ...) is
+                        // accepted and copied, like `re`.
+                        let piece_bound = result.cast::<PyBytes>().cloned().or_else(|_| {
+                            bytes_like(py, &result).map_err(|_| {
+                                PyTypeError::new_err(format!(
+                                    "expected bytes instance, {} found",
+                                    result.get_type()
+                                ))
+                            })
                         })?;
-                        out.extend_from_slice(piece);
+                        let piece: Vec<u8> = piece_bound.as_bytes().to_vec();
+                        out.extend_from_slice(&piece);
                     }
                 }
                 prev = se;
@@ -1292,6 +1405,9 @@ fn template_error(
 pub struct FindIter {
     re: Py<Regex>,
     string: Py<PyAny>,
+    /// Snapshot of a bytes-like input (bytearray, ...); `string`
+    /// stays the original object for `Match.string` parity.
+    snapshot: Option<Py<PyBytes>>,
     pos: usize,
     endpos: Endpos,
     /// Byte scan position.
@@ -1357,7 +1473,18 @@ impl FindIter {
                 )))
             }
             (Inner::Bytes(engine), true) => {
-                let b = self.string.bind(py).extract::<&[u8]>()?;
+                let snapshot_bound;
+                let string_bound;
+                let b: &[u8] = match &self.snapshot {
+                    Some(snap) => {
+                        snapshot_bound = snap.bind(py);
+                        snapshot_bound.as_bytes()
+                    }
+                    None => {
+                        string_bound = self.string.bind(py).cast::<PyBytes>()?;
+                        string_bound.as_bytes()
+                    }
+                };
                 let hay = &b[..self.end_b];
                 let scan = self.scan;
                 let spans = py.detach(|| captures_spans_bytes(engine, hay, scan));
@@ -1394,6 +1521,7 @@ impl FindIter {
 pub struct SreScanner {
     re: Py<Regex>,
     string: Py<PyAny>,
+    snapshot: Option<Py<PyBytes>>,
     pos: usize,
     endpos: Endpos,
     scan: usize,
@@ -1460,7 +1588,18 @@ impl SreScanner {
                 })
             }
             (Inner::Bytes(engine), true) => {
-                let b = self.string.bind(py).extract::<&[u8]>()?;
+                let snapshot_bound;
+                let string_bound;
+                let b: &[u8] = match &self.snapshot {
+                    Some(snap) => {
+                        snapshot_bound = snap.bind(py);
+                        snapshot_bound.as_bytes()
+                    }
+                    None => {
+                        string_bound = self.string.bind(py).cast::<PyBytes>()?;
+                        string_bound.as_bytes()
+                    }
+                };
                 let hay = &b[..self.end_b];
                 let scan = self.scan;
                 let spans = py.detach(|| captures_spans_bytes(engine, hay, scan));
@@ -1605,6 +1744,7 @@ impl Scanner {
         let self_obj: Bound<'py, Scanner> = slf.into_pyobject(py)?;
         let mut state = SreScanner {
             re: re_handle,
+            snapshot: None,
             string: string.clone().unbind(),
             pos: 0,
             endpos: Endpos::Eof(OnceLock::new()),

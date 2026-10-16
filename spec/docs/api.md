@@ -154,6 +154,15 @@ Pattern text must be valid UTF-8 in both modes: a `bytes` pattern
 containing raw non-UTF-8 bytes raises `rurex.error` (use `\xNN`
 escapes, which under the ASCII default mean the raw byte).
 
+Haystacks and `repl` accept any bytes-like object (`bytearray`,
+`memoryview`, `array.array`, `bytes` subclasses), like `re`;
+`Match.string` keeps the original object and `group()` returns plain
+`bytes`. One-shot methods copy such inputs once per call; `finditer`
+and `scanner` copy once at creation — iteration sees a snapshot, so
+unlike `re` (which locks the buffer and raises `BufferError` on
+resize during iteration), mutation is simply invisible to the
+iterator.
+
 ## RegexSet objects
 
 `rurex.compile_set(patterns, flags=0)` compiles any iterable of
