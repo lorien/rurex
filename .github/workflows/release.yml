@@ -39,25 +39,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "3.14t", "3.15t"]
-        features: ["", "abi3"]
-        exclude:
-          - py: "3.10"
-            features: "abi3"
-          - py: "3.11"
-            features: "abi3"
-          - py: "3.12"
-            features: "abi3"
-          - py: "3.13"
-            features: "abi3"
-          - py: "3.14"
-            features: "abi3"
-          - py: "3.15"
-            features: "abi3"
-          - py: "3.14t"
-            features: "abi3"
-          - py: "3.15t"
-            features: "abi3"
+        include:
+          - { py: "3.10" }
+          - { py: "3.11" }
+          - { py: "3.12" }
+          - { py: "3.13" }
+          - { py: "3.14" }
+          - { py: "3.15" }
+          - { py: "3.14t" }
+          - { py: "3.15t" }
+          - { py: "3.10", features: "abi3" }
     name: wheel ${{ matrix.py }} x86_64${{ matrix.features == 'abi3' && ' (abi3)' || '' }}
     steps:
       - uses: actions/checkout@v5
@@ -80,37 +71,29 @@ jobs:
           name: wheel-${{ matrix.py }}-x86_64-${{ matrix.features || 'native' }}
           path: dist/*.whl
 
-  # aarch64 wheels, built natively on GitHub's free arm64 runners:
-  # same steps as the x86_64 job. (A cross-compilation variant via
-  # the rust-manylinux images was tried first; their container env
-  # hijacks the host linker for build scripts. The pypa manylinux_2_28
-  # image is not published for arm64, so the glibc floor here comes
-  # from the runner's own sysroot - auditwheel tags accordingly and
-  # the count check in publish still enforces the full set.)
+  # aarch64 wheels: native build on GitHub's free arm64 runners,
+  # inside the pypa manylinux_2_28 arm64 image so the glibc floor
+  # matches the x86_64 job (a bare runner would tag manylinux_2_34,
+  # the runner's own glibc; a cross-compilation variant via the
+  # rust-manylinux images failed earlier - their container env sets
+  # a nonexistent linker for the host target, breaking build
+  # scripts).
   wheels-aarch64:
     runs-on: ubuntu-24.04-arm
+    container: quay.io/pypa/manylinux_2_28_aarch64:latest
     strategy:
       fail-fast: false
       matrix:
-        py: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "3.14t", "3.15t"]
-        features: ["", "abi3"]
-        exclude:
-          - py: "3.10"
-            features: "abi3"
-          - py: "3.11"
-            features: "abi3"
-          - py: "3.12"
-            features: "abi3"
-          - py: "3.13"
-            features: "abi3"
-          - py: "3.14"
-            features: "abi3"
-          - py: "3.15"
-            features: "abi3"
-          - py: "3.14t"
-            features: "abi3"
-          - py: "3.15t"
-            features: "abi3"
+        include:
+          - { py: "3.10" }
+          - { py: "3.11" }
+          - { py: "3.12" }
+          - { py: "3.13" }
+          - { py: "3.14" }
+          - { py: "3.15" }
+          - { py: "3.14t" }
+          - { py: "3.15t" }
+          - { py: "3.10", features: "abi3" }
     name: wheel ${{ matrix.py }} aarch64${{ matrix.features == 'abi3' && ' (abi3)' || '' }}
     steps:
       - uses: actions/checkout@v5
@@ -154,8 +137,8 @@ jobs:
           find dist -type f | sort
           COUNT=$(find dist -type f | wc -l)
           echo "artifacts: $COUNT"
-          # 8 + 8 wheels + 1 sdist
-          test "$COUNT" -eq 17
+          # 9 + 9 wheels + 1 sdist
+          test "$COUNT" -eq 19
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
