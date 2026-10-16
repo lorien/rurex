@@ -214,8 +214,9 @@ CPPython quirk is preserved: an unknown name in `\g<name>` raises
 
 `rurex.error` subclasses `Exception` like `re.error` and carries the
 same attribute set: `msg` (short reason), `pattern` (the pattern that
-failed), `pos`, `lineno`, `colno`. `rurex.PatternError` is the same
-exception, like `re.PatternError` (Python 3.13+). Positions are
+failed), `pos`, `lineno`, `colno`. The exception class's canonical name is
+`PatternError` (like Python 3.13+); the module-level `error`
+attribute is the legacy alias, exactly as in `re`. Positions are
 character indices for
 `str` patterns and byte indices for `bytes` patterns, exactly as in
 `re`. The exception message mirrors `re`'s formatting:

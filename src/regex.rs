@@ -1397,7 +1397,7 @@ fn template_error(
         (Some(p), Some(l), Some(c))
     };
     error::make_error(py, &e.msg, template_obj, pos, lineno, colno)
-        .unwrap_or_else(|_| error::Error::new_err(e.msg))
+        .unwrap_or_else(|_| error::PatternError::new_err(e.msg))
 }
 
 /// Lazy iterator over matches, returned by `Regex.finditer`.

@@ -23,6 +23,20 @@ def test_error_subclasses_exception():
     assert issubclass(rurex.error, Exception)
 
 
+def test_patternerror_is_the_class_error_the_alias():
+    # Exactly like re (3.13+): one exception class whose canonical
+    # name is PatternError; `error` is the module-level legacy alias.
+    import re as stdre
+
+    assert rurex.error is rurex.PatternError
+    assert rurex.PatternError.__name__ == "PatternError"
+    assert rurex.PatternError.__name__ == stdre.PatternError.__name__
+    try:
+        rurex.compile("(")
+    except rurex.error as e:
+        assert type(e).__name__ == "PatternError"
+
+
 def test_public_surface():
     allowed = (
         [

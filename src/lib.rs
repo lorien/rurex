@@ -313,9 +313,9 @@ fn rurex(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<RegexSet>()?;
     m.add_class::<Match>()?;
     m.add_class::<FindIter>()?;
-    m.add("error", m.py().get_type::<error::Error>())?;
+    m.add("error", m.py().get_type::<error::PatternError>())?;
     // CPython 3.13+ alias.
-    m.add("PatternError", m.py().get_type::<error::Error>())?;
+    m.add("PatternError", m.py().get_type::<error::PatternError>())?;
     // Flag constants at stdlib `re` bit values (ADR-0004, revised).
     for (name, value) in [
         ("I", flags::IGNORECASE),

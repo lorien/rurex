@@ -4,9 +4,11 @@ use pyo3::create_exception;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
-// Error: raised for pattern compilation errors; subclasses `Exception`,
+// PatternError: raised for pattern compilation errors; subclasses
+// `Exception`, the class name mirroring `re.PatternError` (Python 3.13+);
+// the module-level `error` attribute is the legacy alias, like `re.error`.
 // exactly like `re.error` (ADR-0004).
-create_exception!(rurex, Error, pyo3::exceptions::PyException);
+create_exception!(rurex, PatternError, pyo3::exceptions::PyException);
 
 /// Convert a byte offset into a character index within `text`.
 pub(crate) fn byte_offset_to_char(text: &str, offset: usize) -> usize {
@@ -76,7 +78,7 @@ pub(crate) fn make_error(
             );
         }
     }
-    let err = Error::new_err(text);
+    let err = PatternError::new_err(text);
     let value = err.value(py);
     value.setattr("msg", msg)?;
     value.setattr("pattern", pattern)?;
