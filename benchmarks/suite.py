@@ -1,15 +1,11 @@
-"""Benchmark suite: three tests, each with one or more parameter sweeps.
+"""Benchmark suite: five single-variable tests.
 
-A test describes a pattern, why it is interesting, a sample of the data
-it runs on, and a list of sweeps. A sweep varies one parameter (data
-length, match position, density, ...) and measures the time one
-operation takes for each engine.
+Each test varies exactly one parameter and states its fixed context in
+the title; a test op maps to one operation on a precompiled pattern:
 
-Test op names map to operations on a precompiled pattern:
-- "search":  rx.search(text)
-- "findall": rx.findall(text)
-Pathological cases ("guarded_search") are single-shot and timeout-
-guarded in run.py because re's time explodes.
+- "search":        rx.search(text)
+- "findall":       rx.findall(text)
+- "guarded_search": single-shot, timeout-guarded (re explodes)
 """
 
 import random
@@ -43,7 +39,7 @@ def with_needle_at(n_bytes, needle, position_pct):
 
 
 def numbers_with_density(n_bytes, matches_per_kb):
-    r"""Digit runs (\d{3,4}-shaped) embedded in word filler at a given
+    """Digit runs (\\d{3,4}-shaped) embedded in word filler at a given
     density (matches per KB of text)."""
     rng = random.Random(9)
     filler_v = ["alpha", "beta", "word", "text", "value", "node", "lorem"]
@@ -67,59 +63,69 @@ SCAN_PATTERN = "the-needle-string"
 EXTRACT_PATTERN = r"\d{3,4}"
 PATHO_PATTERN = r"(x+x+)+y"
 
-SCAN_SIZES_KB = [64, 256, 1024, 4096, 16384]
-SCAN_POSITIONS_PCT = [0, 25, 50, 75, 100]
 SCAN_POSITION_FIXED_KB = 8192
-EXTRACT_SIZES_KB = [64, 256, 1024, 4096]
-EXTRACT_DENSITY = [5, 20, 80, 160]
+EXTRACT_SIZE_FIXED_DENSITY = 80
 EXTRACT_DENSITY_FIXED_KB = 1024
-PATHO_RANGE_RE = range(8, 27, 2)
-PATHO_RANGE_RUREX = range(8, 29, 4)
 
 
-def scan_data_example():
-    import random
-    filler = words(100, random.Random(1))
-    return filler + " " + SCAN_PATTERN + " …"
-
-
-def extract_data_example():
-    return numbers_with_density(400, 80)
-
-
-def patho_data_example():
-    return "x" * 24 + "  (n=24 of the sweep; no y, so nothing ever matches)"
+def _example(text, width=110):
+    return text[:width].rstrip() + " …"
 
 
 TESTS = [
     {
-        "name": "scan",
-        "title": "Test 1 — Scan: one literal in a large haystack",
+        "name": "scan_size",
+        "title": "Test 1 — Scan: haystack size (needle at the end)",
         "description": (
-            "A plain literal search for a single needle that occurs once. "
-            "This is the classic log-grep workload and the automata "
-            "engine's home turf: rurex scans with SIMD-accelerated "
-            "prefilters, `re` steps its backtracking VM byte by byte. "
-            "Two parameters are swept: haystack length, and where in the "
-            "haystack the needle sits (position 100% is the worst case: "
-            "the whole text must be scanned)."
+            "A plain literal search for a single needle occurring once, "
+            "with the needle at the very end of the text — the worst "
+            "case, the whole haystack must be scanned. Variable: "
+            "haystack size from 64 KB to 16 MB. This is the classic "
+            "log-grep workload: rurex scans with SIMD-accelerated "
+            "prefilters, `re` steps its backtracking VM character by "
+            "character."
         ),
         "pattern": SCAN_PATTERN,
-        "data_example": scan_data_example(),
+        "data_example": _example(
+            with_needle_at(4096, SCAN_PATTERN, 100)
+        ),
         "op": "search",
         "sweeps": [
             {
                 "param": "data_size",
                 "unit": "KB",
-                "label": "haystack size (needle at the end)",
-                "values": SCAN_SIZES_KB,
+                "label": "haystack size, needle at the end (worst case)",
+                "values": [64, 256, 1024, 4096, 16384],
                 "make": lambda kb: with_needle_at(kb * 1024, SCAN_PATTERN, 100),
             },
+        ],
+    },
+    {
+        "name": "scan_position",
+        "title": (
+            f"Test 2 — Scan: needle position "
+            f"(fixed {SCAN_POSITION_FIXED_KB // 1024} MB haystack)"
+        ),
+        "description": (
+            "The same single-needle literal search as Test 1, but the "
+            "haystack is fixed at 8 MB and the variable is where in the "
+            "text the needle sits, from the first bytes (0%) to the very "
+            "end (100%). Position 0% favors `re`'s instant fast path; "
+            "every later position is scan-bound."
+        ),
+        "pattern": SCAN_PATTERN,
+        "data_example": (
+            _example(words(60, random.Random(2)))
+            + " " + SCAN_PATTERN + " "
+            + _example(words(60, random.Random(3)))
+        ),
+        "op": "search",
+        "sweeps": [
             {
                 "param": "match_position",
                 "unit": "%",
-                "label": f"needle position in an {SCAN_POSITION_FIXED_KB // 1024} MB haystack",
-                "values": SCAN_POSITIONS_PCT,
+                "label": "needle position in the fixed 8 MB haystack",
+                "values": [0, 25, 50, 75, 100],
                 "make": lambda pct: with_needle_at(
                     SCAN_POSITION_FIXED_KB * 1024, SCAN_PATTERN, pct
                 ),
@@ -127,33 +133,56 @@ TESTS = [
         ],
     },
     {
-        "name": "extract",
-        "title": "Test 2 — Extraction: findall over match-dense data",
+        "name": "extract_size",
+        "title": (
+            "Test 3 — Extraction: haystack size "
+            f"(fixed density, {EXTRACT_SIZE_FIXED_DENSITY} matches/KB)"
+        ),
         "description": (
-            "Digit-run extraction (`findall`) over word filler — the "
-            "regime where `re` wins today: matches are small and "
-            "everywhere, so the cost is dominated by building Python "
-            "match objects, and rurex currently constructs each result "
-            "through Python-level slicing. Two parameters are swept: "
-            "data length at fixed density, and match density at fixed "
-            "length (isolating the per-match cost from the scan cost)."
+            "Digit-run extraction (`findall`) over word filler at a "
+            "fixed density of 80 matches per KB. Variable: haystack size "
+            "from 64 KB to 4 MB (the match count grows with it). This "
+            "is the match-dense regime, where building Python match "
+            "objects — not scanning — dominates."
         ),
         "pattern": EXTRACT_PATTERN,
-        "data_example": extract_data_example(),
+        "data_example": _example(numbers_with_density(2048, 80)),
         "op": "findall",
         "sweeps": [
             {
                 "param": "data_size",
                 "unit": "KB",
-                "label": "haystack size (fixed density, 80 matches/KB)",
-                "values": EXTRACT_SIZES_KB,
-                "make": lambda kb: numbers_with_density(kb * 1024, 80),
+                "label": "haystack size at fixed density (80 matches/KB)",
+                "values": [64, 256, 1024, 4096],
+                "make": lambda kb: numbers_with_density(
+                    kb * 1024, EXTRACT_SIZE_FIXED_DENSITY
+                ),
             },
+        ],
+    },
+    {
+        "name": "extract_density",
+        "title": (
+            "Test 4 — Extraction: match density "
+            f"(fixed {EXTRACT_DENSITY_FIXED_KB // 1024} MB haystack)"
+        ),
+        "description": (
+            "The same digit-run extraction as Test 3, but the haystack "
+            "is fixed at 1 MB and the variable is match density, from 5 "
+            "to 160 matches per KB. This isolates the per-match cost "
+            "from the scan cost and shows the crossover: sparse matches "
+            "are scan-bound (rurex territory), dense matches are "
+            "extraction-bound (`re` territory)."
+        ),
+        "pattern": EXTRACT_PATTERN,
+        "data_example": _example(numbers_with_density(2048, 160)),
+        "op": "findall",
+        "sweeps": [
             {
                 "param": "match_density",
                 "unit": "matches/KB",
-                "label": "match density in a 1 MB haystack",
-                "values": EXTRACT_DENSITY,
+                "label": "match density in the fixed 1 MB haystack",
+                "values": [5, 20, 80, 160],
                 "make": lambda per_kb: numbers_with_density(
                     EXTRACT_DENSITY_FIXED_KB * 1024, per_kb
                 ),
@@ -162,28 +191,25 @@ TESTS = [
     },
     {
         "name": "pathological",
-        "title": "Test 3 — Pathological: catastrophic backtracking",
+        "title": "Test 5 — Pathological: catastrophic backtracking",
         "description": (
             "The pattern `(x+x+)+y` never matches a run of x's, and for "
             "a backtracking engine the number of ways to distribute the "
             "x's across the groups grows exponentially: `re`'s time "
             "doubles with every two extra characters. A finite-automata "
-            "engine cannot backtrack, so rurex's time grows linearly "
-            "with input length — at n=28 it answers in nanoseconds "
-            "where `re` would run for longer than the universe's age. "
-            "This is a safety property (ReDoS resistance), not a speed "
-            "feature."
+            "engine cannot backtrack, so rurex' time is flat. This is a "
+            "safety property (ReDoS resistance), not a speed feature."
         ),
         "pattern": PATHO_PATTERN,
-        "data_example": patho_data_example(),
+        "data_example": "x" * 24 + "  (n = 24 of the sweep; no y, so nothing matches)",
         "op": "guarded_search",
         "sweeps": [
             {
                 "param": "input_length",
                 "unit": "chars",
                 "label": "input length n, text = \"x\" * n",
-                "values": list(PATHO_RANGE_RE),
-                "values_rurex": list(PATHO_RANGE_RUREX),
+                "values": list(range(8, 27, 2)),
+                "values_rurex": list(range(8, 29, 4)),
                 "make": lambda n: "x" * n,
             },
         ],

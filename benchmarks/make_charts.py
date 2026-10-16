@@ -104,8 +104,8 @@ def sweep_chart(test, sweep, out_name, logx=False, logy=True):
         ax.set_yscale("log")
     ax.set_xlabel(f"{sweep['param']} ({sweep['unit']})")
     ax.set_ylabel("time per operation" + (" (log scale)" if logy else ""))
-    ax.set_title(f"{test['title'].split('—')[0].strip()} — {sweep['param']}",
-                 loc="left", fontsize=13, fontweight="bold", pad=12)
+    ax.set_title(test["title"], loc="left", fontsize=13,
+                 fontweight="bold", pad=12)
     ax.text(0, 1.02, sweep["label"], transform=ax.transAxes, fontsize=9.5,
             color="#666666")
     ax.legend(loc="best")
@@ -118,10 +118,10 @@ def sweep_chart(test, sweep, out_name, logx=False, logy=True):
 
 # Per-sweep presentation hints: (test, param) -> dict(logx=, logy=)
 PRESENTATION = {
-    ("scan", "data_size"): dict(logx=True, logy=True),
-    ("scan", "match_position"): dict(logx=False, logy=True),
-    ("extract", "data_size"): dict(logx=True, logy=True),
-    ("extract", "match_density"): dict(logx=False, logy=False),
+    ("scan_size", "data_size"): dict(logx=True, logy=True),
+    ("scan_position", "match_position"): dict(logx=False, logy=True),
+    ("extract_size", "data_size"): dict(logx=True, logy=True),
+    ("extract_density", "match_density"): dict(logx=False, logy=False),
     ("pathological", "input_length"): dict(logx=False, logy=True),
 }
 

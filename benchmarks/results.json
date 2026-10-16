@@ -9,138 +9,158 @@
   },
   "tests": [
     {
-      "name": "scan",
-      "title": "Test 1 \u2014 Scan: one literal in a large haystack",
-      "description": "A plain literal search for a single needle that occurs once. This is the classic log-grep workload and the automata engine's home turf: rurex scans with SIMD-accelerated prefilters, `re` steps its backtracking VM byte by byte. Two parameters are swept: haystack length, and where in the haystack the needle sits (position 100% is the worst case: the whole text must be scanned).",
+      "name": "scan_size",
+      "title": "Test 1 \u2014 Scan: haystack size (needle at the end)",
+      "description": "A plain literal search for a single needle occurring once, with the needle at the very end of the text \u2014 the worst case, the whole haystack must be scanned. Variable: haystack size from 64 KB to 16 MB. This is the classic log-grep workload: rurex scans with SIMD-accelerated prefilters, `re` steps its backtracking VM character by character.",
       "pattern": "the-needle-string",
-      "data_example": "jumps delta data node item brown lorem fox alpha item world alpha text amet node lazy fox alpha the the-needle-string \u2026",
+      "data_example": "text fox the value lorem dog dog jumps value fox line value code gamma brown delta hello quick the brown lazy \u2026",
       "op": "search",
       "sweeps": [
         {
           "param": "data_size",
           "unit": "KB",
-          "label": "haystack size (needle at the end)",
+          "label": "haystack size, needle at the end (worst case)",
           "points": [
             {
               "value": 64,
-              "re_s": 7.668020296841859e-05,
-              "rurex_s": 8.949201777577401e-06
+              "re_s": 7.668234314769507e-05,
+              "rurex_s": 9.013859173282981e-06
             },
             {
               "value": 256,
-              "re_s": 0.00031136500416323543,
-              "rurex_s": 3.634646190330386e-05
+              "re_s": 0.0003146070837974548,
+              "rurex_s": 3.5668303864076734e-05
             },
             {
               "value": 1024,
-              "re_s": 0.001262084529735148,
-              "rurex_s": 0.0001431663460098207
+              "re_s": 0.0012494054343551398,
+              "rurex_s": 0.00014614953310228883
             },
             {
               "value": 4096,
-              "re_s": 0.005012273360043764,
-              "rurex_s": 0.0006950022717937827
+              "re_s": 0.005053159417584539,
+              "rurex_s": 0.0006927954526618123
             },
             {
               "value": 16384,
-              "re_s": 0.020378563599660993,
-              "rurex_s": 0.0048758845031261445
-            }
-          ]
-        },
-        {
-          "param": "match_position",
-          "unit": "%",
-          "label": "needle position in an 8 MB haystack",
-          "points": [
-            {
-              "value": 0,
-              "re_s": 1.6279747802764177e-07,
-              "rurex_s": 0.0007151770200580359
-            },
-            {
-              "value": 25,
-              "re_s": 0.002493431130424142,
-              "rurex_s": 0.0008949031000956893
-            },
-            {
-              "value": 50,
-              "re_s": 0.005044916598126292,
-              "rurex_s": 0.0011943958699703217
-            },
-            {
-              "value": 75,
-              "re_s": 0.0076253052428364755,
-              "rurex_s": 0.0016021839459426702
-            },
-            {
-              "value": 100,
-              "re_s": 0.011444429680705071,
-              "rurex_s": 0.0028083710372447967
+              "re_s": 0.020670738397166134,
+              "rurex_s": 0.00506883492693305
             }
           ]
         }
       ]
     },
     {
-      "name": "extract",
-      "title": "Test 2 \u2014 Extraction: findall over match-dense data",
-      "description": "Digit-run extraction (`findall`) over word filler \u2014 the regime where `re` wins today: matches are small and everywhere, so the cost is dominated by building Python match objects, and rurex currently constructs each result through Python-level slicing. Two parameters are swept: data length at fixed density, and match density at fixed length (isolating the per-match cost from the scan cost).",
+      "name": "scan_position",
+      "title": "Test 2 \u2014 Scan: needle position (fixed 8 MB haystack)",
+      "description": "The same single-needle literal search as Test 1, but the haystack is fixed at 8 MB and the variable is where in the text the needle sits, from the first bytes (0%) to the very end (100%). Position 0% favors `re`'s instant fast path; every later position is scan-bound.",
+      "pattern": "the-needle-string",
+      "data_example": "data data quick brown brown sit path over value node line da \u2026 the-needle-string dog delta gamma jumps sit rust omega alpha text delta brown \u2026",
+      "op": "search",
+      "sweeps": [
+        {
+          "param": "match_position",
+          "unit": "%",
+          "label": "needle position in the fixed 8 MB haystack",
+          "points": [
+            {
+              "value": 0,
+              "re_s": 1.6643999237567187e-07,
+              "rurex_s": 0.0007444174839183688
+            },
+            {
+              "value": 25,
+              "re_s": 0.0025054184067994354,
+              "rurex_s": 0.0009020633064210415
+            },
+            {
+              "value": 50,
+              "re_s": 0.005010419236496091,
+              "rurex_s": 0.0012259432766586543
+            },
+            {
+              "value": 75,
+              "re_s": 0.0076297615841031076,
+              "rurex_s": 0.001614420865662396
+            },
+            {
+              "value": 100,
+              "re_s": 0.010202591121196748,
+              "rurex_s": 0.0021787028526887298
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "extract_size",
+      "title": "Test 3 \u2014 Extraction: haystack size (fixed density, 80 matches/KB)",
+      "description": "Digit-run extraction (`findall`) over word filler at a fixed density of 80 matches per KB. Variable: haystack size from 64 KB to 4 MB (the match count grows with it). This is the match-dense regime, where building Python match objects \u2014 not scanning \u2014 dominates.",
       "pattern": "\\d{3,4}",
-      "data_example": "7685 value word word beta beta lorem node alpha word value text value alpha word value value node alpha node text beta node text node text beta beta beta alpha alpha beta value lorem value alpha lorem node text lorem node alpha word beta node beta node lorem text alpha lorem word beta text word word lorem alpha beta node alpha text alpha text lorem text beta alpha beta text node lorem alpha value",
+      "data_example": "7685 6216 word 2369 beta 205 5643 value 7697 value 1424 word 9181 770 node 6309 beta 7505 7023 beta 2859 beta \u2026",
       "op": "findall",
       "sweeps": [
         {
           "param": "data_size",
           "unit": "KB",
-          "label": "haystack size (fixed density, 80 matches/KB)",
+          "label": "haystack size at fixed density (80 matches/KB)",
           "points": [
             {
               "value": 64,
-              "re_s": 0.002481192848645151,
-              "rurex_s": 0.0020820548478513957
+              "re_s": 0.0014882537256926298,
+              "rurex_s": 0.0020010291202925148
             },
             {
               "value": 256,
-              "re_s": 0.006663022162392736,
-              "rurex_s": 0.008454789938405156
+              "re_s": 0.0059474852215498685,
+              "rurex_s": 0.007978906221687794
             },
             {
               "value": 1024,
-              "re_s": 0.02531346878968179,
-              "rurex_s": 0.034874804224818944
+              "re_s": 0.024607271095737814,
+              "rurex_s": 0.03207265161909163
             },
             {
               "value": 4096,
-              "re_s": 0.09792613256722689,
-              "rurex_s": 0.1288550840690732
+              "re_s": 0.10124509129673243,
+              "rurex_s": 0.1289447054732591
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "name": "extract_density",
+      "title": "Test 4 \u2014 Extraction: match density (fixed 1 MB haystack)",
+      "description": "The same digit-run extraction as Test 3, but the haystack is fixed at 1 MB and the variable is match density, from 5 to 160 matches per KB. This isolates the per-match cost from the scan cost and shows the crossover: sparse matches are scan-bound (rurex territory), dense matches are extraction-bound (`re` territory).",
+      "pattern": "\\d{3,4}",
+      "data_example": "7685 6216 4476 2369 3149 205 5643 8337 7697 1424 5572 9181 770 6309 2875 7505 7023 2674 2859 3999 941 1917 226 \u2026",
+      "op": "findall",
+      "sweeps": [
         {
           "param": "match_density",
           "unit": "matches/KB",
-          "label": "match density in a 1 MB haystack",
+          "label": "match density in the fixed 1 MB haystack",
           "points": [
             {
               "value": 5,
-              "re_s": 0.01910777185112238,
-              "rurex_s": 0.004071761057712137
+              "re_s": 0.016688035614788533,
+              "rurex_s": 0.003854716341011226
             },
             {
               "value": 20,
-              "re_s": 0.018634147406555713,
-              "rurex_s": 0.01025129745248705
+              "re_s": 0.018424781900830568,
+              "rurex_s": 0.009930973518639802
             },
             {
               "value": 80,
-              "re_s": 0.025701625598594548,
-              "rurex_s": 0.033419466391205785
+              "re_s": 0.025102916872128844,
+              "rurex_s": 0.03190749390050769
             },
             {
               "value": 160,
-              "re_s": 0.02819337658584118,
-              "rurex_s": 0.06237956816330552
+              "re_s": 0.030663494393229483,
+              "rurex_s": 0.060359445959329606
             }
           ]
         }
@@ -148,10 +168,10 @@
     },
     {
       "name": "pathological",
-      "title": "Test 3 \u2014 Pathological: catastrophic backtracking",
-      "description": "The pattern `(x+x+)+y` never matches a run of x's, and for a backtracking engine the number of ways to distribute the x's across the groups grows exponentially: `re`'s time doubles with every two extra characters. A finite-automata engine cannot backtrack, so rurex's time grows linearly with input length \u2014 at n=28 it answers in nanoseconds where `re` would run for longer than the universe's age. This is a safety property (ReDoS resistance), not a speed feature.",
+      "title": "Test 5 \u2014 Pathological: catastrophic backtracking",
+      "description": "The pattern `(x+x+)+y` never matches a run of x's, and for a backtracking engine the number of ways to distribute the x's across the groups grows exponentially: `re`'s time doubles with every two extra characters. A finite-automata engine cannot backtrack, so rurex' time is flat. This is a safety property (ReDoS resistance), not a speed feature.",
       "pattern": "(x+x+)+y",
-      "data_example": "xxxxxxxxxxxxxxxxxxxxxxxx  (n=24 of the sweep; no y, so nothing ever matches)",
+      "data_example": "xxxxxxxxxxxxxxxxxxxxxxxx  (n = 24 of the sweep; no y, so nothing matches)",
       "op": "guarded_search",
       "sweeps": [
         {
@@ -161,58 +181,58 @@
           "points": [
             {
               "value": 8,
-              "re_s": 2.3563392460346222e-05,
-              "rurex_s": 2.289812918752432e-07
+              "re_s": 2.2129155695438385e-05,
+              "rurex_s": 2.1749571384862065e-07
             },
             {
               "value": 10,
-              "re_s": 7.121730595827103e-05,
-              "rurex_s": 2.199143897742033e-07
+              "re_s": 6.679212674498558e-05,
+              "rurex_s": 2.153489999473095e-07
             },
             {
               "value": 12,
-              "re_s": 0.00023610005155205727,
-              "rurex_s": 2.220942978747189e-07
+              "re_s": 0.00024023745208978653,
+              "rurex_s": 2.2079483605921269e-07
             },
             {
               "value": 14,
-              "re_s": 0.0009256871417164803,
-              "rurex_s": 2.3153873905539513e-07
+              "re_s": 0.00091139180585742,
+              "rurex_s": 2.1959065878763794e-07
             },
             {
               "value": 16,
-              "re_s": 0.003867825958877802,
-              "rurex_s": 2.3806502483785152e-07
+              "re_s": 0.003677458968013525,
+              "rurex_s": 2.2513283602893353e-07
             },
             {
               "value": 18,
-              "re_s": 0.014786041341722012,
-              "rurex_s": 2.3021109402179717e-07
+              "re_s": 0.014939473010599613,
+              "rurex_s": 2.2457343293353914e-07
             },
             {
               "value": 20,
-              "re_s": 0.059869336895644665,
-              "rurex_s": 2.3640243196859957e-07
+              "re_s": 0.05855904007330537,
+              "rurex_s": 2.288387776352465e-07
             },
             {
               "value": 22,
-              "re_s": 0.2384863467887044,
-              "rurex_s": 2.3736362298950554e-07
+              "re_s": 0.23448666092008352,
+              "rurex_s": 2.3215085174888373e-07
             },
             {
               "value": 24,
-              "re_s": 0.9656408429145813,
-              "rurex_s": 2.421864261850715e-07
+              "re_s": 0.9282711748965085,
+              "rurex_s": 2.3574128886684775e-07
             },
             {
               "value": 26,
               "re_s": null,
-              "rurex_s": 2.456546411849558e-07
+              "rurex_s": 2.4103689193725587e-07
             },
             {
               "value": 28,
               "re_s": null,
-              "rurex_s": 2.4770818743854763e-07
+              "rurex_s": 2.462309948168695e-07
             }
           ]
         }
