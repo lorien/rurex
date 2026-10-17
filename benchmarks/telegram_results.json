@@ -1,0 +1,133 @@
+{
+  "environment": {
+    "cpu": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+    "pattern": "@[a-zA-Z][a-zA-Z0-9_]{4,31}",
+    "threads": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "protocol": "one cold real-world run per point (fresh process: load -> single pass)"
+  },
+  "points": [
+    {
+      "engine": "re",
+      "threads": 1,
+      "wall_s": 0.4803108787164092,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "wall_s": 1.649408487137407,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 2,
+      "wall_s": 0.655725970864296,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "wall_s": 2.63040944095701,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "wall_s": 0.5265429392457008,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "wall_s": 4.262432015966624,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "wall_s": 0.5183887961320579,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "wall_s": 5.377282347064465,
+      "mentions": 334136,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 1,
+      "wall_s": 0.4232943430542946,
+      "mentions": 334136,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "wall_s": 1.456375848967582,
+      "mentions": 334136,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 2,
+      "wall_s": 0.27435564808547497,
+      "mentions": 334136,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "wall_s": 0.8136957241222262,
+      "mentions": 334136,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "wall_s": 0.21512203011661768,
+      "mentions": 334136,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "wall_s": 0.6315830457024276,
+      "mentions": 334136,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "wall_s": 0.334861408919096,
+      "mentions": 334136,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "wall_s": 0.5173711990937591,
+      "mentions": 334136,
+      "interpreter": "free"
+    }
+  ],
+  "stats": {
+    "posts": 1000000,
+    "total_bytes": 470186205,
+    "total_mentions": 334136,
+    "posts_with_mentions": 186226
+  }
+}

@@ -38,6 +38,10 @@ A standalone HTML twin of this page (images embedded) can be rendered
 locally for browser viewing: `python benchmarks/make_charts.py --html`
 writes `docs/benchmarks.html`.
 
+A real-world complement — @mention extraction over 1M Telegram posts
+(the extraction-bound regime, one cold run per measured point) lives
+in [`telegram-benchmarks.html`](telegram-benchmarks.html).
+
 ## Methodology
 
 - **One variable per test.** Each test fixes its context (haystack
