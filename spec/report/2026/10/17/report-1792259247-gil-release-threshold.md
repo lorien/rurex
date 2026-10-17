@@ -107,7 +107,7 @@ and correct semantics for all three storage kinds.
 
 ### Future-task note (amended)
 
-- [open] SIMD transcoding for the cold-str path: encoding_rs with
-  `simd-accel` (pure Rust, ~2-5 GB/s claimed) as the first candidate;
-  xutf/simdutf (5-10 GB/s, C++/nightly) if that is not enough.
-  Expected: cold str ×3 → ×1.4-1.5 on the Telegram workload.
+- [acted] SIMD transcoding for the cold-str path: hand-written AVX2
+  kernel in `src/utf8/simd.rs` (every ready-made option needed nightly
+  Rust or C++; see ADR-0012). Cold str ×3.0 → ×1.6 on the Telegram
+  workload — see `report-1792281301-simd-transcoder.md`.

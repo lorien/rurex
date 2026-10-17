@@ -158,25 +158,30 @@ single-threaded.
 
 {table(data, "gil", n)}
 
-Each point now runs both input forms. The **str** variant is the
-real task on parsed text: `re` 0.48 s single-threaded vs rurex
-1.49 s — most of rurex's gap is **CPython's first-touch UTF-8
-materialization** (CPython stores `str` in UCS form and lazily
-encodes-and-caches a UTF-8 copy inside each string on first use;
-`re` never converts). The **bytes** variant feeds the same posts
-pre-encoded to UTF-8 — the corpus is already UTF-8 on disk, so a
-pipeline that stays in bytes never pays the transcode: rurex answers
-in **0.35 s, beating `re`'s 0.51 s (×1.5)** single-threaded. This is
-the RE2-binding-recommended shape (feed UTF-8 bytes), and rurex
-makes it a first-class mode.
+Each point runs both input forms. The **str** variant is the real
+task on parsed text: `re` 0.48 s single-threaded vs rurex 0.77 s
+(×1.6). The remaining gap is rurex's **per-scan UCS→UTF-8 transcode**
+— CPython stores `str` as UCS-1/2/4 and only materializes UTF-8 on
+demand, while `re` never converts at all. rurex transcodes in Rust:
+the AVX2 kernel measures 1.4–3.8 GB/s where the scalar loop (and
+CPython's own encoder) manage ~0.45 GB/s, which took this row from
+×3.0 to ×1.6. Strings whose UTF-8 cache another C-API consumer
+already filled are borrowed zero-copy instead.
 
-With threads, rurex str stays flat (1.49–1.73 s; an earlier build
+The **bytes** variant feeds the same posts pre-encoded to UTF-8 —
+the corpus is already UTF-8 on disk, so a pipeline that stays in
+bytes never pays the transcode: rurex answers in **0.35 s, beating
+`re`'s 0.54 s (×0.7)** single-threaded. That is the
+RE2-binding-recommended shape (feed UTF-8 bytes), and rurex makes it
+a first-class mode.
+
+With threads, rurex str stays flat (0.77–0.91 s; an earlier build
 degraded to 5.38 s before the 4 KB GIL-release threshold landed —
 rurex releases the GIL only for ≥ 4 KB haystacks, matching `re`'s
 own never-release-during-matching behavior for short texts), and
-rurex bytes improves modestly (0.35 → 0.54 s at four workers: the
+rurex bytes improves modestly (0.35 → 0.53 s at four workers: the
 scans are sub-µs, so the GIL-held per-call result building
-dominates — the same ceiling `re` bytes hits at 0.51 → 0.67 s).
+dominates — the same ceiling `re` bytes hits).
 
 ## Free-threaded Python
 
@@ -184,21 +189,21 @@ dominates — the same ceiling `re` bytes hits at 0.51 → 0.67 s).
 
 {table(data, "free", n)}
 
-Without the GIL both variants scale: rurex str 1.82 s → 0.65 s
-(2.8×; the first-touch UTF-8 encoding parallelizes like any other
-work) and rurex bytes 0.43 s → 0.30 s; `re` 0.50 s → 0.20 s str,
-0.42 s → 0.19 s bytes. On this task free-threaded Python is the
-fastest way to run either engine at every thread count, and rurex
-bytes at 0.30 s is within 1.6× of the best `re` number while
-carrying no transcode tax at all.
+Without the GIL both variants scale: rurex str 0.84 s → 0.37 s
+(2.3×; the transcode parallelizes like any other work) and rurex
+bytes 0.42 s → 0.30 s; `re` 0.44 s → 0.20 s str, 0.39 s → 0.19 s
+bytes. On this task free-threaded Python is the fastest way to run
+either engine at every thread count, and rurex bytes at 0.30 s is
+within 1.6× of the best `re` number while carrying no transcode tax
+at all.
 
 ## Reading the numbers
 
 Read the two variants as two different questions. **str**: what a
-user scanning parsed text once pays — `re` wins (it never
-transcodes), rurex pays CPython's one-time per-string UTF-8 encode
-(warm re-scans borrow the cache and reach near-parity, ≈0.55 vs
-≈0.49 µs/post). **bytes**: what a UTF-8-native pipeline pays — rurex
+user scanning parsed text once pays — `re` still wins (it never
+transcodes), rurex pays a per-scan UCS→UTF-8 transcode in Rust (AVX2
+where available; re-scans of strings warmed by another C-API
+consumer borrow the cache and reach near-parity). **bytes**: what a UTF-8-native pipeline pays — rurex
 **wins** (×1.5 single-threaded), because its engine scans UTF-8
 directly with SIMD prefilters. The scan-bound leads on the main page
 (×7–13) do not transfer to short-text per-call extraction, but the

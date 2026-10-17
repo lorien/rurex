@@ -55,6 +55,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   `regex-engine-divergences` constructs vendored as inputs (not
   oracles): hard parity vs live `re` (mode L) and a discussion-mode
   engine-contract report vs recorded Rust answers (mode E).
+- [adr/0012-simd-transcoder-and-detected-layout.md](adr/0012-simd-transcoder-and-detected-layout.md) —
+  hand-written AVX2 UCS→UTF-8 transcoder (no new dependency) plus
+  runtime-detected, self-validated PEP 393 offsets instead of
+  hard-coded ones.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

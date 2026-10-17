@@ -67,7 +67,36 @@ is the only expected failure at the boundary and always maps to
 
 ## Memory and safety
 
-No `unsafe` code is expected in this crate (PyO3 and `regex` handle their
-own internals). If `unsafe` is ever proposed, it needs an ADR. Wrapper
-types own their data; nothing borrowed from Python outlives a call except
-through PyO3's checked lifetimes.
+`unsafe` is confined to the `str` haystack fast path (`src/utf8.rs`
+and `src/utf8/simd.rs`), authorized by
+[adr/0012-simd-transcoder-and-detected-layout.md](adr/0012-simd-transcoder-and-detected-layout.md).
+Everything else relies on PyO3 and `regex` handling their own
+internals. Wrapper types own their data; nothing borrowed from Python
+outlives a call except through PyO3's checked lifetimes.
+
+The `str` fast path reads PEP 393 fields through raw pointers, so it
+depends on an object layout that differs between interpreters (GIL vs
+free-threaded object headers, `wstr_length` before 3.12, the widened
+`state.interned` on free-threaded builds). That layout is **detected
+and validated once per process** at first use; if validation fails,
+the module falls back to `PyUnicode_AsUTF8AndSize` and behaves exactly
+as if the fast path did not exist. Never hard-code those offsets.
+
+## Text transcoding
+
+`re` never converts: it matches UCS directly. rurex's engine matches
+UTF-8, so a `str` haystack must be viewed as UTF-8, in three ways
+(`src/utf8.rs`):
+
+1. compact ASCII — the UCS-1 data is already valid UTF-8, borrowed
+   zero-copy;
+2. non-ASCII whose CPython UTF-8 cache is warm — borrowed zero-copy
+   (rurex never writes that cache: it is `PyMem_Malloc`-owned);
+3. non-ASCII with a cold cache — transcoded into an owned buffer, by
+   the AVX2 kernel where available (x86_64 with AVX2+BMI2, 1.4–3.8
+   GB/s) and by a scalar loop everywhere else (~0.48 GB/s).
+
+The transcoded buffer lives for the duration of the call (`HayKeep`),
+so re-scans of a string only rurex touched re-transcode each time —
+cheap at those rates, and traded deliberately against a side cache
+that would have to stay correct across `str` identity and lifetime.
