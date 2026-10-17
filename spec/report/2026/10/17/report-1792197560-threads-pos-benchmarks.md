@@ -45,6 +45,11 @@ workers, sweeping the needle position "similar to Test 2".
   test (20), maturin develop + pytest (191), fresh import — all pass.
   Restored the release build in .venv afterwards (check #3 installs a
   debug build over it — see Tooling).
+- Follow-up (owner review of the docs page): added a `**Method:**`
+  line to every test section — `.search(text)` / `.findall(text)` —
+  stating the exact call each test makes (first owner ask used a
+  made-up `rx` name and a slash-pair; rejected — method name only,
+  leading dot).
 
 ### Spec/ADR amendments
 

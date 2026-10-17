@@ -103,6 +103,8 @@ by character.
 "the-needle-string"
 ```
 
+**Method:** `.search(text)` — first match anywhere; timed per call.
+
 **Data example** (word filler, one needle at the end)
 
 ```
@@ -139,6 +141,8 @@ from the first bytes (0%) to the very end (100%). Position 0% favors
 ```python
 "the-needle-string"
 ```
+
+**Method:** `.search(text)` — first match anywhere; timed per call.
 
 **Data example** (needle mid-text, as at position ~50%)
 
@@ -180,6 +184,8 @@ building the returned values — not scanning — dominates.
 r"\d{3,4}"
 ```
 
+**Method:** `.findall(text)` — one call returns every match, as a list of strings.
+
 **Data example** (digits in word filler at 80/KB)
 
 ```
@@ -214,6 +220,8 @@ matches are scan-bound, dense matches are extraction-bound.
 ```python
 r"\d{3,4}"
 ```
+
+**Method:** `.findall(text)` — one call returns every match, as a list of strings.
 
 **Data example** (digits in word filler at 160/KB)
 
@@ -254,6 +262,9 @@ rurex blow up.
 r"(x+x+)+y"
 ```
 
+**Method:** `.search(text)` — one single call per point, no timed loop
+(`re` wrapped in a 2 s timeout guard).
+
 **Data example**
 
 ```
@@ -291,6 +302,9 @@ the whole pile: a dropping line means threads became throughput.
 "the-needle-string"
 ```
 
+**Method:** `.search(text)` — 8000 calls split across N threads;
+Y is the wall-clock for the whole pile.
+
 ![Threads on GIL Python](img/bench_threads_gil_threads.png)
 
 | Workers | `re` | rurex | Speedup |
@@ -323,6 +337,9 @@ GIL off.
 ```python
 "the-needle-string"
 ```
+
+**Method:** `.search(text)` — 8000 calls split across N threads;
+Y is the wall-clock for the whole pile.
 
 ![Threads on free-threaded Python](img/bench_threads_free_threads.png)
 
@@ -358,6 +375,9 @@ would time the harness, not the engines.
 "the-needle-string"
 ```
 
+**Method:** `.search(text)` — 1000 calls split across 4 fixed threads;
+Y is the wall-clock for the whole pile.
+
 ![Threads × needle position on GIL Python](img/bench_threads_pos_gil_match_position.png)
 
 | Needle at | `re` | rurex | Speedup |
@@ -392,6 +412,9 @@ with the GIL off.
 ```python
 "the-needle-string"
 ```
+
+**Method:** `.search(text)` — 1000 calls split across 4 fixed threads;
+Y is the wall-clock for the whole pile.
 
 ![Threads × needle position on free-threaded Python](img/bench_threads_pos_free_match_position.png)
 
