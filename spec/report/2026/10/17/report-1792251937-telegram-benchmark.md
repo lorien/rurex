@@ -93,6 +93,12 @@ engines), mention checksum 334,136 per run.
 
 ### Tooling/process
 
+- The corpus release asset is live at
+  `bench-data-telegram-v1`; the harness download+sha256 chain was
+  validated end-to-end (cache deleted -> download -> verify -> run).
+- `gh`'s keyring token cannot write (HTTP 403 on releases); the
+  write-capable `GITHUB_TOKEN` lives in `.env` and must be sourced
+  first — now documented in AGENTS.md.
 - A GIL-hog control thread is the cheap decisive test for "does X
   release the GIL": compare the pile wall with and without a
   spinning pure-Python thread — settled the _sre question without
