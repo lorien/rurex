@@ -5,12 +5,14 @@
 
 Python bindings to the Rust [`regex`](https://crates.io/crates/regex)
 crate: linear-time matching — catastrophic backtracking (ReDoS)
-is impossible by construction — and faster than `re` in every
-measured regime: up to ×13 on scans, ahead on extraction, and
-inputs that hang `re` forever answer in ~250 ns. The API — names,
-flags, keyword arguments, `Match` semantics, even error messages
-and positions — matches `re`, verified continuously against
-CPython's own test suite.
+is impossible by construction — and faster than `re` on scans (up
+to ×13), extraction, and pathological inputs (`re` hangs forever,
+rurex answers in ~250 ns); on bytes input it leads there too. The
+one regime where `re` keeps an edge is one-shot scans of many short
+non-ASCII `str` objects — see *Performance: str vs bytes* below.
+The API — names, flags, keyword arguments, `Match` semantics, even
+error messages and positions — matches `re`, verified continuously
+against CPython's own test suite.
 
 ## Use it as `re`
 
@@ -83,6 +85,27 @@ Beyond `re`:
 - **Bytes with an opt-in:** bytes patterns use ASCII semantics like
   `re`, and a `(?u:...)` group opts a region into UTF-8-aware
   matching.
+
+## Performance: str vs bytes
+
+rurex's engine matches UTF-8 directly. CPython stores `str`
+internally as UCS-1/2/4, so the **first** match against a
+non-ASCII `str` pays a one-time UTF-8 encoding that CPython caches
+inside the string object; `re` never converts. Two consequences:
+
+- **Scanning many short non-ASCII `str` inputs once** — the worst
+  case — `re` is faster (measured on 1M Telegram posts: ~0.5 µs vs
+  ~1.5 µs per post). Repeated scans reuse the cached encoding and
+  are near parity.
+- **If your data is already UTF-8 bytes** (files, network,
+  JSONL/log streams), use bytes patterns: no conversion happens at
+  all and rurex **beats `re`'s bytes mode** (×1.5 on the same
+  corpus, 0.35 s vs 0.51 s). This is the recommended shape for
+  high-throughput pipelines — the same advice the official RE2
+  binding gives.
+
+Details and thread-scaling numbers:
+[docs/telegram-benchmarks.md](docs/telegram-benchmarks.md).
 
 ## Installation
 
