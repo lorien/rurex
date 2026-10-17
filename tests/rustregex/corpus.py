@@ -51,27 +51,46 @@ def _normalize_match(entry):
 
 
 def unescape_haystack(text: str) -> bytes:
-    r"""Decode `\xNN` escapes into raw bytes (`unescape = true` tests).
+    r"""Decode escaped haystacks (`unescape = true` tests).
 
-    The corpus only uses two-hex-digit forms (verified over all files
-    at vendoring time); anything else passes through unchanged.
+    The escape forms used by this corpus (verified over all 1,203
+    cases): `\xNN`, `\\` (backslash), `\n`, `\r`, `\t`. Anything
+    else after a backslash passes through unchanged.
     """
     out = bytearray()
     i = 0
     HEX = "0123456789abcdefABCDEF"
     while i < len(text):
-        if (
-            text[i] == "\\"
-            and i + 3 < len(text)
-            and text[i + 1] == "x"
-            and text[i + 2] in HEX
-            and text[i + 3] in HEX
-        ):
-            out.append(int(text[i + 2 : i + 4], 16))
-            i += 4
-        else:
-            out += text[i].encode("utf-8")
-            i += 1
+        c = text[i]
+        if c == "\\" and i + 1 < len(text):
+            nxt = text[i + 1]
+            if (
+                nxt == "x"
+                and i + 3 < len(text)
+                and text[i + 2] in HEX
+                and text[i + 3] in HEX
+            ):
+                out.append(int(text[i + 2 : i + 4], 16))
+                i += 4
+                continue
+            if nxt == "\\":
+                out.append(0x5C)
+                i += 2
+                continue
+            if nxt == "n":
+                out.append(0x0A)
+                i += 2
+                continue
+            if nxt == "r":
+                out.append(0x0D)
+                i += 2
+                continue
+            if nxt == "t":
+                out.append(0x09)
+                i += 2
+                continue
+        out += c.encode("utf-8")
+        i += 1
     return bytes(out)
 
 

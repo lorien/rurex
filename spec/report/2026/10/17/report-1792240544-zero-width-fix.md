@@ -68,6 +68,11 @@ difference. Pinned in `tests/test_zero_width.py` and api.md.
 
 - [open] Bug 2 (unchanged): bytes-mode empty-match off-by-one on
   invalid UTF-8 (`bytes/invalid-utf8-anchor-200`) — last follow-up row.
+  [acted — not a rurex defect: the corpus harness's unescape decoder
+  missed `\\`/`\n`/`\r` forms and fed rurex a 23-byte haystack where
+  upstream feeds 22; fixed in report-1792242971-corpus-unescape-fix by extending
+  corpus.py's decoder; the row now passes and the ledger has zero
+  follow-up cases.]
 - [open] Performance: the retry allocates a fresh PikeVM cache per
   call; if an empty-match-heavy workload ever shows up in benchmarks,
   switch to a `util::pool::Pool` per RetryEngine.

@@ -41,7 +41,6 @@ corpus re-vendoring), then re-review the diff.
 | bytes/case-one-ascii | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | bytes/case-one-unicode | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | bytes/dotstar-prefix-unicode | A | unmapped | unmapped: unicode bytes mode |
-| bytes/invalid-utf8-anchor-200 | A | follow-up | bytes-mode empty-match position off by one on invalid UTF-8 (upstream fuzz regression) |
 | bytes/mixed-dot | A | unmapped | unmapped: unicode bytes mode |
 | bytes/mixed-dot | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
 | bytes/negate-ascii | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
