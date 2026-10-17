@@ -59,10 +59,10 @@ TITLES = {
 }
 
 SERIES = (
-    ("re", "str", "#4C72B0", "o", "re / str"),
-    ("re", "bytes", "#93AED1", "s", "re / bytes"),
-    ("rurex", "str", "#CE422B", "o", "rurex / str"),
-    ("rurex", "bytes", "#E08D75", "s", "rurex / bytes"),
+    ("re", "str", "#4C72B0", "-", "o", "re / str"),
+    ("re", "bytes", "#4C72B0", (0, (6, 3)), "s", "re / bytes"),
+    ("rurex", "str", "#CE422B", "-", "o", "rurex / str"),
+    ("rurex", "bytes", "#CE422B", (0, (6, 3)), "s", "rurex / bytes"),
 )
 
 
@@ -70,12 +70,12 @@ def chart(data, interp, out_name):
     pts = [p for p in data["points"] if p["interpreter"] == interp]
     xs = sorted({p["threads"] for p in pts})
     fig, ax = plt.subplots(figsize=(9.5, 5.4))
-    for engine, form, color, marker, label in SERIES:
+    for engine, form, color, ls, marker, label in SERIES:
         ys = [next(p["wall_s"] for p in pts
                    if p["threads"] == x and p["engine"] == engine
                    and p["input"] == form)
               for x in xs]
-        ax.plot(xs, ys, marker=marker, linestyle="-", color=color,
+        ax.plot(xs, ys, marker=marker, linestyle=ls, color=color,
                 linewidth=2.2, markersize=6, label=label, zorder=3)
         ax.text(xs[-1], ys[-1], "  " + f"{ys[-1]:.2f} s",
                 color=color, fontsize=9, va="center", ha="left")
@@ -84,7 +84,7 @@ def chart(data, interp, out_name):
     ax.set_ylabel("wall time for the whole pile (s)")
     ax.set_title(TITLES[interp], loc="left", fontsize=13,
                  fontweight="bold", pad=12)
-    ax.legend(loc="upper left")
+    ax.legend(loc="upper left", handlelength=4.2, handletextpad=0.8)
     fig.tight_layout()
     path = IMG / out_name
     fig.savefig(path, bbox_inches="tight")
