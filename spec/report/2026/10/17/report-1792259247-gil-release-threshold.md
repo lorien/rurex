@@ -79,3 +79,35 @@ RE2's own binding recommends — while the str variant keeps the
 honest ×3 story (CPython's per-string transcode; near-parity warm).
 Free-threaded: both variants scale (rurex bytes 0.43 → 0.30 s at
 4 workers). Committed as 07b3423.
+
+### Postscript 2: three-way UTF-8 borrow (the str-path follow-up)
+
+Implemented the owner-approved hybrid (`src/utf8.rs`): compact-ASCII
+strings borrow the internal buffer zero-copy; non-ASCII strings with
+CPython's utf8 cache warm borrow it; cold non-ASCII strings transcode
+in Rust into an owned buffer. CPython's cache is never written.
+Correctness: 31 Rust tests (incl. encoder byte-equality over a
+torture corpus + ABI-offset validation), pytest 279, CPython vendored
+suite, all three corpus suites green.
+
+**Honest result: the cold-str gap did not close.** GIL single-thread
+1.49 → 1.46 µs/post. The Rust scalar transcoder
+(`String::from_utf16`) runs at 0.48 GB/s on Arabic UCS-2 — the same
+class as CPython's own encoder (~0.45 GB/s). Micro-benchmarks
+(`var/utf8_micro.md`): from_utf16 0.48 GB/s, encoding_rs 0.81 GB/s
+(1.7×), manual push 0.48 GB/s. To reach the ×1.4-1.5 target the
+transcoder must hit 5-10 GB/s — SIMD territory (encoding_rs
+`simd-accel`, xutf, or simdutf; the latter is a C++ dependency).
+
+What the change does deliver: ASCII haystacks and cache-warm strings
+now skip the CPython encoder entirely (measurable on any workload
+whose strings were pre-touched by another C-API consumer), the
+groundwork for a SIMD transcoder behind the same `utf8_of` signature,
+and correct semantics for all three storage kinds.
+
+### Future-task note (amended)
+
+- [open] SIMD transcoding for the cold-str path: encoding_rs with
+  `simd-accel` (pure Rust, ~2-5 GB/s claimed) as the first candidate;
+  xutf/simdutf (5-10 GB/s, C++/nightly) if that is not enough.
+  Expected: cold str ×3 → ×1.4-1.5 on the Telegram workload.
