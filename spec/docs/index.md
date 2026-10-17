@@ -46,6 +46,11 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   `rurex.Scanner` mirrors `re.Scanner`; CPython's `test_re.py`
   vendored (pinned v3.13.5) as a conformance harness with an
   EXPECTED ledger accounting for every test.
+- [adr/0010-rustregex-corpus-suite.md](adr/0010-rustregex-corpus-suite.md) —
+  rust-lang/regex's `testdata/` corpus vendored (pinned to the
+  Cargo.lock regex version) and run in two layers: binding
+  conformance vs the corpus's expected spans, and parity vs
+  stdlib `re` on identical inputs; EXPECTED ledger as in ADR-0009.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

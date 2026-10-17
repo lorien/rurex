@@ -59,3 +59,36 @@ CPython internals, harness artifacts, or a named follow-up task
 (error-message parity, buffer-protocol haystacks). Closing a gap
 means removing the ledger entry in the same commit. When bumping the
 vendored tag, re-triage and refresh the ledger.
+
+## rust-regex corpus conformance (two layers)
+
+Run:
+
+    .venv/bin/python -m pytest \
+      tests/rustregex/vendored_corpus_engine.py \
+      tests/rustregex/vendored_corpus_parity.py -q
+
+rust-lang/regex's own `testdata/` corpus (1,203 TOML cases), vendored
+verbatim at the tag matching the `Cargo.lock` regex version — see
+`tests/rustregex/PROVENANCE.md` and ADR-0010. Not collected by a
+plain `pytest` run. Two layers:
+
+- **A — binding conformance** (`vendored_corpus_engine.py`): rurex's
+  Python-visible results vs the corpus's expected byte-offset spans;
+  exercises the glue upstream CI never runs (flag translation,
+  anchored/VERBOSE pattern wraps, `pos`/`endpos` windows, byte→char
+  span conversion, iteration advancement, str/bytes duality).
+- **B — parity** (`vendored_corpus_parity.py`): the same inputs
+  through rurex and stdlib `re`; both must agree on the compile
+  verdict and the full match iteration. A disagreement is a bug or a
+  ledger row.
+
+Every non-passing case is a row in `tests/rustregex/EXPECTED.md`
+(bucketed: unmapped / by-design python-parity / by-design
+engine-semantics / by-design rurex-superset / corpus-ahead-of-pinned
+-crate / follow-up); the harness enforces exhaustiveness in both
+directions. Regenerate the ledger with
+`python tests/rustregex/gen_expected.py` after driver changes or
+corpus re-vendoring, then re-review the diff. When `Cargo.lock`'s
+regex version bumps, re-vendor the corpus at the matching tag and
+re-triage.

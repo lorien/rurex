@@ -83,3 +83,13 @@ jobs:
           source .venv/bin/activate
           maturin develop
           python -m pytest tests/ -q
+      - name: Conformance suite (rust-regex corpus, layers A+B)
+        # Layer B compares against stdlib `re` and is triaged on one
+        # interpreter version; other cells would churn the ledger for
+        # no new information.
+        if: ${{ matrix.python-version == '3.13' }}
+        run: |
+          source .venv/bin/activate
+          python -m pytest \
+            tests/rustregex/vendored_corpus_engine.py \
+            tests/rustregex/vendored_corpus_parity.py -q
