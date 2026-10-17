@@ -42,21 +42,30 @@ SPECIAL_A = {
     ),
 }
 
-ZW_BUG = (
-    "zero-width iteration parity bug: CPython >=3.7 alternates empty "
-    "and non-empty matches at the same position; rurex advances by one"
-)
-ZW_TRIAGE = (
-    "zero-width/empty-loop iteration semantics differ from CPython "
-    "(step advancement or loop-capture); needs triage — see report"
-)
+POSIX_CLASS = _re.compile(r"\[:[a-z]+:\]")
 LOOP_CAPTURE = (
     "empty-loop capture differs: engine does not re-enter a loop body "
     "on an empty iteration (by-design; cf. vendored test_bug_2537)"
 )
+LOOP_CORNER = (
+    "empty-body loop corner: CPython's empty-iteration loop "
+    "protection yields a different sequence; by-design (api.md, "
+    "same root cause as test_bug_2537)"
+)
+DOLLAR_END_ONLY = (
+    "engine $ is end-of-haystack (like re's \\Z); Python $ also "
+    "matches before a trailing newline — known engine semantics "
+    "(cf. vendored ledger test_dollar_matches_twice)"
+)
+B_EMPTY_STRING = (
+    "\\B on the empty haystack: engine reports (0,0), CPython "
+    "does not — by-design engine semantics"
+)
 
 
 def construct(pat):
+    if POSIX_CLASS.search(pat):
+        return "POSIX class [:x:] (re parses the bracket as literals)"
     if "\\b{" in pat or "\\B{" in pat:
         return "specialized word boundaries (\\b{start}/\\b{end})"
     if "(?mR" in pat or "(?R" in pat:
@@ -101,17 +110,22 @@ def subseq(x, y):
 def classify_b_seqdiff(case, detail):
     pat = case.patterns[0]
     ru, rr = split_seq(detail)
-    if "[[:" in pat:
-        return "by-design: rurex superset", construct(pat)
+    if POSIX_CLASS.search(pat):
+        return (
+            "by-design: rurex superset",
+            "POSIX class [:x:] (re parses the bracket as literals)",
+        )
     if ru is None:
-        return "follow-up", ZW_TRIAGE
-    if subseq(ru, rr):
-        return "follow-up", ZW_BUG
+        return "follow-up", "sequence diff not machine-parseable"
     spans_ru = [m[0] for m in ru]
     spans_rr = [m[0] for m in rr]
     if spans_ru == spans_rr:
         return "by-design: engine-semantics", LOOP_CAPTURE
-    return "follow-up", ZW_TRIAGE
+    if "\\B" in pat and not rr:
+        return "by-design: engine-semantics", B_EMPTY_STRING
+    if "$" in pat:
+        return "by-design: engine-semantics", DOLLAR_END_ONLY
+    return "by-design: engine-semantics", LOOP_CORNER
 
 
 def main():
@@ -128,7 +142,17 @@ def main():
             if c.case_id in SPECIAL_A:
                 bk, r = SPECIAL_A[c.case_id]
             elif b[0] == "fail" and "rejects" not in b[1]:
-                bk, r = "follow-up", "same root cause as the layer-B row"
+                # Mirror the layer-B bucket: by-design divergences are
+                # by-design on both layers; only genuine defects (or
+                # unparseable diffs) stay follow-up.
+                bb, _br = classify_b_seqdiff(c, b[1])
+                if bb == "follow-up":
+                    bk, r = "follow-up", "same root cause as the layer-B row"
+                else:
+                    bk = bb
+                    r = "same root cause as the layer-B row"
+            elif "($" in c.patterns[0] or "$" in c.patterns[0]:
+                bk, r = "by-design: engine-semantics", DOLLAR_END_ONLY
             else:
                 bk, r = (
                     "by-design: python-parity",

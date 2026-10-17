@@ -27,9 +27,9 @@ corpus re-vendoring), then re-review the diff.
 | anchored/nongreedy-all | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
 | anchored/word-boundary-nounicode-01 | A | unmapped | unmapped: unicode=false str mode |
 | basic/basic171 | A | unmapped | unmapped: unicode bytes mode |
-| basic/basic57 | B | by-design: rurex superset | POSIX class [[:..:]] (re parses as literal chars) |
-| basic/basic58 | B | by-design: rurex superset | POSIX class [[:..:]] (re parses as literal chars) |
-| basic/basic59 | B | by-design: rurex superset | POSIX class [[:..:]] (re parses as literal chars) |
+| basic/basic57 | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
+| basic/basic58 | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
+| basic/basic59 | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
 | basic/basic65 | A | unmapped | unmapped: unicode bytes mode |
 | basic/basic66 | A | unmapped | unmapped: unicode bytes mode |
 | basic/basic67 | A | unmapped | unmapped: unicode bytes mode |
@@ -63,13 +63,13 @@ corpus re-vendoring), then re-review the diff.
 | crazy/date3 | A | unmapped | unmapped: unicode=false str mode |
 | crazy/email | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
 | crazy/email-not | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
-| crazy/empty10 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| crazy/empty10 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | crazy/empty11 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| crazy/neg-class-ascii | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| crazy/neg-class-comma-space | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| crazy/neg-class-letter-space | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| crazy/neg-class-space | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| crazy/neg-class-space-comma | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| crazy/neg-class-ascii | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
+| crazy/neg-class-comma-space | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
+| crazy/neg-class-letter-space | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
+| crazy/neg-class-space | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
+| crazy/neg-class-space-comma | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
 | crazy/nothing-empty | B | by-design: no-re-equivalent | re has no RegexSet equivalent |
 | crazy/nothing-something | B | by-design: no-re-equivalent | re has no RegexSet equivalent |
 | crazy/ranges | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
@@ -96,14 +96,16 @@ corpus re-vendoring), then re-review the diff.
 | earliest/no-greedy-200 | A | unmapped | unmapped option: search-kind=earliest |
 | earliest/no-leftmost-first-100 | A | unmapped | unmapped option: search-kind=earliest |
 | earliest/no-leftmost-first-200 | A | unmapped | unmapped option: search-kind=earliest |
-| empty/100 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| empty/100 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | empty/110 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| empty/220 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| empty/220 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | empty/230 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| empty/300 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| empty/300 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | empty/310 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| empty/600 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
-| empty/610 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| empty/600 | A | by-design: engine-semantics | same root cause as the layer-B row |
+| empty/600 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| empty/610 | A | by-design: engine-semantics | same root cause as the layer-B row |
+| empty/610 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | expensive/backtrack-blow-visited-capacity | B | by-design: rurex superset | Unicode class \p{..} |
 | flags/10 | B | by-design: rurex superset | swap-greed flag (?U) |
 | flags/11 | A | unmapped | unmapped: unicode=false str mode |
@@ -113,16 +115,12 @@ corpus re-vendoring), then re-review the diff.
 | flags/6 | B | by-design: rurex superset | mid-pattern flag toggles ((?-i)) |
 | flags/8 | B | by-design: rurex superset | swap-greed flag (?U) |
 | flags/9 | B | by-design: rurex superset | swap-greed flag (?U) |
-| iter/empty10 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| iter/empty10 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | iter/empty11 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| iter/nonempty-followedby-empty | A | follow-up | same root cause as the layer-B row |
-| iter/nonempty-followedby-empty | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
-| iter/nonempty-followedby-oneempty | A | follow-up | same root cause as the layer-B row |
-| iter/nonempty-followedby-oneempty | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
-| iter/nonempty-followedby-onemixed | A | follow-up | same root cause as the layer-B row |
-| iter/nonempty-followedby-onemixed | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
-| iter/nonempty-followedby-twomixed | A | follow-up | same root cause as the layer-B row |
-| iter/nonempty-followedby-twomixed | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| iter/nonempty-followedby-empty | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| iter/nonempty-followedby-oneempty | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| iter/nonempty-followedby-onemixed | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| iter/nonempty-followedby-twomixed | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | leftmost-all/alt | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
 | leftmost-all/dotall | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
 | leftmost-all/multi | A | unmapped | unmapped: corpus set semantics = alternation-priority selection; rurex reports membership |
@@ -166,15 +164,15 @@ corpus re-vendoring), then re-review the diff.
 | multiline/repeat1-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat1-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat1-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat10 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| multiline/repeat10-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat10 | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
+| multiline/repeat10-crlf | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat10-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat10-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat10-crlf-cr | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat10-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat10-no-multi | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| multiline/repeat10-no-multi-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat10-no-multi | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
+| multiline/repeat10-no-multi-crlf | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat10-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat10-no-multi-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat10-no-multi-crlf-cr | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat10-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat11 | B | by-design: rurex superset | anchor repetition (^*/^+ etc.) |
 | multiline/repeat11-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
@@ -202,15 +200,15 @@ corpus re-vendoring), then re-review the diff.
 | multiline/repeat14-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat15-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat15-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat15-no-multi | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| multiline/repeat15-no-multi | B | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat15-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat15-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat16 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
-| multiline/repeat16-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat16 | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
+| multiline/repeat16-crlf | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat16-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat16-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat16-crlf-cr | A | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat16-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat16-no-multi | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| multiline/repeat16-no-multi | B | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat16-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat16-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat17-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
@@ -219,41 +217,45 @@ corpus re-vendoring), then re-review the diff.
 | multiline/repeat17-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat18-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat18-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat18-no-multi | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| multiline/repeat18-no-multi | B | by-design: engine-semantics | engine $ is end-of-haystack (like re's \Z); Python $ also matches before a trailing newline — known engine semantics (cf. vendored ledger test_dollar_matches_twice) |
 | multiline/repeat18-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat18-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat2 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| multiline/repeat2 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat2-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat2-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
+| multiline/repeat2-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat2-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat2-no-multi | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| multiline/repeat2-no-multi | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat2-no-multi-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat2-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
+| multiline/repeat2-no-multi-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat2-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat3 | A | follow-up | same root cause as the layer-B row |
-| multiline/repeat3 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| multiline/repeat3 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat3-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat3-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat3-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat3-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat3-no-multi | A | follow-up | same root cause as the layer-B row |
-| multiline/repeat3-no-multi | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| multiline/repeat3-no-multi | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat3-no-multi-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat3-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat3-no-multi-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat3-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat4 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| multiline/repeat4 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat4-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat4-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
+| multiline/repeat4-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat4-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat4-no-multi | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| multiline/repeat4-no-multi | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
+| multiline/repeat4-no-multi-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat4-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
+| multiline/repeat4-no-multi-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat4-no-multi-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat5 | A | follow-up | same root cause as the layer-B row |
-| multiline/repeat5 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| multiline/repeat5 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat5-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat5-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat5-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat5-crlf-cr | B | by-design: rurex superset | CRLF line mode (?R) |
-| multiline/repeat5-no-multi | A | follow-up | same root cause as the layer-B row |
-| multiline/repeat5-no-multi | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
+| multiline/repeat5-no-multi | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat5-no-multi-crlf | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | multiline/repeat5-no-multi-crlf | B | by-design: rurex superset | CRLF line mode (?R) |
 | multiline/repeat5-no-multi-crlf-cr | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
@@ -327,7 +329,6 @@ corpus re-vendoring), then re-review the diff.
 | overlapping/alt-leftmost-first-100 | A | unmapped | unmapped: overlapping search on a single pattern |
 | overlapping/empty-000 | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
 | overlapping/empty-alt-000 | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
-| overlapping/empty-alt-000 | B | follow-up | zero-width iteration parity bug: CPython >=3.7 alternates empty and non-empty matches at the same position; rurex advances by one |
 | overlapping/empty-alt-010 | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
 | overlapping/greedy-dotstar-matches-everything-100 | B | by-design: no-re-equivalent | re has no RegexSet equivalent |
 | overlapping/iter1-bytes | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
@@ -357,12 +358,12 @@ corpus re-vendoring), then re-review the diff.
 | regex-lite/perl-class-word | A | unmapped | unmapped: regex-lite crate semantics |
 | regex-lite/word-boundary | A | unmapped | unmapped: regex-lite crate semantics |
 | regex-lite/word-boundary-negated | A | unmapped | unmapped: regex-lite crate semantics |
-| regression/ascii-word-underscore | B | by-design: rurex superset | POSIX class [[:..:]] (re parses as literal chars) |
+| regression/ascii-word-underscore | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
 | regression/empty-flag-expr | A | corpus-ahead-of-pinned-crate | mid-pattern global (?x): accepted upstream after 1.13.1; pinned crate, rurex and re all reject |
 | regression/end-not-word-boundary | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | regression/endl-or-word-boundary | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
 | regression/flags-are-unset | A | corpus-ahead-of-pinned-crate | mid-pattern global (?i): accepted upstream after 1.13.1; pinned crate, rurex and re all reject |
-| regression/hir-optimization-out-of-order-class | B | by-design: rurex superset | POSIX class [[:..:]] (re parses as literal chars) |
+| regression/hir-optimization-out-of-order-class | B | by-design: rurex superset | POSIX class [:x:] (re parses the bracket as literals) |
 | regression/i429-0 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | regression/i429-0 | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
 | regression/i429-1 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
@@ -373,6 +374,7 @@ corpus re-vendoring), then re-review the diff.
 | regression/i429-2 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | regression/i429-3 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | regression/i429-3 | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
+| regression/i429-3-utf8 | A | by-design: python-parity | zero-width iteration follows CPython; corpus follows the Rust engine |
 | regression/i429-3-utf8 | B | by-design: rurex superset | engine inline flags (?u, ?-u scoping) |
 | regression/i429-4 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | regression/i429-5 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
@@ -578,141 +580,141 @@ corpus re-vendoring), then re-review the diff.
 | utf8/empty-utf8yes-startbound | A | unmapped | harness: bounds [1, 4] not on char boundaries |
 | utf8/empty-utf8yes-startbound-overlapping | A | unmapped | unmapped: overlapping iteration (match-kind=all) |
 | word-boundary-special/word-end-ascii-010 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-020 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-030 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-040 | A | unmapped | unmapped: unicode=false str mode |
 | word-boundary-special/word-end-ascii-050 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-060 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-060-bounds | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-060-bounds | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-060-bounds | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-070 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-080 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-090 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-ascii-110 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-ascii-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-ascii-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-010 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-020 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-030 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-040 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-040 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-040 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-050 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-060 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-060-bounds | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-060-bounds | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-060-bounds | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-070 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-080 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-090 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-ascii-110 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-end-half-ascii-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-040 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-ascii-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-040 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-half-unicode-060-bounds | A | unmapped | harness: bounds [2, 3] not on char boundaries |
-| word-boundary-special/word-end-half-unicode-060-bounds | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-half-unicode-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-half-unicode-060-bounds | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-half-unicode-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-end-unicode-060-bounds | A | unmapped | harness: bounds [2, 3] not on char boundaries |
-| word-boundary-special/word-end-unicode-060-bounds | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-end-unicode-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-end-unicode-060-bounds | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-end-unicode-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-010 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-020 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-030 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-040 | A | unmapped | unmapped: unicode=false str mode |
 | word-boundary-special/word-start-ascii-050 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-060 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-060-bounds | A | unmapped | unmapped: unicode=false str mode |
 | word-boundary-special/word-start-ascii-070 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-080 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-090 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-ascii-110 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-ascii-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-ascii-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-010 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-020 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-030 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-040 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-040 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-040 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-050 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-060 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-060-bounds | A | unmapped | unmapped: unicode=false str mode |
 | word-boundary-special/word-start-half-ascii-060-noutf8 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary-special/word-start-half-ascii-060-noutf8 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-060-noutf8 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-070 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-080 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-090 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-110 | A | unmapped | unmapped: unicode=false str mode |
-| word-boundary-special/word-start-half-ascii-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-carriage | A | unmapped | unmapped: unicode bytes mode |
-| word-boundary-special/word-start-half-ascii-carriage | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-carriage | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-customlineterm | A | unmapped | unmapped option: line-terminator |
-| word-boundary-special/word-start-half-ascii-customlineterm | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-customlineterm | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-ascii-linefeed | A | unmapped | unmapped: unicode bytes mode |
-| word-boundary-special/word-start-half-ascii-linefeed | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-040 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-ascii-linefeed | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-040 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-half-unicode-060-bounds | A | unmapped | harness: bounds [2, 3] not on char boundaries |
-| word-boundary-special/word-start-half-unicode-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-half-unicode-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-010 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-020 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-030 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-050 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-060 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-half-unicode-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-half-unicode-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-010 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-020 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-030 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-050 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-060 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary-special/word-start-unicode-060-bounds | A | unmapped | harness: bounds [2, 3] not on char boundaries |
-| word-boundary-special/word-start-unicode-070 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-080 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-090 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
-| word-boundary-special/word-start-unicode-110 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary-special/word-start-unicode-070 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-080 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-090 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
+| word-boundary-special/word-start-unicode-110 | B | by-design: engine-semantics | empty-body loop corner: CPython's empty-iteration loop protection yields a different sequence; by-design (api.md, same root cause as test_bug_2537) |
 | word-boundary/nb1 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb10 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb11 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
@@ -727,29 +729,29 @@ corpus re-vendoring), then re-review the diff.
 | word-boundary/nb2 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb20 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb21 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary/nb21 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary/nb21 | B | by-design: engine-semantics | \B on the empty haystack: engine reports (0,0), CPython does not — by-design engine semantics |
 | word-boundary/nb22 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb23 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary/nb23 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary/nb23 | B | by-design: engine-semantics | \B on the empty haystack: engine reports (0,0), CPython does not — by-design engine semantics |
 | word-boundary/nb24 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb25 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb26 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb27 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb28 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb29 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary/nb29 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary/nb29 | B | by-design: engine-semantics | \B on the empty haystack: engine reports (0,0), CPython does not — by-design engine semantics |
 | word-boundary/nb3 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb30 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb31 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary/nb31 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary/nb31 | B | by-design: engine-semantics | \B on the empty haystack: engine reports (0,0), CPython does not — by-design engine semantics |
 | word-boundary/nb32 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb33 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary/nb33 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary/nb33 | B | by-design: engine-semantics | \B on the empty haystack: engine reports (0,0), CPython does not — by-design engine semantics |
 | word-boundary/nb34 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb35 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb36 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb37 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary/nb37 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary/nb37 | B | by-design: engine-semantics | \B on the empty haystack: engine reports (0,0), CPython does not — by-design engine semantics |
 | word-boundary/nb38 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb39 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb4 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
@@ -758,7 +760,7 @@ corpus re-vendoring), then re-review the diff.
 | word-boundary/nb7 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb8 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
 | word-boundary/nb9 | A | unmapped | unmapped: utf8=false non-unescape bytes mode |
-| word-boundary/nb9 | B | follow-up | zero-width/empty-loop iteration semantics differ from CPython (step advancement or loop-capture); needs triage — see report |
+| word-boundary/nb9 | B | by-design: engine-semantics | \B on the empty haystack: engine reports (0,0), CPython does not — by-design engine semantics |
 | word-boundary/unicode1-only-ascii | A | unmapped | unmapped: unicode=false str mode |
 | word-boundary/unicode2-only-ascii | A | unmapped | unmapped: unicode=false str mode |
 | word-boundary/unicode3-only-ascii | A | unmapped | unmapped: unicode=false str mode |

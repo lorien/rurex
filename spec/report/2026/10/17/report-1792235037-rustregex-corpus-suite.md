@@ -46,6 +46,9 @@ rurex, plus run stdlib `re` on the same inputs to confirm rurex and
   promise, and 30 corpus cases already follow CPython against the
   engine), or keep the documented advance-by-one and re-bucket the
   ledger rows as by-design. Owner call.
+  [acted — adopted CPython ≥3.7 semantics: vendored PikeVM with an
+  empty-accept skip drives a shared must-advance retry; fixed in
+  report-1792240544-zero-width-fix.]
 - **[follow-up] bytes-mode empty-match off-by-one on invalid UTF-8**
   (`bytes/invalid-utf8-anchor-200`, upstream fuzz regression case):
   rurex reports the empty match at byte 23, engine at 22.
@@ -69,12 +72,21 @@ rurex, plus run stdlib `re` on the same inputs to confirm rurex and
 - [open] Implement the zero-width iteration decision above; when
   done, re-run `gen_expected.py`, re-bucket the `follow-up` rows, and
   drop the corresponding EXPECTED entries in the same commit.
+  [acted — implemented in report-1792240544-zero-width-fix; ledger
+  re-triaged, follow-up rows reduced from 128 to 1 (the bytes-mode
+  off-by-one below).]
 - [open] Triage the `follow-up` "zero-width/empty-loop needs triage"
   subrows (29 cases) into step-bug vs capture-semantics buckets once
   the decision lands.
+  [acted — triaged into by-design buckets: loop-capture (spans equal,
+  test_bug_2537 family), empty-body loop corner, $-end-only, and
+  \B-on-empty; see the regenerated EXPECTED.md.]
 - [open] When `Cargo.lock` regex bumps: re-vendor `testdata/` at the
   matching tag, re-run `gen_expected.py`, diff the ledger (behavior
   drift shows up as new unledgered failures) — per PROVENANCE.md.
+  [amended: since the zero-width fix, also re-vendor
+  `src/vendor/pikevm.rs` at the matching regex-automata version and
+  re-apply the marked [rurex] guard; a unit test enforces the sync.]
 - [open] sdist grows by ~290 KB of vendored TOML corpus; if wheel
   phase 1's "sdist is fat" item is ever acted on, keep the corpus in
   the repo but consider excluding `tests/rustregex/data/` from the

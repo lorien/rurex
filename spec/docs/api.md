@@ -130,8 +130,22 @@ translated to engine byte offsets internally.
 pickled). `repr(rx)` renders as `rurex.compile('a+')`, with flags when
 non-default.
 
-Zero-width matches: iteration and substitution advance one character
-past an empty match, matching Python 3.7+ `re` behavior.
+Zero-width matches follow CPython ≥3.7 semantics: after an empty
+match at position `p`, iteration (`finditer`, `findall`, `split`,
+`sub`, the scanners) retries at `p` requiring a non-empty match and
+yields that before moving one unit past `p` — `re.findall(r'|b',
+'abc')` is `['', '', 'b', '', '']`, like `re`. The retry runs on a
+lazily built must-advance engine (a vendored PikeVM with an
+empty-accept skip, `src/vendor/pikevm.rs`); patterns that never
+match empty never build or invoke it.
+
+Known divergence (by-design, same root cause as the vendored
+suite's `test_bug_2537` entry): for a quantifier whose body can
+match empty (`(|a)*`, `(a*)*`), CPython's empty-iteration loop
+protection produces its own match sequence that no NFA engine
+reproduces; rurex reports the engine's leftmost-first results
+there (`re.findall(r'(a*)*', 'aaa')` is `['', '']` in `re`,
+`['aaa', '']` in rurex).
 
 ## Scanner objects
 

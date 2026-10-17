@@ -12,6 +12,7 @@ use pyo3::types::{PyAny, PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
 use crate::error;
 use crate::flags;
 use crate::match_::{Endpos, Match};
+use crate::retry::RetryEngine;
 use crate::template;
 
 enum Inner {
@@ -46,6 +47,11 @@ pub struct Regex {
     /// `None` means the variant could not be built and the span-check
     /// fallback is used instead.
     anchored: OnceLock<Option<Inner>>,
+    /// Lazily built must-advance engine for CPython >=3.7 zero-width
+    /// iteration (see `cpython_step`); built on the first empty
+    /// match ever encountered. `None` = not yet built or failed to
+    /// build (callers then fall back to advancing one unit).
+    retry: OnceLock<Option<Arc<RetryEngine>>>,
 }
 
 /// Convert engine byte spans to Python-unit spans (character offsets)
@@ -102,6 +108,57 @@ fn next_boundary(s: &str, at: usize) -> usize {
         s.len() + 1
     } else {
         at + s[at..].chars().next().map_or(1, char::len_utf8)
+    }
+}
+
+/// One step of CPython's (>=3.7) zero-width iteration, shared by
+/// every match-iteration site (`finditer`, `findall`, `split`, `sub`
+/// and the scanners).
+///
+/// After an empty match at `p`, `re` retries at `p` requiring a
+/// non-empty match, and yields that before moving on. The public
+/// engine API cannot express that preference-order query, so the
+/// retry runs on the lazily built must-advance engine (`retry.rs`);
+/// when that is unavailable the old advance-one-unit rule applies.
+///
+/// `hay` is the windowed haystack (retry bound = its end), `scan`
+/// the current unanchored search position, `pending` the must-advance
+/// retry position carried across steps, `search` the ordinary
+/// unanchored leftmost-first search, `advance` the one-unit step
+/// (char boundary in text mode, `+1` in bytes mode).
+fn cpython_step<S, A>(
+    hay: &[u8],
+    scan: usize,
+    pending: &mut Option<usize>,
+    search: S,
+    retry: Option<&RetryEngine>,
+    advance: A,
+) -> Option<Vec<Option<(usize, usize)>>>
+where
+    S: FnOnce(usize) -> Option<Vec<Option<(usize, usize)>>>,
+    A: FnOnce(usize) -> usize,
+{
+    if let Some(p) = *pending {
+        *pending = None;
+        if let Some(spans) = retry.and_then(|r| r.retry(hay, p, hay.len())) {
+            return Some(spans);
+        }
+        return search(advance(p));
+    }
+    search(scan)
+}
+
+/// Apply the CPython (>=3.7) advance rule to a just-yielded match:
+/// an empty match arms the must-advance retry at its start instead
+/// of moving the scan position.
+#[inline]
+fn advance_after(spans: &[Option<(usize, usize)>], scan: &mut usize) -> Option<usize> {
+    let (sb, se) = spans[0].expect("group 0 always matches");
+    if sb == se {
+        Some(sb)
+    } else {
+        *scan = se;
+        None
     }
 }
 
@@ -463,7 +520,24 @@ impl Regex {
             groups,
             names,
             anchored: OnceLock::new(),
+            retry: OnceLock::new(),
         })
+    }
+
+    /// The lazily built must-advance engine (`retry.rs`), shared by
+    /// every iteration site via `cpython_step`.
+    fn retry_engine(&self) -> Option<&Arc<RetryEngine>> {
+        self.retry
+            .get_or_init(|| {
+                let bytes_mode = matches!(self.inner, Inner::Bytes(_));
+                let cfg = flags::translate(self.flags, bytes_mode).ok()?;
+                let text: &str = match &self.src {
+                    Pattern::Text(s) => s,
+                    Pattern::Bytes(b) => std::str::from_utf8(b).ok()?,
+                };
+                RetryEngine::build(text, &cfg, bytes_mode).map(Arc::new)
+            })
+            .as_ref()
     }
 
     /// The lazily built `\A(?:pattern)\z` variant for `fullmatch`.
@@ -722,6 +796,7 @@ impl Regex {
             pos: it.pos,
             endpos: it.endpos,
             scan: it.scan,
+            pending: it.pending,
             end_b: it.end_b,
             chars_seen: it.chars_seen,
             bytes_seen: it.bytes_seen,
@@ -877,6 +952,7 @@ impl Regex {
             pos,
             endpos: Endpos::from_opt(endpos),
             scan,
+            pending: None,
             end_b,
             chars_seen: 0,
             bytes_seen: 0,
@@ -911,7 +987,8 @@ impl Regex {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(PyList::empty(py));
                 };
-                let all_spans = py.detach(|| scan_all_text(engine, s, pb, eb));
+                let retry = slf.retry_engine().map(Arc::as_ref);
+                let all_spans = py.detach(|| scan_all_text(engine, retry, s, pb, eb));
                 let mut items = Vec::with_capacity(all_spans.len());
                 for spans in &all_spans {
                     items.push(findall_item_text(py, s, slf.groups, spans)?);
@@ -922,7 +999,8 @@ impl Regex {
                 let Some((pb, eb)) = window(pos, endpos, b.len()) else {
                     return Ok(PyList::empty(py));
                 };
-                let all_spans = py.detach(|| scan_all_bytes(engine, b, pb, eb));
+                let retry = slf.retry_engine().map(Arc::as_ref);
+                let all_spans = py.detach(|| scan_all_bytes(engine, retry, b, pb, eb));
                 let mut items = Vec::with_capacity(all_spans.len());
                 for spans in &all_spans {
                     items.push(findall_item_bytes(py, b, slf.groups, spans)?);
@@ -948,14 +1026,25 @@ impl Regex {
         let hay = keep.hay()?;
         match (hay, &slf.inner) {
             (Hay::Text(s), Inner::Text(engine)) => {
+                let retry = slf.retry_engine().map(Arc::as_ref);
                 let mut prev = 0usize;
                 let mut scan = 0usize;
                 let mut n = 0usize;
+                let mut pending: Option<usize> = None;
                 loop {
                     if maxsplit != 0 && n == maxsplit {
                         break;
                     }
-                    let Some(spans) = py.detach(|| captures_spans_text(engine, s, scan)) else {
+                    let Some(spans) = py.detach(|| {
+                        cpython_step(
+                            s.as_bytes(),
+                            scan,
+                            &mut pending,
+                            |at| captures_spans_text(engine, s, at),
+                            retry,
+                            |p| next_boundary(s, p),
+                        )
+                    }) else {
                         break;
                     };
                     let (sb, se) = spans[0].expect("group 0 always matches");
@@ -967,20 +1056,31 @@ impl Regex {
                         });
                     }
                     prev = se;
-                    scan = if sb == se { next_boundary(s, se) } else { se };
+                    pending = advance_after(&spans, &mut scan).or(pending);
                     n += 1;
                 }
                 items.push(PyString::new(py, &s[prev..]).into_any());
             }
             (Hay::Bytes(b), Inner::Bytes(engine)) => {
+                let retry = slf.retry_engine().map(Arc::as_ref);
                 let mut prev = 0usize;
                 let mut scan = 0usize;
                 let mut n = 0usize;
+                let mut pending: Option<usize> = None;
                 loop {
                     if maxsplit != 0 && n == maxsplit {
                         break;
                     }
-                    let Some(spans) = py.detach(|| captures_spans_bytes(engine, b, scan)) else {
+                    let Some(spans) = py.detach(|| {
+                        cpython_step(
+                            b,
+                            scan,
+                            &mut pending,
+                            |at| captures_spans_bytes(engine, b, at),
+                            retry,
+                            |p| p + 1,
+                        )
+                    }) else {
                         break;
                     };
                     let (sb, se) = spans[0].expect("group 0 always matches");
@@ -992,7 +1092,7 @@ impl Regex {
                         });
                     }
                     prev = se;
-                    scan = if sb == se { se + 1 } else { se };
+                    pending = advance_after(&spans, &mut scan).or(pending);
                     n += 1;
                 }
                 items.push(PyBytes::new(py, &b[prev..]).into_any());
@@ -1143,10 +1243,11 @@ fn captures_spans_text(
 }
 
 /// Every match in the `[pb, eb)` byte window, as byte-unit group
-/// spans — pure Rust, safe under a released GIL. Mirrors
-/// `FindIter::step`'s advance rule for empty matches.
+/// spans — pure Rust, safe under a released GIL. Follows CPython's
+/// (>=3.7) zero-width iteration rule via `cpython_step`.
 fn scan_all_text(
     re: &regex::Regex,
+    retry: Option<&RetryEngine>,
     s: &str,
     pb: usize,
     eb: usize,
@@ -1154,22 +1255,27 @@ fn scan_all_text(
     let hay = &s[..eb];
     let mut out = Vec::new();
     let mut scan = pb;
+    let mut pending: Option<usize> = None;
     while scan <= eb {
-        let Some(caps) = re.captures_at(hay, scan) else {
+        let Some(spans) = cpython_step(
+            hay.as_bytes(),
+            scan,
+            &mut pending,
+            |at| captures_spans_text(re, hay, at),
+            retry,
+            |p| next_boundary(s, p),
+        ) else {
             break;
         };
-        let spans: Vec<Option<(usize, usize)>> = (0..caps.len())
-            .map(|i| caps.get(i).map(|m| (m.start(), m.end())))
-            .collect();
-        let (sb, se) = spans[0].expect("group 0 always matches");
+        pending = advance_after(&spans, &mut scan).or(pending);
         out.push(spans);
-        scan = if sb == se { next_boundary(s, se) } else { se };
     }
     out
 }
 
 fn scan_all_bytes(
     re: &regex::bytes::Regex,
+    retry: Option<&RetryEngine>,
     b: &[u8],
     pb: usize,
     eb: usize,
@@ -1177,16 +1283,20 @@ fn scan_all_bytes(
     let hay = &b[..eb];
     let mut out = Vec::new();
     let mut scan = pb;
+    let mut pending: Option<usize> = None;
     while scan <= eb {
-        let Some(caps) = re.captures_at(hay, scan) else {
+        let Some(spans) = cpython_step(
+            hay,
+            scan,
+            &mut pending,
+            |at| captures_spans_bytes(re, hay, at),
+            retry,
+            |p| p + 1,
+        ) else {
             break;
         };
-        let spans: Vec<Option<(usize, usize)>> = (0..caps.len())
-            .map(|i| caps.get(i).map(|m| (m.start(), m.end())))
-            .collect();
-        let (sb, se) = spans[0].expect("group 0 always matches");
+        pending = advance_after(&spans, &mut scan).or(pending);
         out.push(spans);
-        scan = if sb == se { se + 1 } else { se };
     }
     out
 }
@@ -1329,15 +1439,26 @@ fn substitute(
     match (hay, &reg.inner) {
         (Hay::Text(s), Inner::Text(engine)) => {
             let names = reg.names.clone();
+            let retry = reg.retry_engine().map(Arc::as_ref);
             let mut out = String::new();
             let mut prev = 0usize;
             let mut scan = 0usize;
             let mut n = 0usize;
+            let mut pending: Option<usize> = None;
             loop {
                 if count != 0 && n == count {
                     break;
                 }
-                let Some(spans) = py.detach(|| captures_spans_text(engine, s, scan)) else {
+                let Some(spans) = py.detach(|| {
+                    cpython_step(
+                        s.as_bytes(),
+                        scan,
+                        &mut pending,
+                        |at| captures_spans_text(engine, s, at),
+                        retry,
+                        |p| next_boundary(s, p),
+                    )
+                }) else {
                     break;
                 };
                 let (sb, se) = spans[0].expect("group 0 always matches");
@@ -1371,7 +1492,7 @@ fn substitute(
                     }
                 }
                 prev = se;
-                scan = if sb == se { next_boundary(s, se) } else { se };
+                pending = advance_after(&spans, &mut scan).or(pending);
                 n += 1;
             }
             out.push_str(&s[prev..]);
@@ -1379,15 +1500,26 @@ fn substitute(
         }
         (Hay::Bytes(b), Inner::Bytes(engine)) => {
             let names = reg.names.clone();
+            let retry = reg.retry_engine().map(Arc::as_ref);
             let mut out = Vec::new();
             let mut prev = 0usize;
             let mut scan = 0usize;
             let mut n = 0usize;
+            let mut pending: Option<usize> = None;
             loop {
                 if count != 0 && n == count {
                     break;
                 }
-                let Some(spans) = py.detach(|| captures_spans_bytes(engine, b, scan)) else {
+                let Some(spans) = py.detach(|| {
+                    cpython_step(
+                        b,
+                        scan,
+                        &mut pending,
+                        |at| captures_spans_bytes(engine, b, at),
+                        retry,
+                        |p| p + 1,
+                    )
+                }) else {
                     break;
                 };
                 let (sb, se) = spans[0].expect("group 0 always matches");
@@ -1422,7 +1554,7 @@ fn substitute(
                     }
                 }
                 prev = se;
-                scan = if sb == se { se + 1 } else { se };
+                pending = advance_after(&spans, &mut scan).or(pending);
                 n += 1;
             }
             out.extend_from_slice(&b[prev..]);
@@ -1467,6 +1599,9 @@ pub struct FindIter {
     endpos: Endpos,
     /// Byte scan position.
     scan: usize,
+    /// Must-advance retry position (CPython >=3.7 zero-width rule;
+    /// see `cpython_step`).
+    pending: Option<usize>,
     /// Byte end bound.
     end_b: usize,
     /// Chars before `bytes_seen` (text mode only).
@@ -1501,12 +1636,24 @@ impl FindIter {
                 let s = self.string.bind(py).extract::<&str>()?;
                 let hay = &s[..self.end_b];
                 let scan = self.scan;
-                let spans = py.detach(|| captures_spans_text(engine, hay, scan));
+                let retry = re_ref.retry_engine().map(Arc::as_ref);
+                let mut pending = self.pending;
+                let spans = py.detach(|| {
+                    cpython_step(
+                        hay.as_bytes(),
+                        scan,
+                        &mut pending,
+                        |at| captures_spans_text(engine, hay, at),
+                        retry,
+                        |p| next_boundary(s, p),
+                    )
+                });
                 let Some(spans) = spans else {
+                    self.pending = pending;
                     self.done = true;
                     return Ok(None);
                 };
-                let (sb, se) = spans[0].expect("group 0 always matches");
+                let (_sb, se) = spans[0].expect("group 0 always matches");
                 let mut py_spans = Vec::with_capacity(spans.len());
                 for span in &spans {
                     py_spans.push(span.map(|(a, b)| {
@@ -1516,7 +1663,7 @@ impl FindIter {
                 }
                 self.chars_seen += s[self.bytes_seen..se].chars().count();
                 self.bytes_seen = se;
-                self.scan = if sb == se { next_boundary(s, se) } else { se };
+                self.pending = advance_after(&spans, &mut self.scan).or(pending);
                 Ok(Some(Match::new(
                     self.re.clone_ref(py),
                     self.string.clone_ref(py),
@@ -1542,13 +1689,24 @@ impl FindIter {
                 };
                 let hay = &b[..self.end_b];
                 let scan = self.scan;
-                let spans = py.detach(|| captures_spans_bytes(engine, hay, scan));
+                let retry = re_ref.retry_engine().map(Arc::as_ref);
+                let mut pending = self.pending;
+                let spans = py.detach(|| {
+                    cpython_step(
+                        hay,
+                        scan,
+                        &mut pending,
+                        |at| captures_spans_bytes(engine, hay, at),
+                        retry,
+                        |p| p + 1,
+                    )
+                });
                 let Some(spans) = spans else {
+                    self.pending = pending;
                     self.done = true;
                     return Ok(None);
                 };
-                let (sb, se) = spans[0].expect("group 0 always matches");
-                self.scan = if sb == se { se + 1 } else { se };
+                self.pending = advance_after(&spans, &mut self.scan).or(pending);
                 Ok(Some(Match::new(
                     self.re.clone_ref(py),
                     self.string.clone_ref(py),
@@ -1580,6 +1738,8 @@ pub struct SreScanner {
     pos: usize,
     endpos: Endpos,
     scan: usize,
+    /// Must-advance retry position (CPython >=3.7 zero-width rule).
+    pending: Option<usize>,
     end_b: usize,
     chars_seen: usize,
     bytes_seen: usize,
@@ -1603,12 +1763,24 @@ impl SreScanner {
                 let s = self.string.bind(py).extract::<&str>()?;
                 let hay = &s[..self.end_b];
                 let scan = self.scan;
-                let spans = py.detach(|| captures_spans_text(engine, hay, scan));
+                let retry = re_ref.retry_engine().map(Arc::as_ref);
+                let mut pending = self.pending;
+                let spans = py.detach(|| {
+                    cpython_step(
+                        hay.as_bytes(),
+                        scan,
+                        &mut pending,
+                        |at| captures_spans_text(engine, hay, at),
+                        retry,
+                        |p| next_boundary(s, p),
+                    )
+                });
                 let Some(spans) = spans else {
+                    self.pending = pending;
                     self.done = true;
                     return Ok(None);
                 };
-                let (sb, se) = spans[0].expect("group 0 always matches");
+                let (_sb, se) = spans[0].expect("group 0 always matches");
                 // Character offset of the cursor before this step (for
                 // the anchored filter). Like CPython's SRE_Scanner, a
                 // failed anchored call still consumes the match it
@@ -1627,7 +1799,7 @@ impl SreScanner {
                 }
                 self.chars_seen += s[self.bytes_seen..se].chars().count();
                 self.bytes_seen = se;
-                self.scan = if sb == se { next_boundary(s, se) } else { se };
+                self.pending = advance_after(&spans, &mut self.scan).or(pending);
                 let m = Match::new(
                     self.re.clone_ref(py),
                     self.string.clone_ref(py),
@@ -1657,15 +1829,27 @@ impl SreScanner {
                 };
                 let hay = &b[..self.end_b];
                 let scan = self.scan;
-                let spans = py.detach(|| captures_spans_bytes(engine, hay, scan));
+                let retry = re_ref.retry_engine().map(Arc::as_ref);
+                let mut pending = self.pending;
+                let spans = py.detach(|| {
+                    cpython_step(
+                        hay,
+                        scan,
+                        &mut pending,
+                        |at| captures_spans_bytes(engine, hay, at),
+                        retry,
+                        |p| p + 1,
+                    )
+                });
                 let Some(spans) = spans else {
+                    self.pending = pending;
                     self.done = true;
                     return Ok(None);
                 };
-                let (sb, se) = spans[0].expect("group 0 always matches");
+                let (sb, _se) = spans[0].expect("group 0 always matches");
                 // SRE_Scanner parity: an anchored miss still consumes.
                 let reject = anchored && sb != scan;
-                self.scan = if sb == se { se + 1 } else { se };
+                self.pending = advance_after(&spans, &mut self.scan).or(pending);
                 if reject {
                     return Ok(None);
                 }
@@ -1804,6 +1988,7 @@ impl Scanner {
             pos: 0,
             endpos: Endpos::Eof(OnceLock::new()),
             scan: 0,
+            pending: None,
             end_b: s.len(),
             chars_seen: 0,
             bytes_seen: 0,

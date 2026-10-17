@@ -12,7 +12,9 @@ mod flags;
 mod match_;
 mod regex;
 mod regexset;
+mod retry;
 mod template;
+mod vendor;
 
 use match_::Match;
 use regex::{FindIter, Regex, Scanner};
