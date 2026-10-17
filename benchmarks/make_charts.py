@@ -128,6 +128,8 @@ PRESENTATION = {
     ("pathological", "input_length"): dict(logx=False, logy=True),
     ("threads_gil", "threads"): dict(logx=False, logy=False),
     ("threads_free", "threads"): dict(logx=False, logy=False),
+    ("threads_pos_gil", "match_position"): dict(logx=False, logy=False),
+    ("threads_pos_free", "match_position"): dict(logx=False, logy=False),
 }
 
 

@@ -1,4 +1,4 @@
-"""Benchmark suite: five single-variable tests.
+"""Benchmark suite: single-variable benchmark tests.
 
 Each test varies exactly one parameter and states its fixed context in
 the title; a test op maps to one operation on a precompiled pattern:
@@ -68,6 +68,9 @@ EXTRACT_SIZE_FIXED_DENSITY = 80
 EXTRACT_DENSITY_FIXED_KB = 1024
 THREADS_DOC_KB = 1024
 THREADS_PILE = 8000
+THREADS_POS_FIXED_KB = SCAN_POSITION_FIXED_KB
+THREADS_POS_WORKERS = 4
+THREADS_POS_PILE = 1000
 
 
 def _example(text, width=110):
@@ -281,6 +284,95 @@ TESTS = [
                 "values": [1, 2, 4, 8],
                 "make": lambda n: with_needle_at(
                     THREADS_DOC_KB * 1024, SCAN_PATTERN, 100
+                ),
+            },
+        ],
+    },
+    {
+        "name": "threads_pos_gil",
+        "title": (
+            "Test 8 — Concurrency: needle position on GIL Python "
+            f"({THREADS_POS_WORKERS} workers)"
+        ),
+        "description": (
+            "Test 2's scan workload as one fixed pile — "
+            f"{THREADS_POS_PILE} whole-haystack searches over the "
+            f"{THREADS_POS_FIXED_KB // 1024} MB haystack, split across "
+            f"{THREADS_POS_WORKERS} barrier-started workers — with the "
+            "needle's position as the variable (25–100% of the text). "
+            "Position 0% is excluded: a ~170 ns `re` op cannot fill a "
+            "thread pile (thread startup alone costs milliseconds), so "
+            "that point would time the harness, not the engines. On "
+            "GIL Python `re` serializes on the GIL at every position, "
+            "while rurex's GIL-released scans overlap — until the "
+            "GIL-held Match-construction tail and memory bandwidth "
+            "(the 8 MB doc exceeds this CPU's L3) flatten its curve."
+        ),
+        "pattern": SCAN_PATTERN,
+        "data_example": (
+            _example(words(60, random.Random(2)))
+            + " " + SCAN_PATTERN + " "
+            + _example(words(60, random.Random(3)))
+        ),
+        "op": "threaded_search",
+        "interpreter": "gil",
+        "pile": THREADS_POS_PILE,
+        "threads": THREADS_POS_WORKERS,
+        "sweeps": [
+            {
+                "param": "match_position",
+                "unit": "%",
+                "label": (
+                    "needle position in the fixed 8 MB haystack, "
+                    f"{THREADS_POS_WORKERS} workers × a pile of "
+                    f"{THREADS_POS_PILE} searches"
+                ),
+                "values": [25, 50, 75, 100],
+                "make": lambda pct: with_needle_at(
+                    THREADS_POS_FIXED_KB * 1024, SCAN_PATTERN, pct
+                ),
+            },
+        ],
+    },
+    {
+        "name": "threads_pos_free",
+        "title": (
+            "Test 9 — Concurrency: needle position on free-threaded "
+            f"Python ({THREADS_POS_WORKERS} workers)"
+        ),
+        "description": (
+            "The same pile as Test 8 — "
+            f"{THREADS_POS_PILE} searches over the "
+            f"{THREADS_POS_FIXED_KB // 1024} MB haystack across "
+            f"{THREADS_POS_WORKERS} workers, needle position swept "
+            "25–100% — on free-threaded CPython (3.14t, GIL off). With "
+            "no GIL both engines turn the workers into scan throughput "
+            "at every position; the 8 MB doc exceeds this CPU's L3, so "
+            "four parallel scanners share memory bandwidth and scale "
+            "below the ideal 4×."
+        ),
+        "pattern": SCAN_PATTERN,
+        "data_example": (
+            _example(words(60, random.Random(2)))
+            + " " + SCAN_PATTERN + " "
+            + _example(words(60, random.Random(3)))
+        ),
+        "op": "threaded_search",
+        "interpreter": "freethreaded",
+        "pile": THREADS_POS_PILE,
+        "threads": THREADS_POS_WORKERS,
+        "sweeps": [
+            {
+                "param": "match_position",
+                "unit": "%",
+                "label": (
+                    "needle position in the fixed 8 MB haystack, "
+                    f"{THREADS_POS_WORKERS} workers × a pile of "
+                    f"{THREADS_POS_PILE} searches, GIL off"
+                ),
+                "values": [25, 50, 75, 100],
+                "make": lambda pct: with_needle_at(
+                    THREADS_POS_FIXED_KB * 1024, SCAN_PATTERN, pct
                 ),
             },
         ],

@@ -96,12 +96,14 @@ def guarded_once(op, timeout_s):
         signal.signal(signal.SIGALRM, old)
 
 
-def measure_point(op_name, pattern, text, quick, value=None, pile=8000):
+def measure_point(op_name, pattern, text, quick, value=None, pile=8000,
+                  threads=None):
     re_rx = stdre.compile(pattern)
     rurex_rx = rurex.compile(pattern)
 
     if op_name == "threaded_search":
-        return threaded_pile_point(pattern, text, value, pile)
+        nthreads = threads if threads is not None else value
+        return threaded_pile_point(pattern, text, nthreads, pile)
     if op_name == "search":
         op_re = lambda: re_rx.search(text)
         op_ru = lambda: rurex_rx.search(text)
@@ -136,6 +138,7 @@ def run_test(test, quick):
             re_s, ru_s = measure_point(
                 test["op"], test["pattern"], text, quick,
                 value=value, pile=test.get("pile", 8000),
+                threads=test.get("threads"),
             )
             points.append(
                 {"value": value, "re_s": re_s, "rurex_s": ru_s}
