@@ -58,18 +58,25 @@ TITLES = {
     "free": "Telegram @mentions — free-threaded Python",
 }
 
+SERIES = (
+    ("re", "str", "#4C72B0", "-", "re / str"),
+    ("re", "bytes", "#4C72B0", "--", "re / bytes"),
+    ("rurex", "str", "#CE422B", "-", "rurex / str"),
+    ("rurex", "bytes", "#CE422B", "--", "rurex / bytes"),
+)
+
 
 def chart(data, interp, out_name):
     pts = [p for p in data["points"] if p["interpreter"] == interp]
     xs = sorted({p["threads"] for p in pts})
     fig, ax = plt.subplots(figsize=(9.5, 5.4))
-    for engine, color, label in (("re", COLOR_RE, "re (stdlib)"),
-                                  ("rurex", COLOR_RUREX, "rurex")):
+    for engine, form, color, ls, label in SERIES:
         ys = [next(p["wall_s"] for p in pts
-                   if p["threads"] == x and p["engine"] == engine)
+                   if p["threads"] == x and p["engine"] == engine
+                   and p["input"] == form)
               for x in xs]
-        ax.plot(xs, ys, marker="o", color=color, linewidth=2.2,
-                markersize=6, label=label, zorder=3)
+        ax.plot(xs, ys, marker="o", linestyle=ls, color=color,
+                linewidth=2.2, markersize=6, label=label, zorder=3)
         ax.text(xs[-1], ys[-1], "  " + f"{ys[-1]:.2f} s",
                 color=color, fontsize=9, va="center", ha="left")
     ax.set_xticks(xs)
@@ -87,19 +94,23 @@ def chart(data, interp, out_name):
 
 def table(data, interp, n_posts):
     pts = [p for p in data["points"] if p["interpreter"] == interp]
-    by = {(p["threads"], p["engine"]): p["wall_s"] for p in pts}
+    by = {(p["threads"], p["engine"], p["input"]): p["wall_s"] for p in pts}
     rows = []
     for x in sorted({p["threads"] for p in pts}):
-        re_s = by[(x, "re")]
-        ru_s = by[(x, "rurex")]
+        rstr = by[(x, "re", "str")]
+        rbytes = by[(x, "re", "bytes")]
+        ustr = by[(x, "rurex", "str")]
+        ubytes = by[(x, "rurex", "bytes")]
         rows.append(
-            f"| {x} | {re_s:.2f} s | {re_s * 1e6 / n_posts:.2f} µs "
-            f"| {ru_s:.2f} s | {ru_s * 1e6 / n_posts:.2f} µs "
-            f"| `re` ×{ru_s / re_s:.1f} |"
+            f"| {x} | {rstr:.2f} s | {rbytes:.2f} s "
+            f"| {ustr:.2f} s | {ubytes:.2f} s "
+            f"| ×{ustr / rstr:.1f} | ×{ubytes / rbytes:.1f} |"
         )
-    return ("| Workers | `re` | `re`, per post | rurex | rurex, per post "
-            "| Speedup |\n|---:|---:|---:|---:|---:|---:|\n"
-            + "\n".join(rows))
+    return ("| Workers | `re` str | `re` bytes | rurex str | rurex bytes "
+            "| rurex/re str | rurex/re bytes |\n"
+            "|---:|---:|---:|---:|---:|---:|---:|\n"
+            + "\n".join(rows)
+            + "\n\n*(ratio < 1 = rurex faster)*")
 
 
 def render_md():
@@ -147,22 +158,25 @@ single-threaded.
 
 {table(data, "gil", n)}
 
-Single-threaded, `re` answers the pile in 0.48 s and rurex in
-1.58 s. Most of rurex's gap is **CPython's first-touch UTF-8
-materialization**: CPython stores `str` in UCS form and lazily
-encodes-and-caches a UTF-8 copy inside each string the first time
-anything asks for it (`PyUnicode_AsUTF8AndSize`) — which rurex, like
-any UTF-8 engine consuming Python strings, must. `re` never converts.
-Over 470 MB of mostly non-ASCII text that is a one-time ~1 s encode,
-paid inside the measured run because a scan-once user pays it.
+Each point now runs both input forms. The **str** variant is the
+real task on parsed text: `re` 0.48 s single-threaded vs rurex
+1.49 s — most of rurex's gap is **CPython's first-touch UTF-8
+materialization** (CPython stores `str` in UCS form and lazily
+encodes-and-caches a UTF-8 copy inside each string on first use;
+`re` never converts). The **bytes** variant feeds the same posts
+pre-encoded to UTF-8 — the corpus is already UTF-8 on disk, so a
+pipeline that stays in bytes never pays the transcode: rurex answers
+in **0.35 s, beating `re`'s 0.51 s (×1.5)** single-threaded. This is
+the RE2-binding-recommended shape (feed UTF-8 bytes), and rurex
+makes it a first-class mode.
 
-Adding threads, rurex is now **flat** (1.55–1.88 s at 1–4 workers).
-An earlier build degraded badly here (1.65 s → 5.38 s): every tiny
-scan released and re-acquired the GIL, and a million handoffs
-convoyed the lock. rurex now releases the GIL only when the haystack
-is ≥ 4 KB (see `GIL_RELEASE_MIN_HAY`); short-text scans stay
-GIL-held, matching `re`'s own behavior (sre never releases the GIL
-during matching at any size).
+With threads, rurex str stays flat (1.49–1.73 s; an earlier build
+degraded to 5.38 s before the 4 KB GIL-release threshold landed —
+rurex releases the GIL only for ≥ 4 KB haystacks, matching `re`'s
+own never-release-during-matching behavior for short texts), and
+rurex bytes improves modestly (0.35 → 0.54 s at four workers: the
+scans are sub-µs, so the GIL-held per-call result building
+dominates — the same ceiling `re` bytes hits at 0.51 → 0.67 s).
 
 ## Free-threaded Python
 
@@ -170,22 +184,27 @@ during matching at any size).
 
 {table(data, "free", n)}
 
-Without the GIL the same cold scan scales: rurex 1.76 s → 0.53 s at
-four workers (3.3×) — the first-touch UTF-8 encoding parallelizes
-like any other work — and `re` 0.44 s → 0.20 s. On this scan-once
-task, free-threaded Python is the fastest way to run rurex at every
-thread count.
+Without the GIL both variants scale: rurex str 1.82 s → 0.65 s
+(2.8×; the first-touch UTF-8 encoding parallelizes like any other
+work) and rurex bytes 0.43 s → 0.30 s; `re` 0.50 s → 0.20 s str,
+0.42 s → 0.19 s bytes. On this task free-threaded Python is the
+fastest way to run either engine at every thread count, and rurex
+bytes at 0.30 s is within 1.6× of the best `re` number while
+carrying no transcode tax at all.
 
 ## Reading the numbers
 
-`re` wins every point on this workload: partly per-call fixed cost,
-and partly the one-time UTF-8 tax that only the UTF-8 engine pays.
-Users who scan each text exactly once pay it once; users re-scanning
-re-use the cached UTF-8 form and the tax vanishes (steady-state
-single-thread is near-parity, ≈0.55 vs ≈0.49 µs/post). The
-scan-bound leads on the main page do not transfer to short-text
-per-call extraction. Machine-specific; expect different absolute
-numbers elsewhere.
+Read the two variants as two different questions. **str**: what a
+user scanning parsed text once pays — `re` wins (it never
+transcodes), rurex pays CPython's one-time per-string UTF-8 encode
+(warm re-scans borrow the cache and reach near-parity, ≈0.55 vs
+≈0.49 µs/post). **bytes**: what a UTF-8-native pipeline pays — rurex
+**wins** (×1.5 single-threaded), because its engine scans UTF-8
+directly with SIMD prefilters. The scan-bound leads on the main page
+(×7–13) do not transfer to short-text per-call extraction, but the
+bytes variant shows rurex ahead where the input is already UTF-8 —
+which for a JSONL/log corpus is the natural shape. Machine-specific;
+expect different absolute numbers elsewhere.
 
 ## Reproducing
 

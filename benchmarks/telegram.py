@@ -52,6 +52,7 @@ DATA_CACHE = HERE.parent / "var" / "bench-data" / "tg-1m.json.gz"
 PATTERN = r"@[a-zA-Z][a-zA-Z0-9_]{4,31}"
 THREADS = [1, 2, 3, 4]
 ENGINES = ("re", "rurex")
+INPUTS = ("str", "bytes")
 
 
 def resolve_data() -> pathlib.Path:
@@ -102,22 +103,37 @@ def load_texts(path, limit=None):
     return texts
 
 
-def make_rx(engine):
+def make_rx(engine, form):
+    pat = PATTERN if form == "str" else PATTERN.encode()
     if engine == "re":
         import re as stdre
 
-        return stdre.compile(PATTERN)
+        return stdre.compile(pat)
     import rurex
 
-    return rurex.compile(PATTERN)
+    return rurex.compile(pat)
 
 
-def single_point(nthreads, engine):
+def single_point(nthreads, engine, form):
     """One real-world run in THIS (fresh) process. Returns
-    (wall seconds, total mentions)."""
+    (wall seconds, total mentions).
+
+    Untimed setup: load+parse the corpus, prepare the input form
+    (the bytes variant encodes every post to UTF-8 HERE, never
+    inside the timed loop), and compile the matching pattern form —
+    one compile, shared by all workers. Timed window: from the
+    barrier release to the worker's slice end, one findall per post.
+
+    The str variant keeps CPython's first-touch UTF-8 materialization
+    inside the window (it is triggered by the findall call itself);
+    the bytes variant measures pure scan+extraction on prepared
+    UTF-8.
+    """
     limit = int(os.environ.get("RUREX_TG_LIMIT", "0")) or None
     texts = load_texts(resolve_data(), limit)
-    rx = make_rx(engine)
+    if form == "bytes":
+        texts = [t.encode("utf-8") for t in texts]
+    rx = make_rx(engine, form)
     iters = (len(texts) + nthreads - 1) // nthreads
     barrier = threading.Barrier(nthreads)
     walls = [0.0] * nthreads
@@ -168,13 +184,14 @@ def child_main():
         result = corpus_stats()
         print("  stats done", flush=True)
     else:
-        engine, nthreads, out = sys.argv[i + 1], int(sys.argv[i + 2]), sys.argv[i + 3]
-        wall, mentions = single_point(nthreads, engine)
-        result = {"engine": engine, "threads": nthreads,
+        engine, nthreads, form, out = (sys.argv[i + 1], int(sys.argv[i + 2]),
+                                       sys.argv[i + 3], sys.argv[i + 4])
+        wall, mentions = single_point(nthreads, engine, form)
+        result = {"engine": engine, "threads": nthreads, "input": form,
                   "wall_s": wall, "mentions": mentions}
-        print(f"  {engine:5} threads={nthreads} {wall:.2f}s "
+        print(f"  {engine:5} {form:5} threads={nthreads} {wall:.2f}s "
               f"({mentions:,} mentions)", flush=True)
-    pathlib.Path(sys.argv[i + 3]).write_text(json.dumps(result))
+    pathlib.Path(sys.argv[i + 4]).write_text(json.dumps(result))
 
 
 def interpreter_env():
@@ -227,7 +244,7 @@ def main():
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
         stats_path = tf.name
     subprocess.run([sys.executable, script, "--stats", "--point",
-                    "-", "0", stats_path], check=True, env=env)
+                    "-", "0", "-", stats_path], check=True, env=env)
     results["stats"] = json.loads(pathlib.Path(stats_path).read_text())
     pathlib.Path(stats_path).unlink()
     s = results["stats"]
@@ -237,20 +254,21 @@ def main():
     for interp_name, exe in interpreters:
         for nthreads in THREADS:
             for engine in ENGINES:
-                with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
-                    out = tf.name
-                subprocess.run(
-                    [exe, script, "--point", engine, str(nthreads), out],
-                    check=True, env=env,
-                )
-                point = json.loads(pathlib.Path(out).read_text())
-                pathlib.Path(out).unlink()
-                point["interpreter"] = interp_name
-                results["points"].append(point)
-                print(f"  [{interp_name}] threads={nthreads} {engine:5} "
-                      f"{point['wall_s']:.2f}s "
-                      f"({point['wall_s'] * 1e6 / s['posts']:.2f} µs/post, "
-                      f"{point['mentions']:,} mentions)", flush=True)
+                for form in INPUTS:
+                    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
+                        out = tf.name
+                    subprocess.run(
+                        [exe, script, "--point", engine, str(nthreads), form, out],
+                        check=True, env=env,
+                    )
+                    point = json.loads(pathlib.Path(out).read_text())
+                    pathlib.Path(out).unlink()
+                    point["interpreter"] = interp_name
+                    results["points"].append(point)
+                    print(f"  [{interp_name}] threads={nthreads} {engine:5} "
+                          f"{form:5} {point['wall_s']:.2f}s "
+                          f"({point['wall_s'] * 1e6 / s['posts']:.2f} µs/post, "
+                          f"{point['mentions']:,} mentions)", flush=True)
 
     with open(RESULTS, "w") as f:
         json.dump(results, f, indent=2)
