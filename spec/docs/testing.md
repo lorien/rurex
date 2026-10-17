@@ -92,3 +92,30 @@ directions. Regenerate the ledger with
 corpus re-vendoring, then re-review the diff. When `Cargo.lock`'s
 regex version bumps, re-vendor the corpus at the matching tag and
 re-triage.
+
+## regex-engine-divergences corpus (two modes)
+
+Run:
+
+    .venv/bin/python -m pytest \
+      tests/divergences/vendored_divergences_live.py \
+      tests/divergences/vendored_divergences_engine.py -q
+
+539 curated constructs from
+`Kristofp/regex-engine-divergences` (MIT, pinned snapshot — see
+`tests/divergences/PROVENANCE.md`), each chosen because real engines
+disagree on it. Not collected by a plain `pytest` run. The tests are
+**inputs, not oracles** (ADR-0011):
+
+- **Mode L — live parity:** each construct through rurex and
+  stdlib `re` on this interpreter (finditer; i/m/s/x flags). Hard
+  comparison with EXPECTED-ledger discipline; a mismatch is a bug or
+  a ledgered by-design family.
+- **Mode E — engine contract:** rurex vs the upstream-recorded Rust
+  answers (byte indices normalized to characters), as a *discussion*
+  report — mismatches are classified as documented adjustments or
+  version drift, never auto-failures; only unexplained `discuss`
+  rows would require a ledger entry.
+
+Regenerate the ledger with `python tests/divergences/gen_expected.py`
+after driver changes or re-vendoring, then re-review the diff.

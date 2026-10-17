@@ -51,6 +51,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   Cargo.lock regex version) and run in two layers: binding
   conformance vs the corpus's expected spans, and parity vs
   stdlib `re` on identical inputs; EXPECTED ledger as in ADR-0009.
+- [adr/0011-divergences-corpus-suite.md](adr/0011-divergences-corpus-suite.md) —
+  `regex-engine-divergences` constructs vendored as inputs (not
+  oracles): hard parity vs live `re` (mode L) and a discussion-mode
+  engine-contract report vs recorded Rust answers (mode E).
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

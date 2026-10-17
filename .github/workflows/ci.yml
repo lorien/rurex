@@ -92,4 +92,6 @@ jobs:
           source .venv/bin/activate
           python -m pytest \
             tests/rustregex/vendored_corpus_engine.py \
-            tests/rustregex/vendored_corpus_parity.py -q
+            tests/rustregex/vendored_corpus_parity.py \
+            tests/divergences/vendored_divergences_live.py \
+            tests/divergences/vendored_divergences_engine.py -q

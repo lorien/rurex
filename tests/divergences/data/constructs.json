@@ -1,0 +1,6685 @@
+[
+  {
+    "id": "char-literal",
+    "category": "character",
+    "level": 1,
+    "description": "Literal string match",
+    "pattern": "hello",
+    "testText": "say hello to the world, hello again",
+    "flags": "g"
+  },
+  {
+    "id": "char-dot",
+    "category": "character",
+    "level": 1,
+    "description": "Dot matches any character except newline",
+    "pattern": "h.llo",
+    "testText": "hello hallo hxllo h llo",
+    "flags": "g"
+  },
+  {
+    "id": "char-class-range",
+    "category": "character",
+    "level": 1,
+    "description": "Character class with range",
+    "pattern": "[a-z]+",
+    "testText": "Hello World 123 foo",
+    "flags": "g",
+    "excludeFlavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "char-class-negated",
+    "category": "character",
+    "level": 1,
+    "description": "Negated character class",
+    "pattern": "[^0-9]+",
+    "testText": "abc123def456ghi",
+    "flags": "g"
+  },
+  {
+    "id": "char-escape-d",
+    "category": "character",
+    "level": 1,
+    "description": "Digit shorthand \\d",
+    "pattern": "\\d+",
+    "testText": "abc123def456",
+    "flags": "g"
+  },
+  {
+    "id": "char-escape-D",
+    "category": "character",
+    "level": 1,
+    "description": "Non-digit shorthand \\D",
+    "pattern": "\\D+",
+    "testText": "abc123def456",
+    "flags": "g"
+  },
+  {
+    "id": "char-escape-w",
+    "category": "character",
+    "level": 1,
+    "description": "Word character shorthand \\w",
+    "pattern": "\\w+",
+    "testText": "hello world! 123",
+    "flags": "g"
+  },
+  {
+    "id": "char-escape-W",
+    "category": "character",
+    "level": 1,
+    "description": "Non-word character shorthand \\W",
+    "pattern": "\\W+",
+    "testText": "hello world! 123",
+    "flags": "g"
+  },
+  {
+    "id": "char-escape-s",
+    "category": "character",
+    "level": 1,
+    "description": "Whitespace shorthand \\s",
+    "pattern": "\\s+",
+    "testText": "hello world\t123",
+    "flags": "g"
+  },
+  {
+    "id": "char-escape-S",
+    "category": "character",
+    "level": 1,
+    "description": "Non-whitespace shorthand \\S",
+    "pattern": "\\S+",
+    "testText": "hello world\t123",
+    "flags": "g"
+  },
+  {
+    "id": "char-escape-X",
+    "category": "character",
+    "level": 1,
+    "description": "Extended grapheme cluster \\X",
+    "pattern": "\\X",
+    "testText": "aé ñ o",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "javascript",
+      "mysql",
+      "re2",
+      "rust",
+      "typescript"
+    ]
+  },
+  {
+    "id": "char-escape-R",
+    "category": "character",
+    "level": 1,
+    "description": "Unicode line break \\R",
+    "pattern": "\\R",
+    "testText": "line1\r\nline2\nline3",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "javascript",
+      "mysql",
+      "python",
+      "re2",
+      "rust",
+      "typescript"
+    ]
+  },
+  {
+    "id": "char-unicode-prop",
+    "category": "character",
+    "level": 1,
+    "description": "Unicode property \\p{L} for letters",
+    "pattern": "\\p{L}+",
+    "testText": "Hello 世界 123 café",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "char-unicode-prop-neg",
+    "category": "character",
+    "level": 1,
+    "description": "Negated Unicode property \\P{L} for non-letters",
+    "pattern": "\\P{L}+",
+    "testText": "Hello 世界 123 café",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "anchor-start",
+    "category": "anchor",
+    "level": 1,
+    "description": "Start of line anchor ^",
+    "pattern": "^hello",
+    "testText": "hello world\nhello again\nbye",
+    "flags": "gm"
+  },
+  {
+    "id": "anchor-end",
+    "category": "anchor",
+    "level": 1,
+    "description": "End of line anchor $",
+    "pattern": "world$",
+    "testText": "hello world\ngoodbye world\nnot this",
+    "flags": "gm"
+  },
+  {
+    "id": "anchor-boundary-word",
+    "category": "anchor",
+    "level": 1,
+    "description": "Word boundary \\b",
+    "pattern": "\\bword\\b",
+    "testText": "a word here sword crossword",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "anchor-boundary-nonword",
+    "category": "anchor",
+    "level": 1,
+    "description": "Non-word boundary \\B",
+    "pattern": "\\Bword",
+    "testText": "sword keyword word",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "anchor-start-string",
+    "category": "anchor",
+    "level": 1,
+    "description": "Start of string anchor \\A",
+    "pattern": "\\Ahello",
+    "testText": "hello\nhello",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "anchor-end-string",
+    "category": "anchor",
+    "level": 1,
+    "description": "End of string anchor \\Z (allows trailing newline)",
+    "pattern": "end\\Z",
+    "testText": "the end\n",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "javascript",
+      "python",
+      "re2",
+      "typescript"
+    ]
+  },
+  {
+    "id": "anchor-end-string-only",
+    "category": "anchor",
+    "level": 1,
+    "description": "Absolute end of string anchor \\z",
+    "pattern": "end\\z",
+    "testText": "the end",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "go",
+      "re2",
+      "python"
+    ]
+  },
+  {
+    "id": "anchor-match-start",
+    "category": "anchor",
+    "level": 1,
+    "description": "Match start anchor \\G for contiguous matches",
+    "pattern": "\\G\\w+",
+    "testText": "abc def",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "anchor-match-reset",
+    "category": "anchor",
+    "level": 1,
+    "description": "Match reset \\K — resets start of reported match",
+    "pattern": "foo\\Kbar",
+    "testText": "foobar bazfoobar",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "javascript",
+      "mysql",
+      "re2",
+      "rust",
+      "typescript"
+    ]
+  },
+  {
+    "id": "group-capturing",
+    "category": "group",
+    "level": 1,
+    "description": "Capturing groups with numbered references",
+    "pattern": "(foo)(bar)",
+    "testText": "foobar foobarbaz",
+    "flags": "g"
+  },
+  {
+    "id": "group-named",
+    "category": "group",
+    "level": 1,
+    "description": "Named capturing group (?<name>...)",
+    "pattern": "(?<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g"
+  },
+  {
+    "id": "group-noncapturing",
+    "category": "group",
+    "level": 1,
+    "description": "Non-capturing group (?:...)",
+    "pattern": "(?:foo|bar)baz",
+    "testText": "foobaz barbaz quuxbaz",
+    "flags": "g"
+  },
+  {
+    "id": "group-atomic",
+    "category": "group",
+    "level": 1,
+    "description": "Atomic group (?>...) — no backtracking into group",
+    "pattern": "(?>ab|a)b",
+    "testText": "ab abb",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "rust",
+      "go",
+      "re2",
+      "python"
+    ]
+  },
+  {
+    "id": "group-branch-reset",
+    "category": "group",
+    "level": 1,
+    "description": "Branch reset group (?|...) — alternatives share capture numbering",
+    "pattern": "(?|(a)|(b))\\1",
+    "testText": "aa bb",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "group-scoped-flags",
+    "category": "group",
+    "level": 1,
+    "description": "Scoped inline flags (?i:...) for case-insensitive subexpression",
+    "pattern": "(?i:hello) world",
+    "testText": "HELLO world Hello world",
+    "flags": "g"
+  },
+  {
+    "id": "group-balancing",
+    "category": "group",
+    "level": 1,
+    "description": ".NET balancing groups for matching nested constructs",
+    "pattern": "^(?:(?<open>\\()|(?<-open>\\))|[^()])*$(?(open)(?!))$",
+    "testText": "(a(b)c)",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ],
+    "excludeFlavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "lookahead-positive",
+    "category": "lookaround",
+    "level": 1,
+    "description": "Positive lookahead (?=...)",
+    "pattern": "foo(?=bar)",
+    "testText": "foobar foobaz",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "lookahead-negative",
+    "category": "lookaround",
+    "level": 1,
+    "description": "Negative lookahead (?!...)",
+    "pattern": "foo(?!bar)",
+    "testText": "foobar foobaz fooqux",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "lookbehind-positive",
+    "category": "lookaround",
+    "level": 1,
+    "description": "Positive lookbehind (?<=...)",
+    "pattern": "(?<=foo)bar",
+    "testText": "foobar bazbar",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "lookbehind-negative",
+    "category": "lookaround",
+    "level": 1,
+    "description": "Negative lookbehind (?<!...)",
+    "pattern": "(?<!foo)bar",
+    "testText": "foobar bazbar xbar",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "backref-numbered",
+    "category": "backref",
+    "level": 1,
+    "description": "Numbered backreference \\1",
+    "pattern": "(a|b)\\1",
+    "testText": "aa bb ab ba",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "backref-named",
+    "category": "backref",
+    "level": 1,
+    "description": "Named backreference \\k<name>",
+    "pattern": "(?<ch>a|b)\\k<ch>",
+    "testText": "aa bb ab ba",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "backref-subroutine-named",
+    "category": "backref",
+    "level": 1,
+    "description": "Named subroutine call (?&name)",
+    "pattern": "(?<pair>\\(\\))(?&pair)",
+    "testText": "()()",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "backref-recursion-full",
+    "category": "backref",
+    "level": 1,
+    "description": "Full pattern recursion (?R)",
+    "pattern": "\\((?:[^()]*|(?R))*\\)",
+    "testText": "(a(b)c) (x)",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "backref-subroutine-numbered",
+    "category": "backref",
+    "level": 1,
+    "description": "Numbered subroutine call (?1)",
+    "pattern": "(\\w+)\\s+(?1)",
+    "testText": "hello world foo bar",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "cond-numbered",
+    "category": "conditional",
+    "level": 1,
+    "description": "Conditional on numbered capture (?(1)yes|no)",
+    "pattern": "(a)?(?(1)b|c)",
+    "testText": "ab c",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl",
+      "python",
+      "csharp"
+    ]
+  },
+  {
+    "id": "cond-named",
+    "category": "conditional",
+    "level": 1,
+    "description": "Conditional on named capture (?(name)yes|no)",
+    "pattern": "(?<x>a)?(?(x)b|c)",
+    "testText": "ab c",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl",
+      "python",
+      "csharp"
+    ]
+  },
+  {
+    "id": "cond-lookahead",
+    "category": "conditional",
+    "level": 1,
+    "description": "Conditional with lookahead (?(?=...)yes|no)",
+    "pattern": "(?(?=\\d)\\d+|\\w+)",
+    "testText": "123 abc 456",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl",
+      "csharp"
+    ]
+  },
+  {
+    "id": "quant-star",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Star quantifier — zero or more",
+    "pattern": "ba*",
+    "testText": "b ba baa baaa",
+    "flags": "g"
+  },
+  {
+    "id": "quant-plus",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Plus quantifier — one or more",
+    "pattern": "a+",
+    "testText": "a aa aaa b",
+    "flags": "g"
+  },
+  {
+    "id": "quant-optional",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Optional quantifier — zero or one",
+    "pattern": "colou?r",
+    "testText": "color colour col",
+    "flags": "g"
+  },
+  {
+    "id": "quant-exact",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Exact quantifier {n}",
+    "pattern": "a{3}",
+    "testText": "aa aaa aaaa a",
+    "flags": "g"
+  },
+  {
+    "id": "quant-range",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Range quantifier {n,m}",
+    "pattern": "a{2,4}",
+    "testText": "a aa aaa aaaa aaaaa",
+    "flags": "g"
+  },
+  {
+    "id": "quant-min",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Minimum quantifier {n,}",
+    "pattern": "a{2,}",
+    "testText": "a aa aaa aaaa",
+    "flags": "g"
+  },
+  {
+    "id": "quant-lazy",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Lazy (non-greedy) quantifier +?",
+    "pattern": "a+?",
+    "testText": "aaa aa a",
+    "flags": "g"
+  },
+  {
+    "id": "quant-possessive",
+    "category": "quantifier",
+    "level": 1,
+    "description": "Possessive quantifier ++ — no backtracking",
+    "pattern": "a++b",
+    "testText": "aab ab",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "python",
+      "ruby",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "choice-simple",
+    "category": "choice",
+    "level": 1,
+    "description": "Simple alternation with two branches",
+    "pattern": "cat|dog",
+    "testText": "I have a cat and a dog",
+    "flags": "g"
+  },
+  {
+    "id": "choice-triple",
+    "category": "choice",
+    "level": 1,
+    "description": "Alternation with three branches",
+    "pattern": "red|green|blue",
+    "testText": "red and blue and green",
+    "flags": "g"
+  },
+  {
+    "id": "l2-quantified-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Capturing group with range quantifier",
+    "pattern": "(abc){2,3}",
+    "testText": "abcabc abcabcabc abc",
+    "flags": "g"
+  },
+  {
+    "id": "l2-nested-groups",
+    "category": "combination",
+    "level": 2,
+    "description": "Nested capturing groups",
+    "pattern": "(a(b)c)",
+    "testText": "abc xabcx",
+    "flags": "g"
+  },
+  {
+    "id": "l2-nested-named-groups",
+    "category": "combination",
+    "level": 2,
+    "description": "Nested named capturing groups",
+    "pattern": "(?<outer>(?<inner>\\d+)\\w+)",
+    "testText": "123abc 456def",
+    "flags": "g"
+  },
+  {
+    "id": "l2-alternation-in-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Alternation inside a capturing group",
+    "pattern": "(cat|dog)\\s+food",
+    "testText": "cat food dog food bird food",
+    "flags": "g"
+  },
+  {
+    "id": "l2-group-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Capturing group followed by backreference with quantifier",
+    "pattern": "(a|b)\\1+",
+    "testText": "aaa bbb ab",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-quantified-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Character class with range quantifier",
+    "pattern": "[a-z]{3,5}",
+    "testText": "ab abc abcde abcdef XY",
+    "flags": "g"
+  },
+  {
+    "id": "l2-negated-class-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Negated character class with plus quantifier",
+    "pattern": "[^aeiou]+",
+    "testText": "hello world",
+    "flags": "g"
+  },
+  {
+    "id": "l2-dot-greedy",
+    "category": "combination",
+    "level": 2,
+    "description": "Dot with greedy plus between delimiters",
+    "pattern": "a.+b",
+    "testText": "axyzb axxb ab",
+    "flags": "g"
+  },
+  {
+    "id": "l2-dot-lazy",
+    "category": "combination",
+    "level": 2,
+    "description": "Dot with lazy plus between delimiters",
+    "pattern": "a.+?b",
+    "testText": "axbyzb axxb",
+    "flags": "g"
+  },
+  {
+    "id": "l2-anchor-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Start anchor with capturing group in multiline",
+    "pattern": "^(\\w+)",
+    "testText": "hello world\nfoo bar\nbaz",
+    "flags": "gm"
+  },
+  {
+    "id": "l2-anchor-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Start anchor with alternation in multiline",
+    "pattern": "^(foo|bar)",
+    "testText": "foo first\nbar second\nbaz third",
+    "flags": "gm"
+  },
+  {
+    "id": "l2-lookahead-capture",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead after capture group",
+    "pattern": "(\\w+)(?=\\s)",
+    "testText": "hello world test",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookbehind-capture",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookbehind before capture group",
+    "pattern": "(?<=\\s)(\\w+)",
+    "testText": "hello world test",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-nested-lookaround",
+    "category": "combination",
+    "level": 2,
+    "description": "Nested lookahead containing lookbehind",
+    "pattern": "(?=.*(?<=\\d))\\w+",
+    "testText": "abc1 def",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-alternation-in-lookbehind",
+    "category": "combination",
+    "level": 2,
+    "description": "Alternation inside lookbehind",
+    "pattern": "(?<=cat|dog)\\w+",
+    "testText": "catfish dogwood birdhouse",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-scoped-flags-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Case-insensitive scoped flag with character class",
+    "pattern": "(?i:[a-z])+",
+    "testText": "Hello WORLD 123",
+    "flags": "g"
+  },
+  {
+    "id": "l2-scoped-flags-dot",
+    "category": "combination",
+    "level": 2,
+    "description": "Dot-all scoped flag — dot matches newline",
+    "pattern": "(?s:a.b)",
+    "testText": "a\nb axb",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "mysql",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l2-atomic-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Atomic group with quantified content",
+    "pattern": "(?>a+)b",
+    "testText": "aab ab b",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "rust",
+      "go",
+      "re2",
+      "python"
+    ]
+  },
+  {
+    "id": "l2-unicode-prop-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Unicode letter property with plus quantifier",
+    "pattern": "\\p{L}+",
+    "testText": "Hello 世界 café 123",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-unicode-prop-anchor",
+    "category": "combination",
+    "level": 2,
+    "description": "Uppercase Unicode property with start anchor",
+    "pattern": "^\\p{Lu}",
+    "testText": "Hello\nWorld\n123",
+    "flags": "gm",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-digit-boundary",
+    "category": "combination",
+    "level": 2,
+    "description": "Digit sequence bounded by word boundaries",
+    "pattern": "\\b\\d+\\b",
+    "testText": "abc 123 def 456 7x",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l2-multiple-captures",
+    "category": "combination",
+    "level": 2,
+    "description": "Multiple capturing groups in date pattern",
+    "pattern": "(\\d{2})-(\\d{2})-(\\d{4})",
+    "testText": "01-15-2026 12-31-1999",
+    "flags": "g"
+  },
+  {
+    "id": "l2-nested-quantifiers",
+    "category": "combination",
+    "level": 2,
+    "description": "Nested quantifiers — group with + containing +",
+    "pattern": "(a+)+b",
+    "testText": "aab ab",
+    "flags": "g"
+  },
+  {
+    "id": "l2-nongreedy-in-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Non-greedy quantifier inside angle brackets",
+    "pattern": "<(.+?)>",
+    "testText": "<a> and <br> and <div>",
+    "flags": "g"
+  },
+  {
+    "id": "l2-class-special-chars",
+    "category": "combination",
+    "level": 2,
+    "description": "Character class with word chars, dot, hyphen for email-like pattern",
+    "pattern": "[\\w.-]+@[\\w.-]+",
+    "testText": "user@example.com test@foo.bar.org",
+    "flags": "g"
+  },
+  {
+    "id": "l2-escaped-special",
+    "category": "combination",
+    "level": 2,
+    "description": "Escaped special characters in currency pattern",
+    "pattern": "\\$\\d+\\.\\d{2}",
+    "testText": "$19.99 $100.00 $5",
+    "flags": "g"
+  },
+  {
+    "id": "l2-java-class-intersection",
+    "category": "combination",
+    "level": 2,
+    "description": "Java character class intersection [a-z&&[^aeiou]] for consonants",
+    "pattern": "[a-z&&[^aeiou]]+",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "l2-csharp-class-subtraction",
+    "category": "combination",
+    "level": 2,
+    "description": "C# character class subtraction [a-z-[aeiou]] for consonants",
+    "pattern": "[a-z-[aeiou]]+",
+    "testText": "hello world regex",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ],
+    "excludeFlavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "l2-cond-named-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Conditional with C#-style named group reference",
+    "pattern": "(?<digit>\\d)?(?(<digit>)\\w+|[a-z]+)",
+    "testText": "1abc xyz",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "l2-cond-lookahead-combo",
+    "category": "combination",
+    "level": 2,
+    "description": "Conditional with lookahead — digits or words",
+    "pattern": "(?(?=\\d)\\d{3}|\\w+)",
+    "testText": "123 abc 4567",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl",
+      "csharp"
+    ]
+  },
+  {
+    "id": "l2-backref-in-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Backreferences inside alternation branches",
+    "pattern": "(a)\\1|(b)\\2",
+    "testText": "aa bb ab",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-named-backref-conditional",
+    "category": "combination",
+    "level": 2,
+    "description": "Named capture with conditional yes/no pattern",
+    "pattern": "(?<x>a)?(?(x)yes|no)",
+    "testText": "ayes no",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl",
+      "python",
+      "csharp"
+    ]
+  },
+  {
+    "id": "l2-recursion-in-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Recursion for deeply nested parentheses",
+    "pattern": "\\((?:[^()]*|(?R))*\\)",
+    "testText": "(a(b(c)d)e) (x)",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l2-multiple-named-groups",
+    "category": "combination",
+    "level": 2,
+    "description": "Multiple named groups for first/last name",
+    "pattern": "(?<first>\\w+)\\s+(?<last>\\w+)",
+    "testText": "John Smith Jane Doe",
+    "flags": "g"
+  },
+  {
+    "id": "l2-lookahead-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead with alternation",
+    "pattern": "(?=foo|bar)\\w+",
+    "testText": "foobar barfoo baz",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookbehind-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookbehind with quantified content (fixed-length in most flavors)",
+    "pattern": "(?<=\\d{2})\\w+",
+    "testText": "12abc 3def 45xyz",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-possessive-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Possessive quantifier on character class",
+    "pattern": "[a-z]++\\d",
+    "testText": "abc1 xyz2",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "python",
+      "ruby",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-possessive-in-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Atomic group simulating possessive quantifier",
+    "pattern": "(?>a+)b",
+    "testText": "aab ab",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "python",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-match-reset-capture",
+    "category": "combination",
+    "level": 2,
+    "description": "\\K with capturing group after reset point",
+    "pattern": "foo\\K(\\w+)",
+    "testText": "foobar foobaz",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "javascript",
+      "mysql",
+      "re2",
+      "rust",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l2-unicode-case-insensitive",
+    "category": "combination",
+    "level": 2,
+    "description": "Unicode property with case-insensitive flag",
+    "pattern": "(?i)\\p{L}+",
+    "testText": "Hello WORLD café 123",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-multiline-anchor-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Multiline anchors with key=value capture groups",
+    "pattern": "^(\\w+)\\s*=\\s*(.+)$",
+    "testText": "key1 = value1\nkey2 = value2\nkey3=value3",
+    "flags": "gm"
+  },
+  {
+    "id": "l2-dotall-multiline",
+    "category": "combination",
+    "level": 2,
+    "description": "Dot-all + multiline flags combined",
+    "pattern": "^.+$",
+    "testText": "line1\nline2\nline3",
+    "flags": "gms",
+    "excludeFlavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l2-capturing-star",
+    "category": "combination",
+    "level": 2,
+    "description": "Capturing group with star quantifier",
+    "pattern": "(ab)*c",
+    "testText": "c abc ababc",
+    "flags": "g"
+  },
+  {
+    "id": "l2-capturing-optional",
+    "category": "combination",
+    "level": 2,
+    "description": "Optional capturing group",
+    "pattern": "(Mr|Mrs|Ms)?\\.?\\s*(\\w+)",
+    "testText": "Mr. Smith Mrs. Jones Alice",
+    "flags": "g"
+  },
+  {
+    "id": "l2-named-group-star",
+    "category": "combination",
+    "level": 2,
+    "description": "Named group with star quantifier",
+    "pattern": "(?<seg>[a-z]+\\.)*(?<tld>[a-z]+)",
+    "testText": "www.example.com foo.bar.org test",
+    "flags": "g"
+  },
+  {
+    "id": "l2-noncapturing-plus",
+    "category": "combination",
+    "level": 2,
+    "description": "Non-capturing group with plus quantifier",
+    "pattern": "(?:ab)+",
+    "testText": "ab abab ababab x",
+    "flags": "g"
+  },
+  {
+    "id": "l2-noncapturing-optional",
+    "category": "combination",
+    "level": 2,
+    "description": "Non-capturing optional group in URL pattern",
+    "pattern": "https?://(?:www\\.)?\\w+\\.\\w+",
+    "testText": "http://example.com https://www.test.org ftp://nope",
+    "flags": "g"
+  },
+  {
+    "id": "l2-noncapturing-exact",
+    "category": "combination",
+    "level": 2,
+    "description": "Non-capturing group with exact count",
+    "pattern": "(?:ha){3}",
+    "testText": "hahaha ha haha",
+    "flags": "g"
+  },
+  {
+    "id": "l2-noncapturing-range",
+    "category": "combination",
+    "level": 2,
+    "description": "Non-capturing group with range quantifier",
+    "pattern": "(?:ab){2,4}",
+    "testText": "ab abab ababab abababab",
+    "flags": "g"
+  },
+  {
+    "id": "l2-noncapturing-lazy",
+    "category": "combination",
+    "level": 2,
+    "description": "Non-capturing group with lazy quantifier",
+    "pattern": "(?:ab)+?x",
+    "testText": "abx ababx abababx",
+    "flags": "g"
+  },
+  {
+    "id": "l2-lookahead-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead combined with backreference",
+    "pattern": "(?=(\\w+)).*\\1",
+    "testText": "abc abc",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-anchor-lookahead",
+    "category": "combination",
+    "level": 2,
+    "description": "Start anchor with positive lookahead",
+    "pattern": "^(?=.*\\d)(\\w+)",
+    "testText": "abc123\nhello\ntest456",
+    "flags": "gm",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-anchor-lookbehind",
+    "category": "combination",
+    "level": 2,
+    "description": "End anchor with positive lookbehind",
+    "pattern": "(?<=\\d)\\w*$",
+    "testText": "abc123xyz\nhello9end",
+    "flags": "gm",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-multiple-backrefs",
+    "category": "combination",
+    "level": 2,
+    "description": "Multiple backreferences to different groups",
+    "pattern": "(\\w)(\\w)\\2\\1",
+    "testText": "abba deed noon",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-nested-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Nested alternation groups",
+    "pattern": "(a|b(c|d))e",
+    "testText": "ae bce bde be",
+    "flags": "g"
+  },
+  {
+    "id": "l2-flag-combo-im",
+    "category": "combination",
+    "level": 2,
+    "description": "Case-insensitive + multiline flag combination",
+    "pattern": "^hello",
+    "testText": "HELLO world\nhello there\nHeLLo again",
+    "flags": "gim"
+  },
+  {
+    "id": "l2-flag-combo-is",
+    "category": "combination",
+    "level": 2,
+    "description": "Case-insensitive + dot-all flag combination",
+    "pattern": "hello.world",
+    "testText": "hello\nworld HELLO\nWORLD",
+    "flags": "gis",
+    "excludeFlavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l2-unicode-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Unicode property inside capturing group",
+    "pattern": "(\\p{L}+)\\s+(\\p{N}+)",
+    "testText": "hello 123 世界 456",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-word-boundary-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Word boundary with capturing group",
+    "pattern": "\\b(\\w{4})\\b",
+    "testText": "the quick brown fox jumps over lazy dogs",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l2-digit-boundary-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Word boundary with digit capture",
+    "pattern": "\\b(\\d+)\\b",
+    "testText": "item 42 costs 100 dollars and 50 cents",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l2-space-boundary-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Whitespace and non-whitespace with boundaries",
+    "pattern": "\\S+\\s+\\S+",
+    "testText": "hello world foo bar baz",
+    "flags": "g"
+  },
+  {
+    "id": "l2-capturing-alternation-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Capturing group with alternation and backreference — repeated word",
+    "pattern": "\\b(\\w+)\\s+\\1\\b",
+    "testText": "the the quick quick fox fox jumps",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookahead-anchor-end",
+    "category": "combination",
+    "level": 2,
+    "description": "Negative lookahead with end anchor",
+    "pattern": "\\w+(?!\\.)$",
+    "testText": "hello.\nworld\ntest.",
+    "flags": "gm",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookbehind-anchor-start",
+    "category": "combination",
+    "level": 2,
+    "description": "Positive lookbehind with start anchor",
+    "pattern": "^(?<=^)(\\w+)",
+    "testText": "hello\nworld",
+    "flags": "gm",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-double-lookahead",
+    "category": "combination",
+    "level": 2,
+    "description": "Two consecutive positive lookaheads (password-like check)",
+    "pattern": "(?=.*[A-Z])(?=.*\\d)\\w+",
+    "testText": "Hello1 hello abc A1b",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-neg-lookahead-neg-lookbehind",
+    "category": "combination",
+    "level": 2,
+    "description": "Negative lookahead + negative lookbehind",
+    "pattern": "(?<!\\d)\\w+(?!\\d)",
+    "testText": "abc 1xyz def2 ghi",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-class-union",
+    "category": "combination",
+    "level": 2,
+    "description": "Character class union — hex digits",
+    "pattern": "[0-9a-fA-F]+",
+    "testText": "deadBEEF 0x1A3F ghijk",
+    "flags": "g"
+  },
+  {
+    "id": "l2-class-escape-in-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Shorthand escape inside character class",
+    "pattern": "[\\d\\s]+",
+    "testText": "abc 123 def 456",
+    "flags": "g"
+  },
+  {
+    "id": "l2-class-literal-special",
+    "category": "combination",
+    "level": 2,
+    "description": "Literal special chars in character class (] - ^)",
+    "pattern": "[\\]\\-^]+",
+    "testText": "abc]--^def",
+    "flags": "g"
+  },
+  {
+    "id": "l2-group-alternation-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Group with alternation and quantifier",
+    "pattern": "(?:ab|cd){2}",
+    "testText": "abab cdcd abcd cdab xx",
+    "flags": "g"
+  },
+  {
+    "id": "l2-named-group-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Named group with range quantifier",
+    "pattern": "(?<hex>[0-9a-f]){2,4}",
+    "testText": "0 ab abcd abcdef xyz",
+    "flags": "g"
+  },
+  {
+    "id": "l2-nested-three-groups",
+    "category": "combination",
+    "level": 2,
+    "description": "Three levels of nested groups",
+    "pattern": "((a(b))c)",
+    "testText": "abc xabcx",
+    "flags": "g"
+  },
+  {
+    "id": "l2-alternation-different-lengths",
+    "category": "combination",
+    "level": 2,
+    "description": "Alternation with different-length branches",
+    "pattern": "(?:January|Feb|March|Apr)",
+    "testText": "January Feb March Apr May",
+    "flags": "g"
+  },
+  {
+    "id": "l2-group-backref-named",
+    "category": "combination",
+    "level": 2,
+    "description": "Named group with named backreference",
+    "pattern": "(?<quote>['\"]).*?\\k<quote>",
+    "testText": "'hello' \"world\" 'test\"",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-anchor-class-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Start anchor, character class with quantifier, end anchor",
+    "pattern": "^[A-Z][a-z]+$",
+    "testText": "Hello\nworld\nTest\nGOOD",
+    "flags": "gm",
+    "excludeFlavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l2-boundary-capture-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Word boundary with captured word and min quantifier",
+    "pattern": "\\b(\\w{3,})\\b",
+    "testText": "I am the one who tests it",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l2-unicode-script",
+    "category": "combination",
+    "level": 2,
+    "description": "Unicode script property for Cyrillic",
+    "pattern": "\\p{Cyrillic}+",
+    "testText": "Hello Мир world Привет",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-unicode-category-number",
+    "category": "combination",
+    "level": 2,
+    "description": "Unicode category for numbers",
+    "pattern": "\\p{N}+",
+    "testText": "abc 123 ٤٥٦",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-dot-star-group-anchor",
+    "category": "combination",
+    "level": 2,
+    "description": "Dot star with capture and end anchor",
+    "pattern": "^.*(\\w+)$",
+    "testText": "hello world\nfoo bar",
+    "flags": "gm"
+  },
+  {
+    "id": "l2-lookahead-quantified-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead before quantified non-capturing group",
+    "pattern": "(?=\\d)(?:\\d{3}-?){2}\\d{4}",
+    "testText": "call 555-123-4567 or 5551234567",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookbehind-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookbehind with alternation prefix",
+    "pattern": "(?<=Mr\\.|Mrs\\.)\\s*\\w+",
+    "testText": "Mr. Smith and Mrs. Jones and Dr. Brown",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-capture-lazy-range",
+    "category": "combination",
+    "level": 2,
+    "description": "Capturing group with lazy range quantifier",
+    "pattern": "(<(\\w+?)>)",
+    "testText": "<div> <span> <a>",
+    "flags": "g"
+  },
+  {
+    "id": "l2-alternation-capture-star",
+    "category": "combination",
+    "level": 2,
+    "description": "Alternation inside group with star — IP-like pattern",
+    "pattern": "(\\d{1,3}\\.){3}\\d{1,3}",
+    "testText": "192.168.1.1 10.0.0.255 999.999.999.999",
+    "flags": "g"
+  },
+  {
+    "id": "l2-complex-email",
+    "category": "combination",
+    "level": 2,
+    "description": "Email-like pattern with multiple groups and classes",
+    "pattern": "([\\w.+-]+)@([\\w-]+)\\.([a-z]{2,})",
+    "testText": "user@example.com test+tag@foo.org bad@",
+    "flags": "gi"
+  },
+  {
+    "id": "l2-hex-color",
+    "category": "combination",
+    "level": 2,
+    "description": "Hex color pattern with alternation for 3 or 6 digits",
+    "pattern": "#(?:[0-9a-f]{6}|[0-9a-f]{3})",
+    "testText": "#ff0000 #abc #1234 not#hex",
+    "flags": "gi"
+  },
+  {
+    "id": "l2-word-nonword-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Alternation of word and non-word character classes",
+    "pattern": "(?:\\w+|\\W+)",
+    "testText": "hello!!! world??? foo",
+    "flags": "g"
+  },
+  {
+    "id": "l2-named-groups-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Named groups inside alternation",
+    "pattern": "(?:(?<year>\\d{4})-(?<month>\\d{2})|(?<month2>\\d{2})/(?<year2>\\d{4}))",
+    "testText": "2026-04 04/2026",
+    "flags": "g"
+  },
+  {
+    "id": "l2-greedy-vs-lazy-star",
+    "category": "combination",
+    "level": 2,
+    "description": "Greedy star vs lazy star in captured HTML tags",
+    "pattern": "<(.*?)>",
+    "testText": "<div class=\"x\"> <span> </div>",
+    "flags": "g"
+  },
+  {
+    "id": "l2-noncapturing-nested-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Nested non-capturing groups with alternation",
+    "pattern": "(?:(?:un|re)(?:do|make))",
+    "testText": "undo redo unmake remake do",
+    "flags": "g"
+  },
+  {
+    "id": "l2-backref-in-quantified-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Backreference inside a quantified group",
+    "pattern": "(['\"])(\\w+)\\1",
+    "testText": "'hello' \"world\" 'bad\"",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookahead-boundary",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead at word boundary",
+    "pattern": "\\b(?=\\w{5,})(\\w+)\\b",
+    "testText": "I am the quick brown fox",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "postgresql",
+      "re2",
+      "rust"
+    ]
+  },
+  {
+    "id": "l2-neg-lookahead-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Negative lookahead with character class",
+    "pattern": "\\d+(?![\\d.])",
+    "testText": "3.14 42 100.0 7x",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookbehind-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Positive lookbehind with character class",
+    "pattern": "(?<=[A-Z])\\w+",
+    "testText": "Hello World test ABC",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2",
+      "rust"
+    ]
+  },
+  {
+    "id": "l2-group-star-anchor-end",
+    "category": "combination",
+    "level": 2,
+    "description": "Repeated group before end anchor",
+    "pattern": "(?:\\d+\\.)+\\d+$",
+    "testText": "1.2.3.4\n10.20.30",
+    "flags": "gm"
+  },
+  {
+    "id": "l2-capture-class-range-lazy",
+    "category": "combination",
+    "level": 2,
+    "description": "Capturing class with lazy range quantifier",
+    "pattern": "([a-z]{2,5}?)",
+    "testText": "abcdef ghij k",
+    "flags": "g"
+  },
+  {
+    "id": "l2-triple-capture-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Three captures with backreference to first",
+    "pattern": "(\\w)(\\w)(\\w)\\1",
+    "testText": "abca xyxy deed",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookahead-capture-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead capture used as backref later",
+    "pattern": "(?=(\\w{3}))\\w",
+    "testText": "abcdef",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-neg-lookbehind-capture",
+    "category": "combination",
+    "level": 2,
+    "description": "Negative lookbehind followed by capture",
+    "pattern": "(?<!\\d)(\\w+)",
+    "testText": "abc 1xyz def 2ghi jkl",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-anchor-neg-lookahead",
+    "category": "combination",
+    "level": 2,
+    "description": "Start anchor with negative lookahead to exclude lines",
+    "pattern": "^(?!#)(.+)$",
+    "testText": "# comment\ncode line\n# another\nmore code",
+    "flags": "gm",
+    "excludeFlavors": [
+      "go",
+      "re2",
+      "ruby",
+      "rust"
+    ]
+  },
+  {
+    "id": "l2-scoped-flag-i-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Case-insensitive scoped flag with alternation",
+    "pattern": "(?i:yes|no|maybe)",
+    "testText": "YES no MAYBE perhaps",
+    "flags": "g"
+  },
+  {
+    "id": "l2-capture-dot-star-lazy-anchor",
+    "category": "combination",
+    "level": 2,
+    "description": "Capture dot-star-lazy between anchors",
+    "pattern": "^(.*?)\\s*$",
+    "testText": "hello  \nworld\n  test  ",
+    "flags": "gm",
+    "excludeFlavors": [
+      "clojure",
+      "csharp",
+      "groovy",
+      "java",
+      "kotlin",
+      "mysql",
+      "perl",
+      "php",
+      "postgresql",
+      "python",
+      "r",
+      "ruby",
+      "scala",
+      "shell"
+    ]
+  },
+  {
+    "id": "l2-boundary-alternation-capture",
+    "category": "combination",
+    "level": 2,
+    "description": "Word boundary with alternation capture",
+    "pattern": "\\b(cat|dog|bird)s?\\b",
+    "testText": "cats and dogs and a bird",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l2-digit-class-quantifier-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Digit class in group with quantifier — phone number pattern",
+    "pattern": "(\\d{3})[-.\\s]?(\\d{3})[-.\\s]?(\\d{4})",
+    "testText": "555-123-4567 555.987.6543 555 111 2222",
+    "flags": "g"
+  },
+  {
+    "id": "l2-nested-quantifier-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Nested quantifiers with character class",
+    "pattern": "([a-z]+\\d+)+",
+    "testText": "abc123def456 xyz789",
+    "flags": "g"
+  },
+  {
+    "id": "l2-escape-sequence-in-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Multiple escape sequences in character class",
+    "pattern": "[\\w\\d\\s]+",
+    "testText": "hello 123 world!!! foo",
+    "flags": "g"
+  },
+  {
+    "id": "l2-optional-capture-in-sequence",
+    "category": "combination",
+    "level": 2,
+    "description": "Optional capture groups in sequence",
+    "pattern": "(\\w+)\\s*(=)\\s*(\\w+)(?:\\s*;)?",
+    "testText": "x = 5; y = 10; z = 15",
+    "flags": "g"
+  },
+  {
+    "id": "l2-class-negated-quantifier-anchor",
+    "category": "combination",
+    "level": 2,
+    "description": "Negated class with quantifier between anchors",
+    "pattern": "^[^#\\n]+$",
+    "testText": "code line\n# comment\nmore code",
+    "flags": "gm"
+  },
+  {
+    "id": "l2-dot-class-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Dot, character class, and alternation combined",
+    "pattern": "(?:.+@[\\w.]+|\\bN/A\\b)",
+    "testText": "user@test.com N/A foo@bar.org hello",
+    "flags": "g"
+  },
+  {
+    "id": "l2-unicode-group-boundary",
+    "category": "combination",
+    "level": 2,
+    "description": "Unicode property with word boundary and group",
+    "pattern": "\\b(\\p{L}+)\\b",
+    "testText": "Hello 世界 café 123",
+    "flags": "g",
+    "excludeFlavors": [
+      "clojure",
+      "go",
+      "groovy",
+      "java",
+      "kotlin",
+      "mysql",
+      "r",
+      "re2",
+      "scala",
+      "swift"
+    ]
+  },
+  {
+    "id": "l2-multiple-flag-scopes",
+    "category": "combination",
+    "level": 2,
+    "description": "Multiple scoped flags in sequence",
+    "pattern": "(?i:hello)\\s+(?i:world)",
+    "testText": "HELLO WORLD hello world HeLLo WoRLd",
+    "flags": "g"
+  },
+  {
+    "id": "l2-lookahead-class-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead with class and quantifier — at least 8 chars with digit",
+    "pattern": "(?=.*\\d)[\\w]{8,}",
+    "testText": "password1 shortpw abcdefgh abc12345",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-capture-unicode-named",
+    "category": "combination",
+    "level": 2,
+    "description": "Named capture with Unicode property",
+    "pattern": "(?<letters>\\p{L}+)(?<digits>\\p{N}+)",
+    "testText": "abc123 hello456",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookbehind-neg-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookbehind with negated class",
+    "pattern": "(?<=[a-z])[^a-z]+",
+    "testText": "hello 123 world 456",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-backref-alternation-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Backref inside alternation with group",
+    "pattern": "(\\w)(?:\\1{2}|\\w{2})",
+    "testText": "aaa abc bbb xyz",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-anchor-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Start anchor with capture and backref at end",
+    "pattern": "^(\\w).*\\1$",
+    "testText": "abcda\nxyzzx\nhello",
+    "flags": "gm",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-double-negated-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Double negation — negated class containing negated escape",
+    "pattern": "[^\\W]+",
+    "testText": "hello world! 123",
+    "flags": "g"
+  },
+  {
+    "id": "l2-time-pattern",
+    "category": "combination",
+    "level": 2,
+    "description": "Time pattern with optional seconds",
+    "pattern": "(\\d{1,2}):(\\d{2})(?::(\\d{2}))?",
+    "testText": "9:30 14:00:59 7:45:01",
+    "flags": "g"
+  },
+  {
+    "id": "l2-csv-field",
+    "category": "combination",
+    "level": 2,
+    "description": "CSV field pattern with quoted or unquoted values",
+    "pattern": "(?:\"([^\"]*)\"|([^,]+))",
+    "testText": "\"hello\",world,\"foo,bar\",baz",
+    "flags": "g"
+  },
+  {
+    "id": "l2-version-number",
+    "category": "combination",
+    "level": 2,
+    "description": "Semantic version pattern with optional patch",
+    "pattern": "(\\d+)\\.(\\d+)(?:\\.(\\d+))?",
+    "testText": "1.0 2.3.4 10.20.30 v1.2",
+    "flags": "g"
+  },
+  {
+    "id": "l2-html-tag-pair",
+    "category": "combination",
+    "level": 2,
+    "description": "Matching HTML open and close tags with backref",
+    "pattern": "<(\\w+)>[^<]*</\\1>",
+    "testText": "<div>hello</div> <span>world</span> <div>bad</span>",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-log-line",
+    "category": "combination",
+    "level": 2,
+    "description": "Log line pattern with timestamp, level, message",
+    "pattern": "^(\\d{4}-\\d{2}-\\d{2})\\s+(\\w+)\\s+(.+)$",
+    "testText": "2026-04-12 INFO Starting up\n2026-04-12 ERROR Something failed",
+    "flags": "gm"
+  },
+  {
+    "id": "l2-url-parts",
+    "category": "combination",
+    "level": 2,
+    "description": "URL pattern with protocol, host, path groups",
+    "pattern": "(https?)://([\\w.-]+)(/[\\w./]*)?",
+    "testText": "http://example.com/path https://www.test.org",
+    "flags": "g"
+  },
+  {
+    "id": "l2-quantifier-zero-max",
+    "category": "combination",
+    "level": 2,
+    "description": "Range quantifier with zero minimum",
+    "pattern": "a{0,3}b",
+    "testText": "b ab aab aaab aaaab",
+    "flags": "g"
+  },
+  {
+    "id": "l2-non-backtracking-group",
+    "category": "combination",
+    "level": 2,
+    "description": "Atomic group preventing backtracking in repetition",
+    "pattern": "(?>\\d+)\\.",
+    "testText": "123. 456. abc.",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "rust",
+      "go",
+      "re2",
+      "python"
+    ]
+  },
+  {
+    "id": "l2-lookahead-lookahead",
+    "category": "combination",
+    "level": 2,
+    "description": "Two consecutive lookaheads for multiple constraints",
+    "pattern": "(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{6,}",
+    "testText": "Hello1 HELLO hello Hello12",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookbehind-lookahead",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookbehind and lookahead combined — extract between delimiters",
+    "pattern": "(?<=\\[)\\w+(?=\\])",
+    "testText": "[hello] (world) [test] [foo]",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-lookahead-optional-capture",
+    "category": "combination",
+    "level": 2,
+    "description": "Lookahead with optional capture group",
+    "pattern": "(?=(\\d+)?)\\w+",
+    "testText": "abc 123 def456",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "perl",
+      "re2",
+      "rust"
+    ]
+  },
+  {
+    "id": "l2-boundary-neg-lookahead",
+    "category": "combination",
+    "level": 2,
+    "description": "Word boundary with negative lookahead filtering",
+    "pattern": "\\b(?!the\\b)\\w+\\b",
+    "testText": "the quick brown fox jumps over the lazy dog",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "postgresql",
+      "re2",
+      "rust"
+    ]
+  },
+  {
+    "id": "l2-named-group-alternation-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Named group with alternation and named backreference",
+    "pattern": "(?<delim>[|/])\\w+\\k<delim>",
+    "testText": "|hello| /world/ |bad/",
+    "flags": "g",
+    "excludeFlavors": [
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l2-unicode-digit-boundary",
+    "category": "combination",
+    "level": 2,
+    "description": "Unicode digit property with word boundary",
+    "pattern": "\\b\\p{Nd}+\\b",
+    "testText": "abc 123 def ٤٥٦ ghi",
+    "flags": "g",
+    "excludeFlavors": [
+      "clojure",
+      "go",
+      "groovy",
+      "java",
+      "kotlin",
+      "mysql",
+      "r",
+      "re2",
+      "scala",
+      "swift"
+    ]
+  },
+  {
+    "id": "l2-class-dot-alternation-quantifier",
+    "category": "combination",
+    "level": 2,
+    "description": "Complex class + dot + alternation + quantifier",
+    "pattern": "(?:[a-z]+\\.)+(?:com|org|net)",
+    "testText": "www.example.com foo.bar.org test.net bad.xyz",
+    "flags": "g"
+  },
+  {
+    "id": "l2-possessive-group-class",
+    "category": "combination",
+    "level": 2,
+    "description": "Possessive quantifier inside atomic group with class",
+    "pattern": "(?>\\w+)\\s",
+    "testText": "hello world foo bar",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "rust",
+      "go",
+      "re2",
+      "python"
+    ]
+  },
+  {
+    "id": "l2-recursive-nested",
+    "category": "combination",
+    "level": 2,
+    "description": "Recursion matching nested brackets",
+    "pattern": "\\[(?:[^\\[\\]]*|(?R))*\\]",
+    "testText": "[a[b[c]d]e] [x]",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l2-subroutine-in-alternation",
+    "category": "combination",
+    "level": 2,
+    "description": "Subroutine call inside alternation",
+    "pattern": "(?<digit>\\d+)(?:\\s+(?&digit))+",
+    "testText": "123 456 789 abc",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l2-capture-optional-backref",
+    "category": "combination",
+    "level": 2,
+    "description": "Optional capture with conditional backref behavior",
+    "pattern": "(x)?(?(1)y|z)",
+    "testText": "xy z xz",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl",
+      "python",
+      "csharp"
+    ]
+  },
+  {
+    "id": "py-named-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Python-style named group (?P<name>...)",
+    "pattern": "(?P<name>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "py-named-backref",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Python-style named backreference (?P=name)",
+    "pattern": "(?P<ch>\\w)(?P=ch)",
+    "testText": "aabbc deed",
+    "flags": "g",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "py-strict-end",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Python \\Z anchor (matches at end of string, before optional trailing newline)",
+    "pattern": "end\\Z",
+    "testText": "the end",
+    "flags": "g",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "py-inline-flags",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Python inline flag (?i) at start of pattern",
+    "pattern": "(?i)hello",
+    "testText": "HELLO hello HeLLo",
+    "flags": "g",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "ruby-absent",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby absent operator (?~...) — match anything not containing the pattern",
+    "pattern": "(?~abc)",
+    "testText": "axyz def",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ],
+    "excludeFlavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "ruby-subroutine-angle",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby named subroutine call with angle brackets \\g<name>",
+    "pattern": "(?<pair>\\w+)\\s+\\g<pair>",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "ruby-subroutine-quote",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby named subroutine call with single quotes \\g'name'",
+    "pattern": "(?<w>\\w+) \\g'w'",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "ruby-hex-digit",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby \\h hex digit shorthand",
+    "pattern": "\\h+",
+    "testText": "0123456789abcdef xyz GHI",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ],
+    "excludeFlavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "ruby-posix-class",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby POSIX character class [:alpha:]",
+    "pattern": "[[:alpha:]]+",
+    "testText": "hello 123 world",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "perl-match-reset",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl match reset \\K",
+    "pattern": "foo\\Kbar",
+    "testText": "foobar bazfoobar",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "perl-recursion",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl full pattern recursion (?R)",
+    "pattern": "\\((?:[^()]*|(?R))*\\)",
+    "testText": "(a(b)c) (x(y(z)))",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "perl-named-subroutine",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl named subroutine call (?&name)",
+    "pattern": "(?<pair>\\w+) (?&pair)",
+    "testText": "hello world foo bar",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "perl-backtrack-verb",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl backtracking control verbs (*SKIP)(*FAIL)",
+    "pattern": "aaa(*SKIP)(*FAIL)|a",
+    "testText": "aaabba",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "perl-named-backref-k",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl named backreference \\k<name>",
+    "pattern": "(?<ch>\\w)\\k<ch>",
+    "testText": "aabbc deed",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "java-quote-literal",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java literal quoting \\Q...\\E",
+    "pattern": "\\Qa.b\\E",
+    "testText": "a.b axb a.b.c",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "java-unicode-block",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java Unicode block property \\p{InGreek}",
+    "pattern": "\\p{InGreek}+",
+    "testText": "Hello αβγ world δεζ",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "java-binary-prop",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java binary Unicode property \\p{IsAlphabetic}",
+    "pattern": "\\p{IsAlphabetic}+",
+    "testText": "hello 123 world",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "java-prop-lowercase-error",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java-only property \\p{javaLowerCase} — expected to error in non-Java engines",
+    "pattern": "\\p{javaLowerCase}+",
+    "testText": "hello WORLD 123",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "java-class-intersection",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java character class intersection with &&",
+    "pattern": "[a-z&&[^aeiou]]+",
+    "testText": "hello world regex",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "java-posix-class",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java POSIX-like class \\p{Alpha}",
+    "pattern": "\\p{Alpha}+",
+    "testText": "hello 123 world",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "csharp-balancing-parens",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# balancing groups for nested parentheses matching",
+    "pattern": "^(?:(?<open>\\()|(?<-open>\\))|[^()])*$(?(open)(?!))$",
+    "testText": "(a(b)c)",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ],
+    "excludeFlavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "csharp-class-subtraction",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# character class subtraction [base-[subtract]]",
+    "pattern": "[a-z-[aeiou]]+",
+    "testText": "hello world regex",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ],
+    "excludeFlavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "csharp-named-backref-quote",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# named backreference with single-quote syntax \\k'name'",
+    "pattern": "(?<w>\\w+) \\k'w'",
+    "testText": "hello hello world world",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "csharp-balancing-braces",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# balancing groups for nested curly braces",
+    "pattern": "\\{(?:(?<open>\\{)|(?<-open>\\})|[^{}])*\\}(?(open)(?!))",
+    "testText": "{a{b}c} {x}",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ],
+    "excludeFlavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "php-branch-reset",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP branch reset group (?|...)",
+    "pattern": "(?|(a)|(b))\\1",
+    "testText": "aa bb",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "php-match-reset",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP match reset \\K",
+    "pattern": "foo\\Kbar",
+    "testText": "foobar bazfoobar",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "php-duplicate-names",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP duplicate subpattern names (?J) flag",
+    "pattern": "(?J)(?<n>a)|(?<n>b)",
+    "testText": "a b c",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "php-recursion",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP full pattern recursion (?R)",
+    "pattern": "\\((?:[^()]*|(?R))*\\)",
+    "testText": "(a(b)c) (x(y(z)))",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "php-possessive-quantifier",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP possessive quantifier ++",
+    "pattern": "\\w++\\d",
+    "testText": "abc1 xyz2",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "go-named-python-style",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Go named group using Python-style (?P<name>...)",
+    "pattern": "(?P<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "go-posix-class",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Go POSIX character class [[:alpha:]]",
+    "pattern": "[[:alpha:]]+",
+    "testText": "hello 123 world",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "go-no-lookaround-error",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Go does not support lookaround — expected to error",
+    "pattern": "foo(?=bar)",
+    "testText": "foobar",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "go-no-backref-error",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Go does not support backreferences — expected to error",
+    "pattern": "(a)\\1",
+    "testText": "aa",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "rust-named-python-style",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Rust named group using Python-style (?P<name>...)",
+    "pattern": "(?P<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "rust-unicode-prop",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Rust Unicode property \\p{Greek}",
+    "pattern": "\\p{Greek}+",
+    "testText": "Hello αβγ world δεζ",
+    "flags": "g",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "rust-no-backref-note",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Rust regex crate does not support backreferences — but fancy-regex fallback does",
+    "pattern": "(a)\\1",
+    "testText": "aa ab",
+    "flags": "g",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "rust-no-lookaround-note",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Rust regex crate does not support lookaround — but fancy-regex fallback does",
+    "pattern": "foo(?=bar)",
+    "testText": "foobar foobaz",
+    "flags": "g",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "rust-unicode-category",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Rust Unicode category \\p{Uppercase_Letter}",
+    "pattern": "\\p{Uppercase_Letter}+",
+    "testText": "Hello WORLD test ABC",
+    "flags": "g",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "elixir-pcre-recursion",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Elixir uses PCRE — recursion (?R) should work",
+    "pattern": "\\((?:[^()]*|(?R))*\\)",
+    "testText": "(a(b)c) (x)",
+    "flags": "g",
+    "flavors": [
+      "elixir"
+    ]
+  },
+  {
+    "id": "elixir-pcre-lookahead",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Elixir uses PCRE — lookahead should work",
+    "pattern": "foo(?=bar)",
+    "testText": "foobar foobaz",
+    "flags": "g",
+    "flavors": [
+      "elixir"
+    ]
+  },
+  {
+    "id": "elixir-pcre-backref",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Elixir uses PCRE — backreference should work",
+    "pattern": "(\\w)\\1",
+    "testText": "aabbc deed",
+    "flags": "g",
+    "flavors": [
+      "elixir"
+    ]
+  },
+  {
+    "id": "r-pcre-lookahead",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "R uses PCRE — lookahead should work",
+    "pattern": "foo(?=bar)",
+    "testText": "foobar foobaz",
+    "flags": "g",
+    "flavors": [
+      "r"
+    ]
+  },
+  {
+    "id": "r-pcre-recursion",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "R uses PCRE — recursion (?R) should work",
+    "pattern": "\\((?:[^()]*|(?R))*\\)",
+    "testText": "(a(b)c) (x)",
+    "flags": "g",
+    "flavors": [
+      "r"
+    ]
+  },
+  {
+    "id": "r-pcre-backref",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "R uses PCRE — backreference should work",
+    "pattern": "(\\w)\\1",
+    "testText": "aabbc deed",
+    "flags": "g",
+    "flavors": [
+      "r"
+    ]
+  },
+  {
+    "id": "r-pcre-lookbehind",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "R uses PCRE — lookbehind should work",
+    "pattern": "(?<=foo)bar",
+    "testText": "foobar bazbar",
+    "flags": "g",
+    "flavors": [
+      "r"
+    ]
+  },
+  {
+    "id": "re2-named-python-style",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "RE2 named group using Python-style (?P<name>...)",
+    "pattern": "(?P<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "re2"
+    ]
+  },
+  {
+    "id": "re2-posix-class",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "RE2 POSIX character class [[:digit:]]",
+    "pattern": "[[:digit:]]+",
+    "testText": "abc 123 def 456",
+    "flags": "g",
+    "flavors": [
+      "re2"
+    ]
+  },
+  {
+    "id": "re2-no-lookaround-error",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "RE2 does not support lookaround — expected to error",
+    "pattern": "foo(?=bar)",
+    "testText": "foobar",
+    "flags": "g",
+    "flavors": [
+      "re2"
+    ]
+  },
+  {
+    "id": "re2-no-backref-error",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "RE2 does not support backreferences — expected to error",
+    "pattern": "(a)\\1",
+    "testText": "aa",
+    "flags": "g",
+    "flavors": [
+      "re2"
+    ]
+  },
+  {
+    "id": "perl-recursive-named",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl named recursion (?&name) for nested structures",
+    "pattern": "(?<block>\\{(?:[^{}]*|(?&block))*\\})",
+    "testText": "{a{b{c}d}e} {x}",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "perl-conditional-define",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl (?(DEFINE)...) block for defining reusable subpatterns",
+    "pattern": "(?(DEFINE)(?<d>\\d+))(?&d)",
+    "testText": "abc 123 def 456",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "php-recursive-named",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP named recursion (?&name) for nested structures",
+    "pattern": "(?<block>\\{(?:[^{}]*|(?&block))*\\})",
+    "testText": "{a{b{c}d}e} {x}",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "php-conditional-define",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP (?(DEFINE)...) block for defining reusable subpatterns",
+    "pattern": "(?(DEFINE)(?<d>\\d+))(?&d)",
+    "testText": "abc 123 def 456",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "py-conditional-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Python conditional on group existence",
+    "pattern": "(<)?(\\w+@\\w+)(?(1)>|$)",
+    "testText": "<user@host> user@host",
+    "flags": "g",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "ruby-recursion-zero",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby recursion via \\g<0> for full pattern",
+    "pattern": "\\((?:[^()]*|\\g<0>)*\\)",
+    "testText": "(a(b)c) (x(y(z)))",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "ruby-named-class-unicode",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby Unicode property for Katakana",
+    "pattern": "\\p{Katakana}+",
+    "testText": "Hello カタカナ world",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "csharp-right-to-left",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# can use (?<=...) with variable-length lookbehind (not limited like PCRE)",
+    "pattern": "(?<=\\w+)\\d+",
+    "testText": "abc123 x1 foo42",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "java-unicode-category-L",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java Unicode general category \\p{L}",
+    "pattern": "\\p{L}+",
+    "testText": "Hello 世界 café 123",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "java-embedded-flag",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java embedded flag expression (?i)",
+    "pattern": "(?i)hello",
+    "testText": "HELLO hello HeLLo",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "java-lookahead",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java positive lookahead",
+    "pattern": "\\w+(?=;)",
+    "testText": "foo; bar; baz",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "java-lookbehind",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Java positive lookbehind",
+    "pattern": "(?<=@)\\w+",
+    "testText": "user@domain other@host",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "php-named-group-angle",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP named group with angle brackets (?<name>...)",
+    "pattern": "(?<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "php-named-group-python",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PHP named group with Python syntax (?P<name>...)",
+    "pattern": "(?P<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "perl-named-group-angle",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl named group with angle brackets (?<name>...)",
+    "pattern": "(?<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "perl-unicode-prop",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Perl Unicode property \\p{L}",
+    "pattern": "\\p{L}+",
+    "testText": "Hello 世界 café 123",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "csharp-inline-flags",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# inline flags (?i) for case insensitive",
+    "pattern": "(?i)hello",
+    "testText": "HELLO hello HeLLo",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "csharp-named-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# named group (?<name>...)",
+    "pattern": "(?<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "csharp-lookahead",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "C# positive lookahead",
+    "pattern": "\\w+(?=;)",
+    "testText": "foo; bar; baz",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "ruby-lookbehind",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby positive lookbehind",
+    "pattern": "(?<=@)\\w+",
+    "testText": "user@domain other@host",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "ruby-named-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby named group (?<name>...)",
+    "pattern": "(?<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "ruby-atomic-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Ruby atomic group (?>...)",
+    "pattern": "(?>\\d+)\\.",
+    "testText": "123. 456. abc",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "elixir-named-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Elixir named group (?<name>...)",
+    "pattern": "(?<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "elixir"
+    ]
+  },
+  {
+    "id": "r-named-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "R named group (?<name>...)",
+    "pattern": "(?<word>\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "r"
+    ]
+  },
+  {
+    "id": "r-pcre-atomic",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "R uses PCRE — atomic group should work",
+    "pattern": "(?>\\d+)\\.",
+    "testText": "123. 456. abc",
+    "flags": "g",
+    "flavors": [
+      "r"
+    ]
+  },
+  {
+    "id": "elixir-pcre-atomic",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Elixir uses PCRE — atomic group should work",
+    "pattern": "(?>\\d+)\\.",
+    "testText": "123. 456. abc",
+    "flags": "g",
+    "flavors": [
+      "elixir"
+    ]
+  },
+  {
+    "id": "go-character-class",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Go basic character class with range",
+    "pattern": "[a-zA-Z]+",
+    "testText": "Hello World 123",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "go-unicode-category",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Go Unicode category using pL syntax",
+    "pattern": "\\pL+",
+    "testText": "Hello 123 world",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "re2-character-class",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "RE2 basic character class with range",
+    "pattern": "[a-zA-Z]+",
+    "testText": "Hello World 123",
+    "flags": "g",
+    "flavors": [
+      "re2"
+    ]
+  },
+  {
+    "id": "edge-elixir-unicode-w",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Elixir \\w with Unicode text — Erlang :unicode enables UTF-8 but NOT UCP, so \\w stays ASCII",
+    "pattern": "\\w+",
+    "testText": "café naïve über",
+    "flags": "g",
+    "flavors": [
+      "elixir",
+      "php",
+      "python",
+      "ruby",
+      "perl",
+      "java",
+      "csharp"
+    ],
+    "excludeFlavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "edge-elixir-unicode-d",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Elixir \\d on non-ASCII digits — Arabic-Indic digits matched by UCP engines but not ASCII-only",
+    "pattern": "\\d+",
+    "testText": "123 ١٢٣ 456",
+    "flags": "g",
+    "flavors": [
+      "elixir",
+      "php",
+      "python",
+      "ruby",
+      "perl",
+      "java",
+      "csharp",
+      "r"
+    ],
+    "excludeFlavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "edge-r-word-boundary-unicode",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "R \\b word boundary on accented text — locale-dependent",
+    "pattern": "\\b\\w+\\b",
+    "testText": "café naïve test",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "python",
+      "perl",
+      "r"
+    ]
+  },
+  {
+    "id": "edge-r-dot-newline",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "R dot vs newline without s flag",
+    "pattern": ".+",
+    "testText": "line1\nline2",
+    "flags": "g",
+    "flavors": [
+      "r",
+      "php",
+      "python",
+      "perl"
+    ]
+  },
+  {
+    "id": "edge-go-no-whitespace-prop",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Go \\p{White_Space} — not supported in Go regexp (only Script/Category)",
+    "pattern": "\\p{White_Space}",
+    "testText": "a b",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "edge-go-combining-mark",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Go \\p{Mc} spacing combining mark",
+    "pattern": "\\p{Mc}",
+    "testText": "aाb",
+    "flags": "g",
+    "flavors": [
+      "go",
+      "rust"
+    ]
+  },
+  {
+    "id": "edge-re2-vs-rust-octal",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Octal escape \\012 — RE2 supports, Rust regex crate does not",
+    "pattern": "a\\012b",
+    "testText": "a\nb",
+    "flags": "g",
+    "flavors": [
+      "go"
+    ]
+  },
+  {
+    "id": "edge-re2-vs-rust-dot-unicode",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Dot on multibyte UTF-8 — Rust defaults to Unicode, RE2 defaults to byte mode",
+    "pattern": ".+",
+    "testText": "café 世界",
+    "flags": "g",
+    "flavors": [
+      "rust",
+      "go"
+    ]
+  },
+  {
+    "id": "edge-python-Z-trailing-newline",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Python \\Z on text ending with \\n — Python strict end, PCRE2 allows trailing newline",
+    "pattern": "end\\Z",
+    "testText": "the end\n",
+    "flags": "",
+    "flavors": [
+      "python",
+      "php",
+      "perl"
+    ],
+    "excludeFlavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "edge-python-w-unicode-default",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Python \\w matches Unicode by default (Python 3), PCRE2 needs UCP flag",
+    "pattern": "\\w+",
+    "testText": "naïve café über",
+    "flags": "g",
+    "flavors": [
+      "python",
+      "php",
+      "perl",
+      "java"
+    ]
+  },
+  {
+    "id": "edge-python-duplicate-name-error",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Python rejects duplicate named groups — PCRE2 allows with (?J)",
+    "pattern": "(?P<a>x)(?P<a>y)",
+    "testText": "xy",
+    "flags": "g",
+    "flavors": [
+      "python",
+      "php",
+      "perl"
+    ],
+    "excludeFlavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "edge-ruby-h-hex",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Ruby \\h = hex digit [0-9a-fA-F]; PCRE2 \\h = horizontal whitespace — SILENT semantic clash",
+    "pattern": "\\h+",
+    "testText": "DEAD 00FF xyz",
+    "flags": "g",
+    "flavors": [
+      "ruby",
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "edge-ruby-H-nonhex",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Ruby \\H = non-hex; PCRE2 \\H = non-horizontal-whitespace — SILENT semantic clash",
+    "pattern": "\\H+",
+    "testText": "xyz DEAD 123",
+    "flags": "g",
+    "flavors": [
+      "ruby",
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "edge-ruby-absent-operator",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Ruby (?~abc) absent operator — match longest string NOT containing abc",
+    "pattern": "(?~abc)",
+    "testText": "xyzabcdef",
+    "flags": "g",
+    "flavors": [
+      "ruby",
+      "php"
+    ]
+  },
+  {
+    "id": "edge-ruby-duplicate-names",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Ruby allows duplicate named groups by default; PCRE2 requires (?J)",
+    "pattern": "(?<a>.)(?<a>.)",
+    "testText": "xy",
+    "flags": "g",
+    "flavors": [
+      "ruby",
+      "php",
+      "perl"
+    ],
+    "excludeFlavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "edge-ruby-recursion-g0",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Ruby \\g<0> whole-pattern recursion vs PCRE2 (?R)",
+    "pattern": "\\((?:[^()]*|\\g<0>)*\\)",
+    "testText": "(a(b)c)",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "edge-java-intersection",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Java [a-z&&[^aeiou]] class intersection — PCRE2 treats && as literal",
+    "pattern": "[a-z&&[^aeiou]]+",
+    "testText": "hello world regex",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure",
+      "php"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "edge-java-unicode-block",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Java \\p{InGreek} block syntax — PCRE2 uses \\p{Greek}",
+    "pattern": "\\p{InGreek}+",
+    "testText": "αβγ abc",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "edge-java-binary-prop",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Java \\p{IsAlphabetic} binary property — PCRE2 doesn't support Is prefix",
+    "pattern": "\\p{IsAlphabetic}+",
+    "testText": "hello 123 café",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "edge-java-javalowercase",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Java \\p{javaLowerCase} — Java-only property, PCRE2 errors",
+    "pattern": "\\p{javaLowerCase}+",
+    "testText": "Hello World café",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "edge-java-boundary-unicode",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Java \\b with Unicode — uses Character.isLetterOrDigit including accented chars",
+    "pattern": "\\b\\w+\\b",
+    "testText": "café naïve test",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure",
+      "php"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "edge-csharp-balancing",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "C# balancing groups — match balanced parentheses",
+    "pattern": "^(?:(?<open>\\()|(?<-open>\\))|[^()])*$",
+    "testText": "(a(b)c)",
+    "flags": "",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "edge-csharp-class-subtraction",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "C# [a-z-[aeiou]] character class subtraction — .NET only",
+    "pattern": "[a-z-[aeiou]]+",
+    "testText": "hello world regex",
+    "flags": "g",
+    "flavors": [
+      "csharp",
+      "php"
+    ]
+  },
+  {
+    "id": "edge-csharp-backref-quote",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "C# \\k'name' single-quote named backref — .NET only",
+    "pattern": "(?<w>\\w+) \\k'w'",
+    "testText": "hello hello world world",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "edge-csharp-explicit-capture",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "C# (?n) explicit capture mode — unnamed groups become non-capturing",
+    "pattern": "(?n)(a)(b)(?<x>c)",
+    "testText": "abc",
+    "flags": "",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "edge-csharp-connector-boundary",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "C# \\b on connector punctuation — .NET \\w includes \\p{Pc} like ‿",
+    "pattern": "\\bx",
+    "testText": "‿x ax",
+    "flags": "g",
+    "flavors": [
+      "csharp",
+      "php",
+      "python",
+      "java"
+    ],
+    "excludeFlavors": [
+      "csharp",
+      "perl",
+      "php",
+      "python"
+    ]
+  },
+  {
+    "id": "edge-perl-gcb-boundary",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Perl \\b{gcb} grapheme cluster boundary — Perl 5.22+ only",
+    "pattern": "\\b{gcb}",
+    "testText": "é a",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "edge-perl-xposix-alpha",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Perl \\p{XPosixAlpha} extended POSIX property — Perl only",
+    "pattern": "\\p{XPosixAlpha}+",
+    "testText": "hello 123 café",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ],
+    "excludeFlavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "edge-perl-backtrack-verbs",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Perl (*SKIP)(*FAIL) backtracking verbs",
+    "pattern": "aa(*SKIP)(*FAIL)|a",
+    "testText": "aabab",
+    "flags": "g",
+    "flavors": [
+      "perl",
+      "php"
+    ]
+  },
+  {
+    "id": "edge-perl-K-lookbehind",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Perl \\K inside lookbehind — deprecated and undefined behavior",
+    "pattern": "(?<=a\\K)b",
+    "testText": "ab",
+    "flags": "g",
+    "flavors": [
+      "perl",
+      "php"
+    ],
+    "excludeFlavors": [
+      "perl",
+      "php"
+    ]
+  },
+  {
+    "id": "edge-php-utf-verb",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "PHP (*UTF) verb enables UTF-8 mode without /u flag",
+    "pattern": "(*UTF)\\w+",
+    "testText": "café test",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "edge-php-duplicate-J",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "PHP (?J) allows duplicate named groups",
+    "pattern": "(?J)(?<n>a)|(?<n>b)",
+    "testText": "a b",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-lookahead-backref-group",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookahead captures a group, then backref uses it",
+    "pattern": "(?=(\\w+))\\1\\s(\\w+)",
+    "testText": "hello world foo bar",
+    "flags": "g",
+    "excludeFlavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l3-atomic-alternation-quantifier",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Atomic group with quantified alternation",
+    "pattern": "(?>(?:ab|cd)+)ef",
+    "testText": "ababef cdcdef abef",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "rust",
+      "go",
+      "re2",
+      "python"
+    ]
+  },
+  {
+    "id": "l3-nested-lookaround-capture",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookbehind containing lookahead with capture",
+    "pattern": "(?<=(?=\\d)\\w)x",
+    "testText": "1x 2x ax bx",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-scoped-flag-lookahead-class",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Scoped case-insensitive flag with lookahead and class",
+    "pattern": "(?i:(?=[a-z])\\w+)",
+    "testText": "Hello WORLD foo 123",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-backref-alternation-anchor",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Backref to alternation group anchored at both ends",
+    "pattern": "^(a|b)\\1$",
+    "testText": "aa",
+    "flags": ""
+  },
+  {
+    "id": "l3-named-group-flag-backref",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Named group with scoped case-insensitive flag, then named backref",
+    "pattern": "(?<w>(?i:\\w+))\\s+\\k<w>",
+    "testText": "Hello Hello world world",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-unicode-prop-lookaround-quantifier",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Unicode property with lookaround and quantifier",
+    "pattern": "(?<=\\p{L})\\d+(?=\\p{L})",
+    "testText": "a123b x45y z6w",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-multiple-lookaround",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Three consecutive lookarounds then match",
+    "pattern": "(?<=\\d)(?=\\w)(?!_)\\w+",
+    "testText": "3abc 4_xy 5def",
+    "flags": "g"
+  },
+  {
+    "id": "l3-nested-groups-multi-capture",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Nested groups with four captures and backrefs",
+    "pattern": "((a)(b(c)))\\1\\2\\3\\4",
+    "testText": "abcabcabc",
+    "flags": ""
+  },
+  {
+    "id": "l3-quantified-alt-lookbehind",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Quantified alternation inside lookbehind",
+    "pattern": "(?<=(?:Mr|Mrs|Dr)\\.\\s)\\w+",
+    "testText": "Mr. Smith Mrs. Jones Dr. Who",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-class-boundary-group-quantifier",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Class + boundary + group + quantifier",
+    "pattern": "\\b([A-Z][a-z]+){2,}\\b",
+    "testText": "JavaScript RegexPilot FooBarBaz",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-branch-reset-conditional",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Branch reset + conditional backref",
+    "pattern": "(?|(\\d+)|(\\w+))(?(1)=num|=word)",
+    "testText": "123=num abc=word",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-recursion-quantifier-group",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Named recursive group with quantifier",
+    "pattern": "(?<p>\\((?:[^()]|(?&p))*\\)){1,}",
+    "testText": "(a)(b(c))",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-conditional-recursion",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Conditional pattern inside recursion",
+    "pattern": "(?(R)a|b(?R)c)",
+    "testText": "bac",
+    "flags": "",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-lookahead-lazy-quant-class",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookahead + lazy quantifier + character class",
+    "pattern": "(?=[A-Z])\\w+?\\d",
+    "testText": "Hello3 World X9 abc",
+    "flags": "g"
+  },
+  {
+    "id": "l3-lookbehind-negated-class-anchor",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookbehind + negated class + end anchor",
+    "pattern": "(?<=@)[^.]+$",
+    "testText": "user@domain",
+    "flags": ""
+  },
+  {
+    "id": "l3-group-alternation-escape",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Named group + alternation + escape sequences",
+    "pattern": "(?<sep>\\t|\\s)\\w+\\k<sep>",
+    "testText": " hello \tworld\t",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-nested-quantifiers-group",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Nested quantifiers in non-capturing group with anchor",
+    "pattern": "^(?:\\w+\\s?)+$",
+    "testText": "hello world foo",
+    "flags": ""
+  },
+  {
+    "id": "l3-lookahead-capture-quantified",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookahead with quantified capture group",
+    "pattern": "(?=(\\d{2,4}))\\d+",
+    "testText": "12345 67 890",
+    "flags": "g"
+  },
+  {
+    "id": "l3-lookbehind-unicode-capture",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookbehind with Unicode property + capture",
+    "pattern": "(?<=\\p{Lu})(\\p{Ll}+)",
+    "testText": "Hello World Café",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-dot-flag-group-quant",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Dot in singleline mode + group + quantifier",
+    "pattern": "(?s:(.{3,5})\\s)",
+    "testText": "ab\ncd efgh\ni",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "mysql",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-noncap-nested-alternation",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Non-capturing groups nested three deep with alternation",
+    "pattern": "(?:(?:(?:a|b)c|de)f|gh)",
+    "testText": "acf bcf def gh xyz",
+    "flags": "g"
+  },
+  {
+    "id": "l3-word-boundary-class-backref",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Word boundary + character class + backref for repeated word",
+    "pattern": "\\b([a-z]+)\\s+\\1\\b",
+    "testText": "the the cat cat dog fox fox",
+    "flags": "gi"
+  },
+  {
+    "id": "l3-lookahead-boundary-quantifier",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookahead at word boundary with quantifier",
+    "pattern": "\\b(?=[A-Z])\\w{3,}\\b",
+    "testText": "Hello An World It JavaScript",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-capture-lazy-alternation",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Capture group with lazy quantifier and alternation",
+    "pattern": "((?:foo|bar)+?)(baz)",
+    "testText": "foobarbaz foobaz",
+    "flags": "g"
+  },
+  {
+    "id": "l3-negated-lookahead-class-quant",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Negative lookahead + character class + quantifier",
+    "pattern": "\\b(?!un)[a-z]+ed\\b",
+    "testText": "fixed undone played unused coded",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-multiple-named-groups-backref",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Multiple named groups with cross-backrefs",
+    "pattern": "(?<first>\\w+):(?<second>\\w+)=\\k<first>-\\k<second>",
+    "testText": "ab:cd=ab-cd xy:zz=xy-zz",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-possessive-class-anchor",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Possessive quantifier + character class + anchor",
+    "pattern": "^[a-z]++\\d$",
+    "testText": "abc3",
+    "flags": "",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "python",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-lookahead-lookbehind-capture",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Both lookahead and lookbehind surrounding a capture",
+    "pattern": "(?<=\\()([^)]+)(?=\\))",
+    "testText": "(hello) (world)",
+    "flags": "g"
+  },
+  {
+    "id": "l3-alternation-anchor-escape",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Alternation with anchors and escape sequences",
+    "pattern": "(?:^\\d+$|^\\w+\\s\\w+$)",
+    "testText": "12345",
+    "flags": "m"
+  },
+  {
+    "id": "l3-flag-multiline-lookahead",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Multiline flag + anchors + lookahead",
+    "pattern": "^(?=\\S)\\w+",
+    "testText": "hello\n world\nfoo",
+    "flags": "gm"
+  },
+  {
+    "id": "l3-conditional-named-group-quant",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Conditional on named group with quantifier",
+    "pattern": "(?<tag><)?\\w+(?(tag)>)",
+    "testText": "<html> plain <div>",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-recursive-nested-parens",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Recursive pattern for deeply nested parentheses",
+    "pattern": "\\((?:[^()]|(?R))*\\)",
+    "testText": "(a(b(c)d)e)",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-atomic-backref-anchor",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Atomic group + backref + anchor",
+    "pattern": "^(?>(.))\\1$",
+    "testText": "aa",
+    "flags": "",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "python",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-unicode-script-lookahead-quant",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Unicode script property + lookahead + quantifier",
+    "pattern": "\\p{Script=Latin}+(?=\\s)",
+    "testText": "hello world café test",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "mysql",
+      "python",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-capture-inside-lookahead-reuse",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Capture inside lookahead, reused after with alternation",
+    "pattern": "(?=(cat|dog))\\w+s",
+    "testText": "cats dogs birds",
+    "flags": "g"
+  },
+  {
+    "id": "l3-nested-noncap-quant-lazy",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Nested non-capturing groups with mixed greedy/lazy quantifiers",
+    "pattern": "(?:(?:\\w+?)\\s){2,3}",
+    "testText": "a bb ccc dddd eeeee",
+    "flags": "g"
+  },
+  {
+    "id": "l3-negated-lookbehind-class-boundary",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Negative lookbehind + character class + word boundary",
+    "pattern": "(?<!\\d)[a-z]+\\b",
+    "testText": "abc 3def ghi 9jkl mno",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-flag-x-comment-group",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Extended mode with comment + group + quantifier",
+    "pattern": "(?x: (\\d+) \\s+ (\\w+) )",
+    "testText": "42 answer 7 lucky",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-alternation-backref-lazy",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Alternation with backref and lazy quantifier",
+    "pattern": "(a|b)\\w+?\\1",
+    "testText": "abba acca bxxb",
+    "flags": "g"
+  },
+  {
+    "id": "l3-escape-quant-group-anchor",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Escape sequences + quantifier + group + anchor",
+    "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$",
+    "testText": "192.168.1.1",
+    "flags": ""
+  },
+  {
+    "id": "l3-lookahead-negated-class-escape",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookahead + negated class + escape sequence",
+    "pattern": "(?=.*\\d)[^\\s]+",
+    "testText": "abc 12x foo3 bar",
+    "flags": "g"
+  },
+  {
+    "id": "l3-named-alt-quantifier-anchor",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Named group + alternation + quantifier + anchors",
+    "pattern": "^(?<proto>https?|ftp)://\\S+$",
+    "testText": "https://example.com",
+    "flags": ""
+  },
+  {
+    "id": "l3-lookbehind-dot-quantifier",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Lookbehind + dot + quantifier",
+    "pattern": "(?<=\\.).{1,5}(?=\\.)",
+    "testText": "a.hello.b.xy.c",
+    "flags": "g"
+  },
+  {
+    "id": "l3-capture-nested-quantifiers",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Capture with nested quantifiers across groups",
+    "pattern": "((\\w+)\\s?)+",
+    "testText": "hello world foo",
+    "flags": ""
+  },
+  {
+    "id": "l3-class-intersection-lookahead",
+    "category": "triple-combination",
+    "level": 3,
+    "description": "Java class intersection + lookahead + quantifier",
+    "pattern": "(?=[a-z])[a-z&&[^aeiou]]+",
+    "testText": "bcdfg aeiou xyz",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "l3-real-email-lookahead",
+    "category": "real-world",
+    "level": 3,
+    "description": "Email with lookahead requiring at least one uppercase",
+    "pattern": "(?=[^@]*[A-Z])[\\w.+-]+@[\\w-]+\\.[\\w.]+",
+    "testText": "User@test.com bad@x.co Ok@y.io",
+    "flags": "gi"
+  },
+  {
+    "id": "l3-real-url-optional",
+    "category": "real-world",
+    "level": 3,
+    "description": "URL with optional protocol, path, and query",
+    "pattern": "(?:https?://)?(?:[\\w-]+\\.)+[a-z]{2,}(?:/[\\w./-]*)?(?:\\?[\\w=&]*)?",
+    "testText": "https://foo.com/p?a=1 bar.io",
+    "flags": "gi"
+  },
+  {
+    "id": "l3-real-date-validation",
+    "category": "real-world",
+    "level": 3,
+    "description": "Date DD/MM/YYYY with day/month validation",
+    "pattern": "(?:0[1-9]|[12]\\d|3[01])[-/](?:0[1-9]|1[0-2])[-/](?:19|20)\\d{2}",
+    "testText": "25/12/2024 01-01-1999 31/06/2025",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-ipv4-octet",
+    "category": "real-world",
+    "level": 3,
+    "description": "IPv4 with full octet validation (0-255)",
+    "pattern": "(?:(?:25[0-5]|2[0-4]\\d|[01]?\\d?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|[01]?\\d?\\d)",
+    "testText": "192.168.1.1 255.0.0.0 10.0.0.1",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-html-attr",
+    "category": "real-world",
+    "level": 3,
+    "description": "HTML attribute extraction with quoted values",
+    "pattern": "(\\w+)=[\"']([^\"']*)[\"']",
+    "testText": "class=\"foo\" id='bar' data-x=\"z\"",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-css-color",
+    "category": "real-world",
+    "level": 3,
+    "description": "CSS hex color (#RGB or #RRGGBB)",
+    "pattern": "#(?:[0-9a-fA-F]{3}){1,2}\\b",
+    "testText": "#fff #aabbcc #123 #DEAD00",
+    "flags": "g",
+    "excludeFlavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-real-json-string",
+    "category": "real-world",
+    "level": 3,
+    "description": "JSON string with escaped characters",
+    "pattern": "\"(?:[^\"\\\\]|\\\\.)*\"",
+    "testText": "\"hello\" \"say \\\"hi\\\"\" \"a\\nb\"",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-balanced-brackets",
+    "category": "real-world",
+    "level": 3,
+    "description": "Balanced square brackets using recursion",
+    "pattern": "\\[(?:[^\\[\\]]|(?R))*\\]",
+    "testText": "[a[b[c]d]e] [x]",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-real-password-strength",
+    "category": "real-world",
+    "level": 3,
+    "description": "Password strength: upper + lower + digit + special + min 8",
+    "pattern": "(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%]).{8,}",
+    "testText": "Str0ng!Pass weakpass S1mple!",
+    "flags": ""
+  },
+  {
+    "id": "l3-real-log-named-groups",
+    "category": "real-world",
+    "level": 3,
+    "description": "Log line with named captures for timestamp, level, message",
+    "pattern": "(?<ts>\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2})\\s+(?<level>INFO|WARN|ERROR)\\s+(?<msg>.+)",
+    "testText": "2024-01-15T10:30:00 ERROR fail",
+    "flags": ""
+  },
+  {
+    "id": "l3-real-semver",
+    "category": "real-world",
+    "level": 3,
+    "description": "Semantic version with optional pre-release and build",
+    "pattern": "(\\d+)\\.(\\d+)\\.(\\d+)(?:-(\\w+(?:\\.\\w+)*))?(?:\\+(\\w+(?:\\.\\w+)*))?",
+    "testText": "1.2.3 4.5.6-beta.1 7.8.9+build",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-csv-quoted",
+    "category": "real-world",
+    "level": 3,
+    "description": "CSV field: quoted (with escaped quotes) or unquoted",
+    "pattern": "(?:\"(?:[^\"]|\"\")*\"|[^,\"\\r\\n]*)",
+    "testText": "hello,\"wo,rld\",\"say \"\"hi\"\"\"",
+    "flags": "g",
+    "excludeFlavors": [
+      "mysql",
+      "r"
+    ]
+  },
+  {
+    "id": "l3-real-time-12h",
+    "category": "real-world",
+    "level": 3,
+    "description": "12-hour time with AM/PM",
+    "pattern": "(?:0?[1-9]|1[0-2]):[0-5]\\d\\s?(?:AM|PM|am|pm)",
+    "testText": "2:30 PM 12:00am 9:15 AM",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-markdown-link",
+    "category": "real-world",
+    "level": 3,
+    "description": "Markdown link [text](url)",
+    "pattern": "\\[([^\\]]+)\\]\\(([^)]+)\\)",
+    "testText": "[click](http://x.co) [go](y.io)",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-hex-color-named",
+    "category": "real-world",
+    "level": 3,
+    "description": "Named groups for CSS color components",
+    "pattern": "#(?<r>[0-9a-f]{2})(?<g>[0-9a-f]{2})(?<b>[0-9a-f]{2})\\b",
+    "testText": "#ff00cc #aabb11 #123456",
+    "flags": "gi"
+  },
+  {
+    "id": "l3-real-phone-intl",
+    "category": "real-world",
+    "level": 3,
+    "description": "International phone number with optional country code",
+    "pattern": "(?:\\+\\d{1,3}[-.\\s]?)?(?:\\(\\d{1,4}\\)[-.\\s]?)?\\d{3,4}[-.\\s]?\\d{3,4}",
+    "testText": "+1-555-1234 (020) 555-6789",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-camel-to-words",
+    "category": "real-world",
+    "level": 3,
+    "description": "Split camelCase at word boundaries using lookaround",
+    "pattern": "(?<=[a-z])(?=[A-Z])",
+    "testText": "camelCaseString myHTTPClient",
+    "flags": "g",
+    "excludeFlavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l3-real-duplicate-words",
+    "category": "real-world",
+    "level": 3,
+    "description": "Find duplicate consecutive words",
+    "pattern": "\\b(\\w+)\\s+\\1\\b",
+    "testText": "the the quick brown fox fox",
+    "flags": "gi"
+  },
+  {
+    "id": "l3-real-balanced-parens-recursive",
+    "category": "real-world",
+    "level": 3,
+    "description": "Balanced parentheses via named recursion",
+    "pattern": "(?<p>\\((?:[^()]|(?&p))*\\))",
+    "testText": "(a(b)c) ((x))",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-real-xml-tag",
+    "category": "real-world",
+    "level": 3,
+    "description": "XML opening and self-closing tags with attributes",
+    "pattern": "<(\\w+)(\\s+\\w+=\"[^\"]*\")*\\s*/?>",
+    "testText": "<div class=\"x\"> <br/> <img src=\"y\"/>",
+    "flags": "g"
+  },
+  {
+    "id": "l3-real-uuid",
+    "category": "real-world",
+    "level": 3,
+    "description": "UUID v4 format",
+    "pattern": "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+    "testText": "550e8400-e29b-41d4-a716-446655440000",
+    "flags": "gi"
+  },
+  {
+    "id": "l3-real-content-type",
+    "category": "real-world",
+    "level": 3,
+    "description": "HTTP Content-Type with optional charset parameter",
+    "pattern": "(\\w+/\\w+)(?:;\\s*charset=([\\w-]+))?",
+    "testText": "text/html; charset=utf-8 app/json",
+    "flags": "g"
+  },
+  {
+    "id": "l3-edge-empty-alternation",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Empty alternation branch — empty string matches",
+    "pattern": "(|a|b)",
+    "testText": "ab",
+    "flags": "g",
+    "excludeFlavors": [
+      "mysql",
+      "php",
+      "postgresql",
+      "python",
+      "r",
+      "shell"
+    ]
+  },
+  {
+    "id": "l3-edge-zero-width-quantified",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Zero-width assertion in quantified group — infinite loop risk",
+    "pattern": "(?:(?=\\d))+\\d+",
+    "testText": "123 abc 456",
+    "flags": "g"
+  },
+  {
+    "id": "l3-edge-overlapping-capture",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Lookahead capture reused as backref outside",
+    "pattern": "(?=(a+))\\1b",
+    "testText": "aab",
+    "flags": "",
+    "excludeFlavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l3-edge-nested-quantifier",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Nested quantifiers (catastrophic backtracking risk)",
+    "pattern": "(a+)+b",
+    "testText": "aab",
+    "flags": ""
+  },
+  {
+    "id": "l3-edge-backref-nonparticipating",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Backref to optional non-participating group",
+    "pattern": "(a)?(b)\\1",
+    "testText": "aba",
+    "flags": ""
+  },
+  {
+    "id": "l3-edge-alternation-capture-counts",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Alternation branches with different capture counts",
+    "pattern": "(a)(b)|(c)",
+    "testText": "ab",
+    "flags": ""
+  },
+  {
+    "id": "l3-edge-unicode-boundary",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Unicode word boundary on mixed-script text",
+    "pattern": "\\b\\p{L}+\\b",
+    "testText": "hello мир 世界 café",
+    "flags": "g",
+    "excludeFlavors": [
+      "clojure",
+      "go",
+      "groovy",
+      "java",
+      "kotlin",
+      "mysql",
+      "r",
+      "re2",
+      "scala",
+      "swift"
+    ]
+  },
+  {
+    "id": "l3-edge-case-folding-eszett",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Case folding: German ß folds to SS in case-insensitive",
+    "pattern": "stra(ss|ß)e",
+    "testText": "strasse straße",
+    "flags": "gi"
+  },
+  {
+    "id": "l3-edge-crlf-multiline",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Multiline dot-star with CRLF line endings",
+    "pattern": "^.+$",
+    "testText": "line1\r\nline2\r\nline3",
+    "flags": "gm",
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "mysql",
+      "scala",
+      "shell",
+      "swift"
+    ]
+  },
+  {
+    "id": "l3-edge-possessive-no-backtrack",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Possessive quantifier prevents backtracking — no match",
+    "pattern": "\"[^\"]*+\"x",
+    "testText": "\"hello\"x \"world\"y",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "python",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-edge-atomic-no-backtrack",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Atomic group prevents backtracking — should NOT match",
+    "pattern": "(?>a+)ab",
+    "testText": "aaab xyz",
+    "flags": "g",
+    "excludeFlavors": [
+      "javascript",
+      "typescript",
+      "python",
+      "rust",
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-edge-K-with-captures",
+    "category": "edge-case",
+    "level": 3,
+    "description": "\\K resets match start but captures still work",
+    "pattern": "a\\K(b)(c)",
+    "testText": "abc xbc",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "java",
+      "javascript",
+      "mysql",
+      "python",
+      "re2",
+      "rust",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-edge-variable-lookbehind",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Variable-length lookbehind (PCRE2 10.36+)",
+    "pattern": "(?<=\\w{1,10})x",
+    "testText": "abcx x 1234x",
+    "flags": "g",
+    "excludeFlavors": [
+      "go",
+      "java",
+      "javascript",
+      "perl",
+      "re2",
+      "ruby",
+      "rust",
+      "typescript"
+    ]
+  },
+  {
+    "id": "l3-edge-greedy-vs-lazy-capture",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Greedy vs lazy in capture changes match length",
+    "pattern": "\"(.*?)\".*\"(.*)\"",
+    "testText": "\"first\" and \"second\"",
+    "flags": ""
+  },
+  {
+    "id": "l3-edge-empty-capture-backref",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Empty-string capture and backref match",
+    "pattern": "(a?)b\\1",
+    "testText": "ab b aba",
+    "flags": "g"
+  },
+  {
+    "id": "l3-edge-nested-class-escape",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Nested character class edge — dash and caret placement",
+    "pattern": "[\\]\\[^-]+",
+    "testText": "a]b[c^d-e",
+    "flags": "g"
+  },
+  {
+    "id": "l3-edge-lookahead-at-end",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Lookahead at string end with anchor",
+    "pattern": "\\w+(?=\\s*$)",
+    "testText": "hello world  ",
+    "flags": ""
+  },
+  {
+    "id": "l3-edge-backref-in-class-literal",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Backref syntax inside class treated as octal/literal",
+    "pattern": "[\\1]",
+    "testText": "\u0001 1 a",
+    "flags": "g",
+    "excludeFlavors": [
+      "mysql",
+      "r"
+    ]
+  },
+  {
+    "id": "l3-edge-quantifier-on-anchor",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Quantifier on zero-width anchor (valid but unusual)",
+    "pattern": "\\b+\\w+",
+    "testText": "hello world",
+    "flags": "g",
+    "excludeFlavors": [
+      "clojure",
+      "csharp",
+      "go",
+      "groovy",
+      "java",
+      "kotlin",
+      "perl",
+      "postgresql",
+      "python",
+      "re2",
+      "ruby",
+      "rust",
+      "scala",
+      "shell"
+    ]
+  },
+  {
+    "id": "l3-edge-multiline-first-line",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Multiline ^ matches each line start",
+    "pattern": "^\\w+",
+    "testText": "hello\nworld\nfoo",
+    "flags": "gm"
+  },
+  {
+    "id": "l3-edge-catastrophic-avoided",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Potentially catastrophic pattern on safe input",
+    "pattern": "(x+x+)+y",
+    "testText": "xxxy",
+    "flags": ""
+  },
+  {
+    "id": "l3-edge-null-in-class",
+    "category": "edge-case",
+    "level": 3,
+    "description": "Null character in character class",
+    "pattern": "[\\x00-\\x1f]+",
+    "testText": "\u0000\u0001\u0002abc",
+    "flags": "g",
+    "excludeFlavors": [
+      "mysql",
+      "postgresql",
+      "r",
+      "shell"
+    ]
+  },
+  {
+    "id": "l3-flavor-python-nested-named",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Python nested named groups with backref",
+    "pattern": "(?P<a>(?P<b>\\d+)\\w+)(?P=a)",
+    "testText": "12ab12ab x",
+    "flags": "g",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "l3-flavor-python-flag-scope",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Python inline flag scoping (?i:...) + capture + anchor",
+    "pattern": "^(?i:(hello))\\s+\\1",
+    "testText": "Hello Hello world",
+    "flags": "",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "l3-flavor-python-conditional",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Python conditional with named group",
+    "pattern": "(?P<quote>['\"])?\\w+(?(quote)(?P=quote))",
+    "testText": "'hello' world \"foo\"",
+    "flags": "g",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "l3-flavor-ruby-absent-named",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Ruby absent operator with named capture",
+    "pattern": "(?<x>\\w+)(?~abc)\\k<x>",
+    "testText": "fooxyzfoo bar",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "l3-flavor-ruby-subroutine-quant",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Ruby subroutine call with quantifier",
+    "pattern": "(?<d>\\d+)\\s+\\g<d>\\s+\\g<d>",
+    "testText": "12 345 6789 abc",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "l3-flavor-ruby-k-possessive",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Ruby \\K with possessive quantifier",
+    "pattern": "\\w++\\K\\d+",
+    "testText": "abc123 xy45",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "l3-flavor-java-props-lookahead",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Java Unicode block + lookahead + quantifier",
+    "pattern": "\\p{InGreek}+(?=\\s)",
+    "testText": "αβγ δεζ abc",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ],
+    "excludeFlavors": [
+      "clojure",
+      "groovy",
+      "java",
+      "kotlin",
+      "scala"
+    ]
+  },
+  {
+    "id": "l3-flavor-java-quotemeta-group",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Java \\Q\\E literal quoting inside group with quantifier",
+    "pattern": "(\\Q[test]\\E)\\s*\\1",
+    "testText": "[test] [test]",
+    "flags": "",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "l3-flavor-java-possessive-class",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Java possessive quantifier on character class",
+    "pattern": "[a-z]++\\d+",
+    "testText": "abc123 xyz456",
+    "flags": "g",
+    "flavors": [
+      "java",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure",
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-flavor-csharp-balancing-quant",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "C# balancing groups with quantifiers",
+    "pattern": "(?<open>\\()+[^()]+((?<-open>\\))+)",
+    "testText": "((hello))",
+    "flags": "",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "l3-flavor-csharp-subtraction-anchor",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "C# class subtraction + anchor + quantifier",
+    "pattern": "^[a-z-[aeiou]]+$",
+    "testText": "bcdfg",
+    "flags": "",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "l3-flavor-csharp-named-quoteref",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "C# single-quote named backref with alternation",
+    "pattern": "(?<x>\\d+|\\w+)\\s+\\k'x'",
+    "testText": "123 123 abc abc",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "l3-flavor-php-branch-reset-K",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "PHP branch reset + \\K",
+    "pattern": "(?|(first)|(second))\\K\\w+",
+    "testText": "firstmore secondless",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "l3-flavor-php-recursive-named",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "PHP named recursive pattern with alternation",
+    "pattern": "(?<block>\\{(?:[^{}]|(?&block))*\\})",
+    "testText": "{a{b{c}d}e} {x}",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-flavor-php-verb-skip-fail",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "PHP/Perl (*SKIP)(*FAIL) with alternation",
+    "pattern": "\"[^\"]*\"(*SKIP)(*FAIL)|\\w+",
+    "testText": "hello \"skip me\" world",
+    "flags": "g",
+    "flavors": [
+      "php",
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-flavor-perl-code-assertion",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Perl code assertion (?{}) with capture",
+    "pattern": "(\\w+)(?{ 1 })",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-flavor-perl-backtrack-mark",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Perl (*MARK:name) backtracking control",
+    "pattern": "a(*MARK:m1)b|a(*MARK:m2)c",
+    "testText": "ab ac",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-flavor-perl-unicode-boundary",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Perl \\b{wb} word boundary + Unicode + quantifier",
+    "pattern": "\\b{wb}\\w+\\b{wb}",
+    "testText": "hello can't world",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ],
+    "excludeFlavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "l3-flavor-go-named-noncap-only",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Go/RE2 named group + character class + quantifier (no backrefs)",
+    "pattern": "(?P<word>[a-zA-Z]+)\\d+",
+    "testText": "abc123 xyz456 000",
+    "flags": "g",
+    "flavors": [
+      "go",
+      "re2"
+    ]
+  },
+  {
+    "id": "l3-flavor-rust-unicode-class",
+    "category": "flavor-level3",
+    "level": 3,
+    "description": "Rust Unicode property + class subtraction + quantifier",
+    "pattern": "[\\p{L}&&[^\\p{Latin}]]+",
+    "testText": "hello мир 世界 café",
+    "flags": "g",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "dart-01-named-group-basic",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Dart named capture groups with backreference",
+    "pattern": "(?<name>\\w+)\\s+\\k<name>",
+    "testText": "hello hello foo bar",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-02-lookbehind-positive",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Dart positive lookbehind assertion",
+    "pattern": "(?<=user:)\\w+",
+    "testText": "admin:root user:alice guest:bob user:charlie",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-03-lookbehind-negative",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Dart negative lookbehind assertion",
+    "pattern": "(?<!no)way",
+    "testText": "way highway noway away",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-04-unicode-property",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Dart Unicode property \\p{L} with unicode flag (Dart 2.4+)",
+    "pattern": "\\p{L}+",
+    "testText": "hello 世界 café мир",
+    "flags": "gu",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-05-unicode-property-negated",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Dart negated Unicode property \\P{N} non-digits with unicode",
+    "pattern": "\\P{N}+",
+    "testText": "abc123def456ghi",
+    "flags": "gu",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-06-dotall-flag",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Dart dotAll flag makes dot match newlines",
+    "pattern": "start(.+)end",
+    "testText": "start\nmiddle\nend",
+    "flags": "gs",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-07-multiline-dot-vs-dotall",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Dart multiline flag vs dotAll — test ^ anchor with newline",
+    "pattern": "^message:(.+)$",
+    "testText": "message:line1\nresponse:line2\nmessage:test",
+    "flags": "gm",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-08-email-with-unicode",
+    "category": "real-world",
+    "level": 2,
+    "description": "Email regex with Unicode domain support",
+    "pattern": "[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}",
+    "testText": "user@example.com andré@café.fr test@мир.ru",
+    "flags": "gu",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-09-lazy-quantifier-unicode",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Lazy quantifier with Unicode property match",
+    "pattern": "\\p{L}+?(?=\\d)",
+    "testText": "hello123 café456 world789",
+    "flags": "gu",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "dart-10-alternation-lookaround",
+    "category": "flavor-level3",
+    "level": 2,
+    "description": "Alternation with lookahead in named groups",
+    "pattern": "(?<type>\\d+|[\\p{L}]+)(?=\\s*[,;])",
+    "testText": "123, abc; 456, def;",
+    "flags": "gu",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "mysql-01-regexp-like-basic",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "MySQL REGEXP_LIKE pattern match — case-sensitive by default",
+    "pattern": "^[a-z]{3}@[a-z]+\\.com$",
+    "testText": "abc@example.com Abc@example.com 123@test.com",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "mysql-05-word-boundary",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "MySQL ICU word boundary \\b (ICU doesn't support POSIX [[:<:]] syntax)",
+    "pattern": "\\bword\\b",
+    "testText": "word sword keyword word",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "mysql-06-collation-ci-default",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "MySQL default collation utf8mb4_0900_ai_ci makes regex case-insensitive (ground-truth captures MySQL behavior)",
+    "pattern": "café",
+    "testText": "café CAFÉ cafe",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "mysql-07-greedy-vs-reluctant",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "MySQL greedy vs reluctant (non-greedy) quantifiers",
+    "pattern": "a.+?b",
+    "testText": "axyzb axxb ab",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "mysql-08-phone-number",
+    "category": "real-world",
+    "level": 2,
+    "description": "Phone number pattern with optional country code and formatting",
+    "pattern": "\\+?[0-9]{1,3}[-.]?[0-9]{3}[-.]?[0-9]{3}[-.]?[0-9]{4}",
+    "testText": "+1-555-123-4567 555.123.4567 001-555-1234",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "mysql-10-ipv4-address",
+    "category": "real-world",
+    "level": 2,
+    "description": "IPv4 address validation pattern",
+    "pattern": "\\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b",
+    "testText": "192.168.1.1 256.1.1.1 0.0.0.0",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "mysql-11-json-kv",
+    "category": "real-world",
+    "level": 2,
+    "description": "JSON key-value extraction with optional whitespace",
+    "pattern": "\"([^\"]+)\"\\s*:\\s*\"([^\"]+)\"",
+    "testText": "{\"name\": \"John\", \"email\" : \"john@example.com\"}",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "mysql-12-hex-color",
+    "category": "real-world",
+    "level": 1,
+    "description": "CSS hex color code with optional alpha channel",
+    "pattern": "#([0-9a-fA-F]{6}|[0-9a-fA-F]{8}|[0-9a-fA-F]{3})",
+    "testText": "#fff #FFFFFF #ff0000ff #abc",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "pgsql-01-word-boundary-spencer",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL Spencer ARE word boundary [[:<:]] and [[:>:]]",
+    "pattern": "[[:<:]]word[[:>:]]",
+    "testText": "word sword keyword word",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-03-end-of-string-Z",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL Spencer \\Z end-of-string anchor",
+    "pattern": "end\\Z",
+    "testText": "the end\nend line\nend",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-04-embedded-flag-n",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL embedded flag (?n) for newline-sensitive mode",
+    "pattern": "(?n)^message:",
+    "testText": "message: hello\nmessage: world",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-05-embedded-flag-x",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL embedded flag (?x) for expanded/free-spacing mode",
+    "pattern": "(?x) \\b (\\w+) @ (\\w+) \\.",
+    "testText": "john@example.com",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-06-noncap-group",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL non-capturing group (?:...)",
+    "pattern": "(?:foo|bar)\\d+",
+    "testText": "foo123 bar456 baz789",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-07-case-insensitive",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL case-insensitive 'i' flag (Spencer ARE)",
+    "pattern": "hello",
+    "testText": "hello HELLO Hello",
+    "flags": "i",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-08-email-expanded",
+    "category": "real-world",
+    "level": 2,
+    "description": "Email regex with word boundaries and expanded syntax",
+    "pattern": "(?x) [\\w.%-]+ @ [\\w.-]+ \\. [a-z]{2,}",
+    "testText": "john.doe@example.com user+tag@test.co.uk",
+    "flags": "gi",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-09-iso-date",
+    "category": "real-world",
+    "level": 2,
+    "description": "ISO 8601 date format with expanded syntax",
+    "pattern": "(?x) (\\d{4}) - (\\d{2}) - (\\d{2})",
+    "testText": "2024-12-25 2024-01-01 not-date",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-10-multiline",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL multiline mode with ^ and $ anchors",
+    "pattern": "^status:",
+    "testText": "status: ok\nerror: failed\nstatus: warning",
+    "flags": "m",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-11-posix-classes",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "PostgreSQL POSIX character classes [[:alpha:]], [[:digit:]], [[:space:]]",
+    "pattern": "[[:alpha:]]+",
+    "testText": "hello 123 world",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-12-url",
+    "category": "real-world",
+    "level": 2,
+    "description": "URL extraction with protocol and path",
+    "pattern": "https?://[\\w.-]+(?:/[\\w./?%&=-]*)?",
+    "testText": "Visit https://example.com or http://test.org/path?key=value",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "pgsql-13-log-timestamp",
+    "category": "real-world",
+    "level": 2,
+    "description": "Syslog timestamp pattern with word boundaries",
+    "pattern": "(?x) \\y (\\w{3}) \\s+ (\\d{1,2}) \\s+ (\\d{2}:\\d{2}:\\d{2})",
+    "testText": "Jan  1 00:00:00 Feb 14 12:34:56",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "shell-01-bre-grouping",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "BRE backslash-escaped grouping \\(...\\) for grep/sed",
+    "pattern": "\\(foo\\|bar\\)baz",
+    "testText": "foobaz barbaz quuxbaz",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-02-bre-quantifier-range",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "BRE quantifier range \\{n,m\\} for grep/sed",
+    "pattern": "a\\{2,4\\}",
+    "testText": "a aa aaa aaaa aaaaa",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-03-bre-plus",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "BRE one-or-more \\+ for grep/sed",
+    "pattern": "a\\+",
+    "testText": "a aa aaa b",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-04-bre-optional",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "BRE optional \\? for grep/sed",
+    "pattern": "colou\\?r",
+    "testText": "color colour col",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-05-bre-alternation",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "BRE alternation \\| for grep/sed",
+    "pattern": "cat\\|dog",
+    "testText": "I have a cat and a dog",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-06-posix-classes",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "POSIX character classes [[:alpha:]], [[:digit:]], [[:space:]]",
+    "pattern": "[[:alpha:]]+",
+    "testText": "hello 123 world",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-07-anchored-line",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Anchored line pattern ^ and $ in BRE",
+    "pattern": "^[a-z]*$",
+    "testText": "hello WORLD 123test lowercase",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-08-sed-match-basic",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "Basic sed-style literal match",
+    "pattern": "hello",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-09-awk-digits",
+    "category": "real-world",
+    "level": 2,
+    "description": "awk gsub() vs sub() field pattern matching",
+    "pattern": "[0-9]+",
+    "testText": "abc123def456ghi789",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-10-csv-split",
+    "category": "real-world",
+    "level": 2,
+    "description": "CSV line split with comma delimiter using BRE",
+    "pattern": "[^,]+",
+    "testText": "field1,field2,field3",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-11-log-level",
+    "category": "real-world",
+    "level": 2,
+    "description": "Extract date and error level from log line (BRE alternation)",
+    "pattern": "^\\[\\([0-9][0-9]*\\)-\\([0-9][0-9]*\\)\\].*\\(ERROR\\|WARN\\)",
+    "testText": "[2024-01-15] Process started [2024-01-16] ERROR occurred [2024-01-17] WARN condition",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "shell-12-gnu-word-boundary",
+    "category": "flavor-specific",
+    "level": 1,
+    "description": "GNU grep/sed \\< and \\> word boundaries (extension, not POSIX)",
+    "pattern": "\\<word\\>",
+    "testText": "word sword keyword word",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "lib-email-strict-rfc-5322",
+    "category": "library",
+    "level": 3,
+    "description": "Email (strict RFC 5322)",
+    "pattern": "[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*",
+    "testText": "user@example.com\nfirst.last@sub.domain.org\n\"quoted\"@example.com\n@nope\nuser@.invalid",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-url-http-https",
+    "category": "library",
+    "level": 3,
+    "description": "URL (HTTP/HTTPS)",
+    "pattern": "https?://(?:www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\\.[a-zA-Z]{2,}(?:/[^\\s]*)?",
+    "testText": "https://example.com\nhttp://www.google.com/search?q=test\nhttps://sub.domain.co.uk/path\nftp://not-this.com\njust text",
+    "flags": "gi",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-domain-name",
+    "category": "library",
+    "level": 3,
+    "description": "Domain name",
+    "pattern": "(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}",
+    "testText": "example.com\nsub.domain.co.uk\ngoogle.com\n-invalid.com\na.b",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-ipv4-address",
+    "category": "library",
+    "level": 3,
+    "description": "IPv4 address",
+    "pattern": "(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)",
+    "testText": "192.168.1.1\n10.0.0.255\n255.255.255.255\n256.1.1.1\n999.999.999.999\n0.0.0.0",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-ipv6-address",
+    "category": "library",
+    "level": 3,
+    "description": "IPv6 address",
+    "pattern": "\\b(?:(?:[0-9a-fA-F]{1,4}:){7}(?:[0-9a-fA-F]{1,4}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}|:[a-fA-F\\d]{1,4}|:)|(?:[0-9a-fA-F]{1,4}:){5}(?::(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}|(?::[a-fA-F\\d]{1,4}){1,2}|:)|(?:[0-9a-fA-F]{1,4}:){4}(?:(?::[a-fA-F\\d]{1,4}){0,1}:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}|(?::[a-fA-F\\d]{1,4}){1,3}|:)|(?:[0-9a-fA-F]{1,4}:){3}(?:(?::[0-9a-fA-F\\d]{1,4}){0,2}:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}|(?::[a-fA-F\\d]{1,4}){1,4}|:)|(?:[0-9a-fA-F]{1,4}:){2}(?:(?::[0-9a-fA-F\\d]{1,4}){0,3}:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}|(?::[a-fA-F\\d]{1,4}){1,5}|:)|(?:[0-9a-fA-F]{1,4}:){1}(?:(?::[0-9a-fA-F\\d]{1,4}){0,4}:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}|(?::[a-fA-F\\d]{1,4}){1,6}|:)|(?::(?:(?::[0-9a-fA-F\\d]{1,4}){0,5}:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}|(?::[a-fA-F\\d]{1,4}){1,7}|:)))(?:%[0-9a-zA-Z]{1,})?\\b",
+    "testText": "2001:0db8:85a3:0000:0000:8a2e:0370:7334\n2001:db8:85a3::8a2e:370:7334\n::1\nfe80::1\nnot:an:ipv6",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-international-phone",
+    "category": "library",
+    "level": 3,
+    "description": "International phone",
+    "pattern": "\\+(?:[0-9][\\x20\\-\\(\\)\\.]?){7,14}[0-9]\\b",
+    "testText": "+1 (555) 123-4567\n+44 20 7946 0958\n+32 475 12 34 56\ninvalid: 123",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-us-phone-number",
+    "category": "library",
+    "level": 3,
+    "description": "US phone number",
+    "pattern": "\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}",
+    "testText": "(555) 123-4567\n555-123-4567\n555.123.4567\n5551234567\n123-45",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-iso-8601-datetime",
+    "category": "library",
+    "level": 3,
+    "description": "ISO 8601 datetime",
+    "pattern": "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})",
+    "testText": "2024-01-15T10:30:00Z\n2024-01-15T10:30:00.123Z\n2024-01-15T10:30:00+05:30\n2024-01-15 10:30:00",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-date-yyyy-mm-dd",
+    "category": "library",
+    "level": 3,
+    "description": "Date YYYY-MM-DD",
+    "pattern": "\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])",
+    "testText": "2024-01-15\n2023-12-31\n2024-02-29\n2024-13-01\n2024-00-15",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-time-24-hour-hh-mm-ss",
+    "category": "library",
+    "level": 3,
+    "description": "Time 24-hour (HH:MM:SS)",
+    "pattern": "(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d",
+    "testText": "09:30:00\n23:59:59\n00:00:00\n14:45:30\n25:00:00",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-integer-or-decimal",
+    "category": "library",
+    "level": 3,
+    "description": "Integer or decimal",
+    "pattern": "^-?\\d+(\\.\\d+)?$",
+    "testText": "42\n3.14\n-7\n-0.5\n0\n1.\nabc",
+    "flags": "m",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-currency-usd",
+    "category": "library",
+    "level": 3,
+    "description": "Currency (USD)",
+    "pattern": "\\$\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})?",
+    "testText": "$1,234.56\n$99.99\n$1,000,000\n$0.50\n1234\n$abc",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-uuid-v4",
+    "category": "library",
+    "level": 3,
+    "description": "UUID v4",
+    "pattern": "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+    "testText": "550e8400-e29b-41d4-a716-446655440000\n6ba7b810-9dad-41d8-80b4-00c04fd430c8\nnot-a-uuid\n12345678-1234-1234-1234-123456789012",
+    "flags": "gi",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-credit-card-number",
+    "category": "library",
+    "level": 3,
+    "description": "Credit card number",
+    "pattern": "\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|(222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12}|(?:2131|1800|35\\d{3})\\d{11})\\b",
+    "testText": "4111-1111-1111-1111 (Visa)\n3712-345678-90123 (Amex)\n5105 1051 0510 5105 (Mastercard)\n6011111111111111 (Discover)",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-strong-password-8-chars",
+    "category": "library",
+    "level": 3,
+    "description": "Strong password (8+ chars)",
+    "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*]).{8,}$",
+    "testText": "Passw0rd!\nMyP@ss1\nweakpass\nNOLOWER1!\nnoUPPER1!\nNoSpecial1\nSh0rt!",
+    "flags": "m",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-html-tag",
+    "category": "library",
+    "level": 3,
+    "description": "HTML tag",
+    "pattern": "<\\/?[a-zA-Z][a-zA-Z0-9]*(?:\\s[^>]*)?\\/?>",
+    "testText": "<div>\n<p class=\"text\">\n</span>\n<br />\n<img src=\"x\" />\nnot a tag",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-hex-color-code",
+    "category": "library",
+    "level": 3,
+    "description": "Hex color code",
+    "pattern": "#(?:[0-9a-fA-F]{3}){1,2}\\b",
+    "testText": "#fff\n#FF5733\n#000000\n#abc\n#12345G\nno hash",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-markdown-link",
+    "category": "library",
+    "level": 3,
+    "description": "Markdown link",
+    "pattern": "\\[([^\\]]+)\\]\\(([^)]+)\\)",
+    "testText": "[click here](https://example.com)\n[text](url)\n[broken(link\nnot a link",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-lookbehind-extract-amount-after-currency-symbol",
+    "category": "library",
+    "level": 3,
+    "description": "Lookbehind: extract amount after currency symbol",
+    "pattern": "(?<=[$€£])\\d+(?:\\.\\d{2})?",
+    "testText": "Total: $19.99\nTax: €2.50\nDiscount: £5\nNot money: 100",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-named-groups-parse-a-structured-log-line",
+    "category": "library",
+    "level": 3,
+    "description": "Named groups: parse a structured log line",
+    "pattern": "\\[(?<time>\\d{2}:\\d{2}:\\d{2})\\]\\s+(?<level>INFO|WARN|ERROR)\\s+(?<msg>.+)",
+    "testText": "[12:34:56] INFO Server started\n[12:35:01] WARN Slow query\n[12:35:10] ERROR DB timeout\nmalformed line",
+    "flags": "g",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-indices-d-flag-es2022-url-parts-with-match-positions",
+    "category": "library",
+    "level": 3,
+    "description": "Indices d flag (ES2022): URL parts with match positions",
+    "pattern": "(?<protocol>https?)://(?<host>[^/]+)(?<path>/[^\\s]*)?",
+    "testText": "https://example.com/users/42\nhttp://localhost:3000/api\nftp://nope.com",
+    "flags": "dg",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-sticky-y-flag-tokenize-a-tiny-expression",
+    "category": "library",
+    "level": 3,
+    "description": "Sticky y flag: tokenize a tiny expression",
+    "pattern": "\\d+|[+\\-*/]|\\s+",
+    "testText": "12 + 34 * 5",
+    "flags": "y",
+    "flavors": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "lib-python-style-named-groups-http-access-log-fields",
+    "category": "library",
+    "level": 3,
+    "description": "Python-style named groups: HTTP access log fields",
+    "pattern": "(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)\\s+\\S+\\s+\\S+\\s+\\[(?P<time>[^\\]]+)\\]\\s+\"(?P<method>\\w+)\\s+(?P<path>\\S+)",
+    "testText": "192.168.1.5 - - [10/Apr/2026:14:30:00] \"GET /api/users HTTP/1.1\"\n10.0.0.7 - alice [10/Apr/2026:14:31:12] \"POST /login HTTP/1.1\"\nmalformed line",
+    "flags": "",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "lib-python-named-backref-p-name-matched-html-style-tags",
+    "category": "library",
+    "level": 3,
+    "description": "Python named backref (?P=name): matched HTML-style tags",
+    "pattern": "<(?P<tag>\\w+)>[^<]*</(?P=tag)>",
+    "testText": "<title>Hello</title>\n<p>some text</p>\n<a>mismatched</b>\n<br/>",
+    "flags": "",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "lib-verbose-mode-x-readable-email-validator",
+    "category": "library",
+    "level": 3,
+    "description": "Verbose mode (?x): readable email validator",
+    "pattern": "(?x) ^ (?P<local>[\\w.+-]+) @ (?P<domain>[\\w.-]+) \\. (?P<tld>[a-z]{2,}) $",
+    "testText": "alice@example.com\nbob.smith+work@my-co.io\nno-tld@foo\n@missing-local.com",
+    "flags": "m",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "lib-z-anchor-validate-identifier-with-no-trailing-newline",
+    "category": "library",
+    "level": 3,
+    "description": "\\Z anchor: validate identifier with no trailing newline",
+    "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\Z",
+    "testText": "valid_name",
+    "flags": "",
+    "flavors": [
+      "python"
+    ]
+  },
+  {
+    "id": "lib-possessive-quantifier-identifier-without-backtracking",
+    "category": "library",
+    "level": 3,
+    "description": "Possessive quantifier *+: identifier without backtracking",
+    "pattern": "[a-zA-Z_$][a-zA-Z0-9_$]*+",
+    "testText": "validName\n_field\n$dollar\n9invalid\nname.with.dots",
+    "flags": "",
+    "flavors": [
+      "java"
+    ]
+  },
+  {
+    "id": "lib-q-e-literal-block-parse-a-stack-trace-line",
+    "category": "library",
+    "level": 3,
+    "description": "\\Q…\\E literal block: parse a stack trace line",
+    "pattern": "\\Q\tat \\E([\\w$.]+)\\(([\\w.]+):(\\d+)\\)",
+    "testText": "\tat com.example.Main.run(Main.java:42)\n\tat com.example.Util.helper(Util.java:7)\nnot a stack line",
+    "flags": "",
+    "flavors": [
+      "java"
+    ]
+  },
+  {
+    "id": "lib-atomic-group-efficient-property-parser",
+    "category": "library",
+    "level": 3,
+    "description": "Atomic group (?>…): efficient property parser",
+    "pattern": "^(?>\\w+)=(.+)$",
+    "testText": "database_url=postgres://localhost\nport=5432\n malformed",
+    "flags": "m",
+    "flavors": [
+      "java"
+    ]
+  },
+  {
+    "id": "lib-scoped-i-case-insensitive-log-level-only",
+    "category": "library",
+    "level": 3,
+    "description": "Scoped (?i:…): case-insensitive log level only",
+    "pattern": "\\[(?i:error|warn|info|debug)\\]\\s+([\\w.]+):",
+    "testText": "[ERROR] com.example.Main: failed\n[info] com.foo.Bar: ok\n[Warning] com.x.Y: skip",
+    "flags": "",
+    "flavors": [
+      "java"
+    ]
+  },
+  {
+    "id": "lib-balanced-groups-match-balanced-parentheses",
+    "category": "library",
+    "level": 3,
+    "description": "Balanced groups: match balanced parentheses",
+    "pattern": "\\((?:[^()]|(?<open>\\()|(?<-open>\\)))*(?(open)(?!))\\)",
+    "testText": "print(x)\nfn(a, (b + c), d)\nunbalanced(\nnested((deep))",
+    "flags": "",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "lib-conditional-group-yes-no-protocol-aware-url",
+    "category": "library",
+    "level": 3,
+    "description": "Conditional (?(group)yes|no): protocol-aware URL",
+    "pattern": "^(?<proto>https?:)?(?(proto)//[^\\s]+|/[^\\s]+)$",
+    "testText": "https://example.com\nhttp://foo\n/local/path\n//missing-proto",
+    "flags": "m",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "lib-named-group-name-substitution-ready-key-value",
+    "category": "library",
+    "level": 3,
+    "description": "Named group + ${name} substitution-ready: key=value",
+    "pattern": "(?<key>\\w+)=(?<value>[^,;]+)",
+    "testText": "name=alice,age=30\nkey=value;other=thing\n nokey",
+    "flags": "g",
+    "flavors": [
+      "csharp"
+    ]
+  },
+  {
+    "id": "lib-k-keep-mark-extract-authorization-header-value",
+    "category": "library",
+    "level": 3,
+    "description": "\\K keep mark: extract Authorization header value",
+    "pattern": "^Authorization:\\s*\\K\\S+",
+    "testText": "Authorization: Bearer abc123def\nContent-Type: text/html\nAuthorization: Basic xyz789",
+    "flags": "m",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "lib-named-groups-k-name-4-letter-palindrome",
+    "category": "library",
+    "level": 3,
+    "description": "Named groups + \\k<name>: 4-letter palindrome",
+    "pattern": "\\b(?<a>\\w)(?<b>\\w)\\k<b>\\k<a>\\b",
+    "testText": "noon abba level deed forty silly",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "lib-possessive-faster-hex-color-match",
+    "category": "library",
+    "level": 3,
+    "description": "Possessive ++ : faster hex color match",
+    "pattern": "#[0-9a-fA-F]++\\b",
+    "testText": "#fff #abc123 #not\n#0F0 #DEADBEEF",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "lib-atomic-group-efficient-json-like-value-match",
+    "category": "library",
+    "level": 3,
+    "description": "Atomic group (?>…): efficient JSON-like value match",
+    "pattern": "(?>\"[^\"]*\")|(?>\\d+)|(?>true|false|null)",
+    "testText": "\"hello\"\n42\ntrue\n\"unclosed\nfalse",
+    "flags": "g",
+    "flavors": [
+      "ruby"
+    ]
+  },
+  {
+    "id": "lib-recursive-r-balanced-curly-braces",
+    "category": "library",
+    "level": 3,
+    "description": "Recursive (?R): balanced curly braces",
+    "pattern": "\\{(?:[^{}]|(?R))*\\}",
+    "testText": "{a {b {c} d} e}\n{simple}\n{unclosed\n}",
+    "flags": "",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "lib-define-name-ipv4-with-reusable-octet",
+    "category": "library",
+    "level": 3,
+    "description": "(?(DEFINE)…) + (?&name): IPv4 with reusable octet",
+    "pattern": "(?(DEFINE)(?<oct>25[0-5]|2[0-4]\\d|[01]?\\d\\d?))(?&oct)\\.(?&oct)\\.(?&oct)\\.(?&oct)",
+    "testText": "192.168.1.1\n255.255.255.255\n256.0.0.1\n10.20.30.40",
+    "flags": "",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "lib-lookahead-conditional-protocol-specific-url-branch",
+    "category": "library",
+    "level": 3,
+    "description": "Lookahead conditional: protocol-specific URL branch",
+    "pattern": "(?(?=https?:)https?://[\\w.-]+|file://[/\\w.-]+)",
+    "testText": "https://example.com\nfile:///etc/hosts\nftp://nope",
+    "flags": "",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "lib-k-keep-mark-extract-filename-from-path",
+    "category": "library",
+    "level": 3,
+    "description": "\\K keep mark: extract filename from path",
+    "pattern": "(?:[^/]+/)*\\K[^/]+",
+    "testText": "/usr/local/bin/node\n/var/log/syslog\nbarefilename",
+    "flags": "g",
+    "flavors": [
+      "php"
+    ]
+  },
+  {
+    "id": "lib-branch-reset-same-group-s-for-two-date-formats",
+    "category": "library",
+    "level": 3,
+    "description": "Branch reset (?|…|…): same group #s for two date formats",
+    "pattern": "(?|(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})/(\\d{2})/(\\d{4}))",
+    "testText": "2024-01-15\n15/01/2024\nmalformed",
+    "flags": "",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "lib-recursive-name-nested-arithmetic-parens",
+    "category": "library",
+    "level": 3,
+    "description": "Recursive (?&name): nested arithmetic parens",
+    "pattern": "(?<expr>\\((?:[^()]|(?&expr))*\\))",
+    "testText": "(1 + (2 * 3))\n(simple)\nno-parens",
+    "flags": "",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "lib-atomic-efficient-hostname-match",
+    "category": "library",
+    "level": 3,
+    "description": "Atomic (?>…): efficient hostname match",
+    "pattern": "(?>[a-z0-9][a-z0-9-]*\\.)+[a-z]{2,}",
+    "testText": "example.com\nsub.domain.org\n123.45\ninvalid-",
+    "flags": "g",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "lib-k-keep-mark-extract-version-after-label",
+    "category": "library",
+    "level": 3,
+    "description": "\\K keep mark: extract version after label",
+    "pattern": "^Version:\\s*\\K\\d+\\.\\d+(?:\\.\\d+)?",
+    "testText": "Version: 1.2.3\nVersion: 4.5\nName: foo",
+    "flags": "m",
+    "flavors": [
+      "perl"
+    ]
+  },
+  {
+    "id": "lib-inline-i-rust-case-insensitive-http-method",
+    "category": "library",
+    "level": 3,
+    "description": "Inline (?i) Rust: case-insensitive HTTP method",
+    "pattern": "(?i)^(get|post|put|delete)\\b",
+    "testText": "GET /api\nPost /users\ndelete\nFETCH /nope",
+    "flags": "m",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "lib-verbose-x-self-documenting-hex-color",
+    "category": "library",
+    "level": 3,
+    "description": "Verbose (?x): self-documenting hex color",
+    "pattern": "(?x) \\# (?: [0-9a-fA-F]{6} | [0-9a-fA-F]{3} ) \\b",
+    "testText": "#fff #FF5733 #abc123 #notvalid",
+    "flags": "",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "lib-unicode-property-p-han-detect-cjk-runs",
+    "category": "library",
+    "level": 3,
+    "description": "Unicode property \\p{Han}: detect CJK runs",
+    "pattern": "\\p{Han}+",
+    "testText": "Hello 你好 world 世界 mix",
+    "flags": "",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "lib-negative-inline-u-ascii-only-word-boundary",
+    "category": "library",
+    "level": 3,
+    "description": "Negative inline (?-u): ASCII-only word boundary",
+    "pattern": "(?-u)\\b[A-Za-z]+\\b",
+    "testText": "hello world ASCII\ncafé naïve unicode",
+    "flags": "",
+    "flavors": [
+      "rust"
+    ]
+  },
+  {
+    "id": "lib-named-groups-name-dart-port-of-v8-irregexp",
+    "category": "library",
+    "level": 3,
+    "description": "Named groups (?<name>): Dart port of V8 Irregexp",
+    "pattern": "(?<scheme>https?)://(?<host>[^/]+)",
+    "testText": "https://dart.dev\nhttp://pub.dev/packages\nftp://nope",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "lib-lookbehind-price-in-a-dart-shopping-app",
+    "category": "library",
+    "level": 3,
+    "description": "Lookbehind: price in a Dart shopping app",
+    "pattern": "(?<=[\\$€£])\\d+(?:\\.\\d{2})?",
+    "testText": "Total: \\$19.99\nTax: €2.50\nDiscount: £5\nNot money: 100",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "lib-dotall-s-flag-multi-line-html-block-extraction",
+    "category": "library",
+    "level": 3,
+    "description": "dotAll (s flag): multi-line HTML block extraction",
+    "pattern": "<style>(.+?)</style>",
+    "testText": "<style>\n.btn { color: red; }\n.card { padding: 8px; }\n</style>\n<p>after</p>",
+    "flags": "gs",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "lib-flutter-widget-import-line",
+    "category": "library",
+    "level": 3,
+    "description": "Flutter widget import line",
+    "pattern": "^import 'package:flutter/([\\w/]+)\\.dart';",
+    "testText": "import 'package:flutter/material.dart';\nimport 'package:flutter/widgets.dart';\nimport 'dart:async';",
+    "flags": "gm",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "lib-nullable-type-suffix-t-in-dart-3-signatures",
+    "category": "library",
+    "level": 3,
+    "description": "Nullable type suffix: T? in Dart 3 signatures",
+    "pattern": "\\b(?:String|int|double|bool|num|List<\\w+>|Map<\\w+,\\s*\\w+>)\\??",
+    "testText": "String? name\nint count\nList<int>? nums\nMap<String, dynamic>? meta\nvoid run()",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "lib-pub-dev-package-version-constraint",
+    "category": "library",
+    "level": 3,
+    "description": "Pub.dev package version constraint",
+    "pattern": "\\^?\\d+\\.\\d+\\.\\d+(?:[+-][\\w.]+)?",
+    "testText": "provider: ^6.1.2\nriverpod: 2.5.1\nflutter_bloc: ^8.1.3+patch1",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "lib-dart-raw-string-r-detector",
+    "category": "library",
+    "level": 3,
+    "description": "Dart raw string (r'') detector",
+    "pattern": "r'([^'\\\\]|\\\\.)*'",
+    "testText": "var path = r'C:\\Users\\alice'\nvar regex = r'\\d+'\nvar plain = 'hello'",
+    "flags": "g",
+    "flavors": [
+      "dart"
+    ]
+  },
+  {
+    "id": "lib-regexp-like-match-email-with-mysql-8-icu-regex",
+    "category": "library",
+    "level": 3,
+    "description": "REGEXP_LIKE: match email with MySQL 8+ ICU regex",
+    "pattern": "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+    "testText": "alice@example.com\nbob@nope\nno-at-sign\n@missing-local.com",
+    "flags": "m",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "lib-regexp-substr-with-greedy-quantifier-first-digit-run",
+    "category": "library",
+    "level": 3,
+    "description": "REGEXP_SUBSTR with greedy quantifier: first digit run",
+    "pattern": "[0-9]+",
+    "testText": "order-12345-batch-67\ninvoice-890\nno digits",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "lib-phone-number-where-regexp-filter",
+    "category": "library",
+    "level": 3,
+    "description": "Phone number WHERE REGEXP filter",
+    "pattern": "^\\+?[0-9]{1,3}[-.\\s]?\\(?[0-9]{3,4}\\)?[-.\\s]?[0-9]{3,4}[-.\\s]?[0-9]{3,4}$",
+    "testText": "+1 (555) 123-4567\n+32 475 12 34 56\nnot a phone",
+    "flags": "m",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "lib-column-name-validator-snake-case-identifier",
+    "category": "library",
+    "level": 3,
+    "description": "Column name validator (snake_case identifier)",
+    "pattern": "^[a-z_][a-z0-9_]*$",
+    "testText": "user_id\norder_date\ncamelCase\n_internal\n9bad\nvalid_name",
+    "flags": "m",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "lib-json-array-element-extraction",
+    "category": "library",
+    "level": 3,
+    "description": "JSON array element extraction",
+    "pattern": "\"[^\"]+\"",
+    "testText": "[\"alice\", \"bob\", \"charlie\"]\n[\"one\", \"two\"]\nno quotes",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "lib-mysql-log-timestamp-default-format",
+    "category": "library",
+    "level": 3,
+    "description": "MySQL log timestamp (default format)",
+    "pattern": "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z",
+    "testText": "2026-04-24T13:45:12.123456Z\n2026-04-24T14:02:00.000001Z\nnot-a-time",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "lib-spencer-are-word-boundary",
+    "category": "library",
+    "level": 3,
+    "description": "Spencer ARE word boundary [[:<:]]/[[:>:]]",
+    "pattern": "[[:<:]]name[[:>:]]",
+    "testText": "name surname nickname name.field\nusername=alice",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "lib-embedded-n-newline-sensitive-mode",
+    "category": "library",
+    "level": 3,
+    "description": "Embedded (?n) newline-sensitive mode",
+    "pattern": "(?n)^message:\\s*(.+)$",
+    "testText": "message: hello\nstatus: ok\nmessage: world",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "lib-y-word-boundary-are-shortcut",
+    "category": "library",
+    "level": 3,
+    "description": "\\y word boundary (ARE shortcut)",
+    "pattern": "\\yhttps?\\y",
+    "testText": "Visit https and http sites. httpd is not a match.",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "lib-uuid-v4-validation-for-where-col",
+    "category": "library",
+    "level": 3,
+    "description": "UUID v4 validation (for WHERE col ~ ...)",
+    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "testText": "550e8400-e29b-41d4-a716-446655440000\n6ba7b810-9dad-51d8-80b4-00c04fd430c8\nnope-not-a-uuid",
+    "flags": "im",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "lib-regexp-matches-g-flag-extract-all-tags",
+    "category": "library",
+    "level": 3,
+    "description": "regexp_matches 'g' flag: extract all tags",
+    "pattern": "#[[:alnum:]_]+",
+    "testText": "Post tagged #postgres #regex #dev — read the #docs",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "lib-spencer-a-z-anchors-exact-length-hex-color",
+    "category": "library",
+    "level": 3,
+    "description": "Spencer \\A / \\Z anchors: exact-length hex color",
+    "pattern": "\\A#[0-9a-fA-F]{6}\\Z",
+    "testText": "#FF5733",
+    "flags": "",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "lib-posix-class-alnum-sanitise-identifier",
+    "category": "library",
+    "level": 3,
+    "description": "POSIX class [[:alnum:]]: sanitise identifier",
+    "pattern": "^[[:alpha:]_][[:alnum:]_]*$",
+    "testText": "user_name\n_private\n42bad\nok9\nCREATE TABLE",
+    "flags": "m",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "lib-bre-backslash-grouping-extract-filename",
+    "category": "library",
+    "level": 3,
+    "description": "BRE backslash-grouping \\(…\\): extract filename",
+    "pattern": "\\(.*\\)\\.txt",
+    "testText": "readme.txt\nlog.txt\nconfig.json\nreport.TXT",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "lib-gnu-and-word-boundaries-grep-extension",
+    "category": "library",
+    "level": 3,
+    "description": "GNU \\< and \\>: word boundaries (grep extension)",
+    "pattern": "\\<error\\>",
+    "testText": "error: failed\nerrors in log\nerror\nno-error",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "lib-apache-nginx-common-log-line-split",
+    "category": "library",
+    "level": 3,
+    "description": "Apache / nginx common-log line split",
+    "pattern": "^(\\S+) \\S+ \\S+ \\[([^\\]]+)\\] \"(\\S+) (\\S+) \\S+\" (\\d+) (\\d+|-)",
+    "testText": "127.0.0.1 - alice [24/Apr/2026:10:00:00 +0200] \"GET /index HTTP/1.1\" 200 1234\n10.0.0.1 - - [24/Apr/2026:10:00:01 +0200] \"POST /api HTTP/1.1\" 500 -",
+    "flags": "Em",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "lib-quoted-string-sed-replace-swap-single-double-quotes",
+    "category": "library",
+    "level": 3,
+    "description": "Quoted-string sed replace: swap single → double quotes",
+    "pattern": "'\\([^']*\\)'",
+    "testText": "name='alice' greet='hi there' empty=''",
+    "flags": "g",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "lib-awk-field-separator-csv-field-no-embedded-commas",
+    "category": "library",
+    "level": 3,
+    "description": "awk field separator: CSV field (no embedded commas)",
+    "pattern": "[^,]+",
+    "testText": "alice,30,engineer\nbob,25,designer\ncharlie,40,manager",
+    "flags": "gE",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "lib-find-compatible-hidden-file-filter-ere",
+    "category": "library",
+    "level": 3,
+    "description": "find-compatible hidden-file filter (ERE)",
+    "pattern": "(^|/)\\.[^/]+$",
+    "testText": "/etc/passwd\n/home/alice/.bashrc\n/home/alice/docs/notes.md\n.gitignore",
+    "flags": "gE",
+    "flavors": [
+      "shell"
+    ]
+  },
+  {
+    "id": "l3-spencer-word-start-end",
+    "category": "real-world",
+    "level": 3,
+    "description": "Spencer ARE \\m word-start and \\M word-end shortcuts — match whole words",
+    "pattern": "\\m\\w+\\M",
+    "testText": "abc 123 xyz",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-spencer-non-boundary",
+    "category": "real-world",
+    "level": 3,
+    "description": "Spencer ARE \\Y non-word-boundary — matches mid-word positions only",
+    "pattern": "\\Y\\w+",
+    "testText": "abc def ghi",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-spencer-word-boundary-y",
+    "category": "real-world",
+    "level": 3,
+    "description": "Spencer ARE \\y word boundary (equivalent to PCRE \\b) — matches https at word edge",
+    "pattern": "\\yhttps?\\y",
+    "testText": "visit https://example.com",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-spencer-replace-pg-style",
+    "category": "real-world",
+    "level": 3,
+    "description": "Spencer ARE \\m\\w+\\M match on replace input — PG uses \\& for full-match in regexp_replace",
+    "pattern": "\\m\\w+\\M",
+    "testText": "abc 123",
+    "flags": "g",
+    "flavors": [
+      "postgresql"
+    ]
+  },
+  {
+    "id": "l3-mysql-icu-letter-class",
+    "category": "real-world",
+    "level": 3,
+    "description": "MySQL ICU \\p{L} general-category Letter (PCRE2 short form, ICU accepts)",
+    "pattern": "\\p{L}+",
+    "testText": "café 123 résumé naïve",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l3-mysql-icu-decimal-class",
+    "category": "real-world",
+    "level": 3,
+    "description": "MySQL ICU \\p{Nd} general-category Decimal_Number (PCRE2 short form)",
+    "pattern": "\\p{Nd}+",
+    "testText": "abc 123 def 456",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l3-mysql-icu-script-greek",
+    "category": "real-world",
+    "level": 3,
+    "description": "MySQL ICU Script=Greek via short \\p{Greek} (both PCRE2 and ICU accept)",
+    "pattern": "\\p{Greek}+",
+    "testText": "Hello αβγ world",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l3-mysql-backref-translate",
+    "category": "real-world",
+    "level": 3,
+    "description": "MySQL regexp_replace uses \\1 backrefs — match test for two-group swap pattern",
+    "pattern": "(\\w+) (\\w+)",
+    "testText": "hello world",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "l3-mysql-named-group-extract",
+    "category": "real-world",
+    "level": 3,
+    "description": "MySQL ICU named capture groups (?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2}) on ISO date",
+    "pattern": "(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})",
+    "testText": "2026-05-07",
+    "flags": "g",
+    "flavors": [
+      "mysql"
+    ]
+  },
+  {
+    "id": "class-difference",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Character class difference [a--b] — ICU subtracts, Java/Ruby read -- as a literal dash",
+    "pattern": "[a-z--[aeiou]]+",
+    "testText": "abcd",
+    "flags": "g",
+    "flavors": [
+      "rust",
+      "swift",
+      "mysql",
+      "java",
+      "ruby",
+      "scala",
+      "kotlin",
+      "groovy",
+      "clojure"
+    ]
+  },
+  {
+    "id": "class-intersection-icu",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "Character class intersection && on the ICU family and Onigmo",
+    "pattern": "[a-z&&[^aeiou]]+",
+    "testText": "hello world regex",
+    "flags": "g",
+    "flavors": [
+      "ruby",
+      "swift",
+      "mysql"
+    ]
+  },
+  {
+    "id": "js-v-nested-class",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "ES2024 v flag — nested character class [[a-z]]",
+    "pattern": "[[a-z]]+",
+    "testText": "abc",
+    "flags": "gv",
+    "flavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "js-v-class-intersection",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "ES2024 v flag — character class intersection [\\w&&[a-z]]",
+    "pattern": "[\\w&&[a-z]]+",
+    "testText": "abc123",
+    "flags": "gv",
+    "flavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "js-v-class-difference",
+    "category": "flavor-specific",
+    "level": 2,
+    "description": "ES2024 v flag — character class difference [\\p{L}--[a-z]]",
+    "pattern": "[\\p{L}--[a-z]]+",
+    "testText": "abcABC",
+    "flags": "gv",
+    "flavors": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  {
+    "id": "js-v-string-literal",
+    "category": "flavor-specific",
+    "level": 3,
+    "description": "ES2024 v flag — multi-character string literal [\\q{abc}]",
+    "pattern": "[\\q{abc}]",
+    "testText": "abc",
+    "flags": "gv",
+    "flavors": [
+      "javascript",
+      "typescript"
+    ]
+  }
+]

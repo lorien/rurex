@@ -1,0 +1,2584 @@
+{
+  "anchor-boundary-nonword": {
+    "matches": [
+      {
+        "match": "word",
+        "index": 1
+      },
+      {
+        "match": "word",
+        "index": 9
+      }
+    ],
+    "error": null
+  },
+  "anchor-boundary-word": {
+    "matches": [
+      {
+        "match": "word",
+        "index": 2
+      }
+    ],
+    "error": null
+  },
+  "anchor-end": {
+    "matches": [
+      {
+        "match": "world",
+        "index": 6
+      },
+      {
+        "match": "world",
+        "index": 20
+      }
+    ],
+    "error": null
+  },
+  "anchor-end-string": {
+    "matches": [],
+    "error": "regex parse error:\n    end\\Z\n       ^^\nerror: unrecognized escape sequence"
+  },
+  "anchor-end-string-only": {
+    "matches": [
+      {
+        "match": "end",
+        "index": 4
+      }
+    ],
+    "error": null
+  },
+  "anchor-match-start": {
+    "matches": [],
+    "error": "regex parse error:\n    \\G\\w+\n    ^^\nerror: unrecognized escape sequence"
+  },
+  "anchor-start": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "hello",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "anchor-start-string": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "char-class-negated": {
+    "matches": [
+      {
+        "match": "abc",
+        "index": 0
+      },
+      {
+        "match": "def",
+        "index": 6
+      },
+      {
+        "match": "ghi",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "char-class-range": {
+    "matches": [
+      {
+        "match": "ello",
+        "index": 1
+      },
+      {
+        "match": "orld",
+        "index": 7
+      },
+      {
+        "match": "foo",
+        "index": 16
+      }
+    ],
+    "error": null
+  },
+  "char-dot": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "hallo",
+        "index": 6
+      },
+      {
+        "match": "hxllo",
+        "index": 12
+      },
+      {
+        "match": "h llo",
+        "index": 18
+      }
+    ],
+    "error": null
+  },
+  "char-escape-D": {
+    "matches": [
+      {
+        "match": "abc",
+        "index": 0
+      },
+      {
+        "match": "def",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "char-escape-S": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 6
+      },
+      {
+        "match": "123",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "char-escape-W": {
+    "matches": [
+      {
+        "match": " ",
+        "index": 5
+      },
+      {
+        "match": "! ",
+        "index": 11
+      }
+    ],
+    "error": null
+  },
+  "char-escape-d": {
+    "matches": [
+      {
+        "match": "123",
+        "index": 3
+      },
+      {
+        "match": "456",
+        "index": 9
+      }
+    ],
+    "error": null
+  },
+  "char-escape-s": {
+    "matches": [
+      {
+        "match": " ",
+        "index": 5
+      },
+      {
+        "match": "\t",
+        "index": 11
+      }
+    ],
+    "error": null
+  },
+  "char-escape-w": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 6
+      },
+      {
+        "match": "123",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "char-literal": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 4
+      },
+      {
+        "match": "hello",
+        "index": 24
+      }
+    ],
+    "error": null
+  },
+  "char-unicode-prop": {
+    "matches": [
+      {
+        "match": "Hello",
+        "index": 0
+      },
+      {
+        "match": "世界",
+        "index": 6
+      },
+      {
+        "match": "café",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "char-unicode-prop-neg": {
+    "matches": [
+      {
+        "match": " ",
+        "index": 5
+      },
+      {
+        "match": " 123 ",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "choice-simple": {
+    "matches": [
+      {
+        "match": "cat",
+        "index": 9
+      },
+      {
+        "match": "dog",
+        "index": 19
+      }
+    ],
+    "error": null
+  },
+  "choice-triple": {
+    "matches": [
+      {
+        "match": "red",
+        "index": 0
+      },
+      {
+        "match": "blue",
+        "index": 8
+      },
+      {
+        "match": "green",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "class-difference": {
+    "matches": [
+      {
+        "match": "bcd",
+        "index": 1
+      }
+    ],
+    "error": null
+  },
+  "edge-go-combining-mark": {
+    "matches": [
+      {
+        "match": "ा",
+        "index": 1
+      }
+    ],
+    "error": null
+  },
+  "edge-re2-vs-rust-dot-unicode": {
+    "matches": [
+      {
+        "match": "café 世界",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "group-capturing": {
+    "matches": [
+      {
+        "match": "foobar",
+        "index": 0
+      },
+      {
+        "match": "foobar",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "group-named": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "group-noncapturing": {
+    "matches": [
+      {
+        "match": "foobaz",
+        "index": 0
+      },
+      {
+        "match": "barbaz",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "group-scoped-flags": {
+    "matches": [
+      {
+        "match": "HELLO world",
+        "index": 0
+      },
+      {
+        "match": "Hello world",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-alternation-capture-star": {
+    "matches": [
+      {
+        "match": "192.168.1.1",
+        "index": 0
+      },
+      {
+        "match": "10.0.0.255",
+        "index": 12
+      },
+      {
+        "match": "999.999.999.999",
+        "index": 23
+      }
+    ],
+    "error": null
+  },
+  "l2-alternation-different-lengths": {
+    "matches": [
+      {
+        "match": "January",
+        "index": 0
+      },
+      {
+        "match": "Feb",
+        "index": 8
+      },
+      {
+        "match": "March",
+        "index": 12
+      },
+      {
+        "match": "Apr",
+        "index": 18
+      }
+    ],
+    "error": null
+  },
+  "l2-alternation-in-group": {
+    "matches": [
+      {
+        "match": "cat food",
+        "index": 0
+      },
+      {
+        "match": "dog food",
+        "index": 9
+      }
+    ],
+    "error": null
+  },
+  "l2-anchor-alternation": {
+    "matches": [
+      {
+        "match": "foo",
+        "index": 0
+      },
+      {
+        "match": "bar",
+        "index": 10
+      }
+    ],
+    "error": null
+  },
+  "l2-anchor-class-quantifier": {
+    "matches": [
+      {
+        "match": "Hello",
+        "index": 0
+      },
+      {
+        "match": "Test",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-anchor-group": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "foo",
+        "index": 12
+      },
+      {
+        "match": "baz",
+        "index": 20
+      }
+    ],
+    "error": null
+  },
+  "l2-boundary-alternation-capture": {
+    "matches": [
+      {
+        "match": "cats",
+        "index": 0
+      },
+      {
+        "match": "dogs",
+        "index": 9
+      },
+      {
+        "match": "bird",
+        "index": 20
+      }
+    ],
+    "error": null
+  },
+  "l2-boundary-capture-quantifier": {
+    "matches": [
+      {
+        "match": "the",
+        "index": 5
+      },
+      {
+        "match": "one",
+        "index": 9
+      },
+      {
+        "match": "who",
+        "index": 13
+      },
+      {
+        "match": "tests",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "l2-capture-class-range-lazy": {
+    "matches": [
+      {
+        "match": "ab",
+        "index": 0
+      },
+      {
+        "match": "cd",
+        "index": 2
+      },
+      {
+        "match": "ef",
+        "index": 4
+      },
+      {
+        "match": "gh",
+        "index": 7
+      },
+      {
+        "match": "ij",
+        "index": 9
+      }
+    ],
+    "error": null
+  },
+  "l2-capture-dot-star-lazy-anchor": {
+    "matches": [
+      {
+        "match": "hello  ",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 8
+      },
+      {
+        "match": "  test  ",
+        "index": 14
+      }
+    ],
+    "error": null
+  },
+  "l2-capture-lazy-range": {
+    "matches": [
+      {
+        "match": "<div>",
+        "index": 0
+      },
+      {
+        "match": "<span>",
+        "index": 6
+      },
+      {
+        "match": "<a>",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l2-capture-unicode-named": {
+    "matches": [
+      {
+        "match": "abc123",
+        "index": 0
+      },
+      {
+        "match": "hello456",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l2-capturing-optional": {
+    "matches": [
+      {
+        "match": "Mr. Smith",
+        "index": 0
+      },
+      {
+        "match": " Mrs",
+        "index": 9
+      },
+      {
+        "match": ". Jones",
+        "index": 13
+      },
+      {
+        "match": " Alice",
+        "index": 20
+      }
+    ],
+    "error": null
+  },
+  "l2-capturing-star": {
+    "matches": [
+      {
+        "match": "c",
+        "index": 0
+      },
+      {
+        "match": "abc",
+        "index": 2
+      },
+      {
+        "match": "ababc",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "l2-class-dot-alternation-quantifier": {
+    "matches": [
+      {
+        "match": "www.example.com",
+        "index": 0
+      },
+      {
+        "match": "foo.bar.org",
+        "index": 16
+      },
+      {
+        "match": "test.net",
+        "index": 28
+      }
+    ],
+    "error": null
+  },
+  "l2-class-escape-in-class": {
+    "matches": [
+      {
+        "match": " 123 ",
+        "index": 3
+      },
+      {
+        "match": " 456",
+        "index": 11
+      }
+    ],
+    "error": null
+  },
+  "l2-class-literal-special": {
+    "matches": [
+      {
+        "match": "]--^",
+        "index": 3
+      }
+    ],
+    "error": null
+  },
+  "l2-class-negated-quantifier-anchor": {
+    "matches": [
+      {
+        "match": "code line",
+        "index": 0
+      },
+      {
+        "match": "more code",
+        "index": 20
+      }
+    ],
+    "error": null
+  },
+  "l2-class-special-chars": {
+    "matches": [
+      {
+        "match": "user@example.com",
+        "index": 0
+      },
+      {
+        "match": "test@foo.bar.org",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "l2-class-union": {
+    "matches": [
+      {
+        "match": "deadBEEF",
+        "index": 0
+      },
+      {
+        "match": "0",
+        "index": 9
+      },
+      {
+        "match": "1A3F",
+        "index": 11
+      }
+    ],
+    "error": null
+  },
+  "l2-complex-email": {
+    "matches": [
+      {
+        "match": "user@example.com",
+        "index": 0
+      },
+      {
+        "match": "test+tag@foo.org",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "l2-csv-field": {
+    "matches": [
+      {
+        "match": "\"hello\"",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 8
+      },
+      {
+        "match": "\"foo,bar\"",
+        "index": 14
+      },
+      {
+        "match": "baz",
+        "index": 24
+      }
+    ],
+    "error": null
+  },
+  "l2-digit-boundary": {
+    "matches": [
+      {
+        "match": "123",
+        "index": 4
+      },
+      {
+        "match": "456",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-digit-boundary-group": {
+    "matches": [
+      {
+        "match": "42",
+        "index": 5
+      },
+      {
+        "match": "100",
+        "index": 14
+      },
+      {
+        "match": "50",
+        "index": 30
+      }
+    ],
+    "error": null
+  },
+  "l2-digit-class-quantifier-group": {
+    "matches": [
+      {
+        "match": "555-123-4567",
+        "index": 0
+      },
+      {
+        "match": "555.987.6543",
+        "index": 13
+      },
+      {
+        "match": "555 111 2222",
+        "index": 26
+      }
+    ],
+    "error": null
+  },
+  "l2-dot-class-alternation": {
+    "matches": [
+      {
+        "match": "user@test.com N/A foo@bar.org",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l2-dot-greedy": {
+    "matches": [
+      {
+        "match": "axyzb axxb ab",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l2-dot-lazy": {
+    "matches": [
+      {
+        "match": "axb",
+        "index": 0
+      },
+      {
+        "match": "axxb",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l2-dot-star-group-anchor": {
+    "matches": [
+      {
+        "match": "hello world",
+        "index": 0
+      },
+      {
+        "match": "foo bar",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-dotall-multiline": {
+    "matches": [
+      {
+        "match": "line1\nline2\nline3",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l2-double-negated-class": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 6
+      },
+      {
+        "match": "123",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l2-escape-sequence-in-class": {
+    "matches": [
+      {
+        "match": "hello 123 world",
+        "index": 0
+      },
+      {
+        "match": " foo",
+        "index": 18
+      }
+    ],
+    "error": null
+  },
+  "l2-escaped-special": {
+    "matches": [
+      {
+        "match": "$19.99",
+        "index": 0
+      },
+      {
+        "match": "$100.00",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l2-flag-combo-im": {
+    "matches": [
+      {
+        "match": "HELLO",
+        "index": 0
+      },
+      {
+        "match": "hello",
+        "index": 12
+      },
+      {
+        "match": "HeLLo",
+        "index": 24
+      }
+    ],
+    "error": null
+  },
+  "l2-flag-combo-is": {
+    "matches": [
+      {
+        "match": "hello\nworld",
+        "index": 0
+      },
+      {
+        "match": "HELLO\nWORLD",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-greedy-vs-lazy-star": {
+    "matches": [
+      {
+        "match": "<div class=\"x\">",
+        "index": 0
+      },
+      {
+        "match": "<span>",
+        "index": 16
+      },
+      {
+        "match": "</div>",
+        "index": 23
+      }
+    ],
+    "error": null
+  },
+  "l2-group-alternation-quantifier": {
+    "matches": [
+      {
+        "match": "abab",
+        "index": 0
+      },
+      {
+        "match": "cdcd",
+        "index": 5
+      },
+      {
+        "match": "abcd",
+        "index": 10
+      },
+      {
+        "match": "cdab",
+        "index": 15
+      }
+    ],
+    "error": null
+  },
+  "l2-group-star-anchor-end": {
+    "matches": [
+      {
+        "match": "1.2.3.4",
+        "index": 0
+      },
+      {
+        "match": "10.20.30",
+        "index": 8
+      }
+    ],
+    "error": null
+  },
+  "l2-hex-color": {
+    "matches": [
+      {
+        "match": "#ff0000",
+        "index": 0
+      },
+      {
+        "match": "#abc",
+        "index": 8
+      },
+      {
+        "match": "#123",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l2-log-line": {
+    "matches": [
+      {
+        "match": "2026-04-12 INFO Starting up",
+        "index": 0
+      },
+      {
+        "match": "2026-04-12 ERROR Something failed",
+        "index": 28
+      }
+    ],
+    "error": null
+  },
+  "l2-multiline-anchor-group": {
+    "matches": [
+      {
+        "match": "key1 = value1",
+        "index": 0
+      },
+      {
+        "match": "key2 = value2",
+        "index": 14
+      },
+      {
+        "match": "key3=value3",
+        "index": 28
+      }
+    ],
+    "error": null
+  },
+  "l2-multiple-captures": {
+    "matches": [
+      {
+        "match": "01-15-2026",
+        "index": 0
+      },
+      {
+        "match": "12-31-1999",
+        "index": 11
+      }
+    ],
+    "error": null
+  },
+  "l2-multiple-flag-scopes": {
+    "matches": [
+      {
+        "match": "HELLO WORLD",
+        "index": 0
+      },
+      {
+        "match": "hello world",
+        "index": 12
+      },
+      {
+        "match": "HeLLo WoRLd",
+        "index": 24
+      }
+    ],
+    "error": null
+  },
+  "l2-multiple-named-groups": {
+    "matches": [
+      {
+        "match": "John Smith",
+        "index": 0
+      },
+      {
+        "match": "Jane Doe",
+        "index": 11
+      }
+    ],
+    "error": null
+  },
+  "l2-named-group-quantifier": {
+    "matches": [
+      {
+        "match": "ab",
+        "index": 2
+      },
+      {
+        "match": "abcd",
+        "index": 5
+      },
+      {
+        "match": "abcd",
+        "index": 10
+      },
+      {
+        "match": "ef",
+        "index": 14
+      }
+    ],
+    "error": null
+  },
+  "l2-named-group-star": {
+    "matches": [
+      {
+        "match": "www.example.com",
+        "index": 0
+      },
+      {
+        "match": "foo.bar.org",
+        "index": 16
+      },
+      {
+        "match": "test",
+        "index": 28
+      }
+    ],
+    "error": null
+  },
+  "l2-named-groups-alternation": {
+    "matches": [
+      {
+        "match": "2026-04",
+        "index": 0
+      },
+      {
+        "match": "04/2026",
+        "index": 8
+      }
+    ],
+    "error": null
+  },
+  "l2-negated-class-quantifier": {
+    "matches": [
+      {
+        "match": "h",
+        "index": 0
+      },
+      {
+        "match": "ll",
+        "index": 2
+      },
+      {
+        "match": " w",
+        "index": 5
+      },
+      {
+        "match": "rld",
+        "index": 8
+      }
+    ],
+    "error": null
+  },
+  "l2-nested-alternation": {
+    "matches": [
+      {
+        "match": "ae",
+        "index": 0
+      },
+      {
+        "match": "bce",
+        "index": 3
+      },
+      {
+        "match": "bde",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l2-nested-groups": {
+    "matches": [
+      {
+        "match": "abc",
+        "index": 0
+      },
+      {
+        "match": "abc",
+        "index": 5
+      }
+    ],
+    "error": null
+  },
+  "l2-nested-named-groups": {
+    "matches": [
+      {
+        "match": "123abc",
+        "index": 0
+      },
+      {
+        "match": "456def",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l2-nested-quantifier-class": {
+    "matches": [
+      {
+        "match": "abc123def456",
+        "index": 0
+      },
+      {
+        "match": "xyz789",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l2-nested-quantifiers": {
+    "matches": [
+      {
+        "match": "aab",
+        "index": 0
+      },
+      {
+        "match": "ab",
+        "index": 4
+      }
+    ],
+    "error": null
+  },
+  "l2-nested-three-groups": {
+    "matches": [
+      {
+        "match": "abc",
+        "index": 0
+      },
+      {
+        "match": "abc",
+        "index": 5
+      }
+    ],
+    "error": null
+  },
+  "l2-noncapturing-exact": {
+    "matches": [
+      {
+        "match": "hahaha",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l2-noncapturing-lazy": {
+    "matches": [
+      {
+        "match": "abx",
+        "index": 0
+      },
+      {
+        "match": "ababx",
+        "index": 4
+      },
+      {
+        "match": "abababx",
+        "index": 10
+      }
+    ],
+    "error": null
+  },
+  "l2-noncapturing-nested-alternation": {
+    "matches": [
+      {
+        "match": "undo",
+        "index": 0
+      },
+      {
+        "match": "redo",
+        "index": 5
+      },
+      {
+        "match": "unmake",
+        "index": 10
+      },
+      {
+        "match": "remake",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "l2-noncapturing-optional": {
+    "matches": [
+      {
+        "match": "http://example.com",
+        "index": 0
+      },
+      {
+        "match": "https://www.test.org",
+        "index": 19
+      }
+    ],
+    "error": null
+  },
+  "l2-noncapturing-plus": {
+    "matches": [
+      {
+        "match": "ab",
+        "index": 0
+      },
+      {
+        "match": "abab",
+        "index": 3
+      },
+      {
+        "match": "ababab",
+        "index": 8
+      }
+    ],
+    "error": null
+  },
+  "l2-noncapturing-range": {
+    "matches": [
+      {
+        "match": "abab",
+        "index": 3
+      },
+      {
+        "match": "ababab",
+        "index": 8
+      },
+      {
+        "match": "abababab",
+        "index": 15
+      }
+    ],
+    "error": null
+  },
+  "l2-nongreedy-in-group": {
+    "matches": [
+      {
+        "match": "<a>",
+        "index": 0
+      },
+      {
+        "match": "<br>",
+        "index": 8
+      },
+      {
+        "match": "<div>",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "l2-optional-capture-in-sequence": {
+    "matches": [
+      {
+        "match": "x = 5;",
+        "index": 0
+      },
+      {
+        "match": "y = 10;",
+        "index": 7
+      },
+      {
+        "match": "z = 15",
+        "index": 15
+      }
+    ],
+    "error": null
+  },
+  "l2-quantified-class": {
+    "matches": [
+      {
+        "match": "abc",
+        "index": 3
+      },
+      {
+        "match": "abcde",
+        "index": 7
+      },
+      {
+        "match": "abcde",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l2-quantified-group": {
+    "matches": [
+      {
+        "match": "abcabc",
+        "index": 0
+      },
+      {
+        "match": "abcabcabc",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l2-quantifier-zero-max": {
+    "matches": [
+      {
+        "match": "b",
+        "index": 0
+      },
+      {
+        "match": "ab",
+        "index": 2
+      },
+      {
+        "match": "aab",
+        "index": 5
+      },
+      {
+        "match": "aaab",
+        "index": 9
+      },
+      {
+        "match": "aaab",
+        "index": 15
+      }
+    ],
+    "error": null
+  },
+  "l2-scoped-flag-i-alternation": {
+    "matches": [
+      {
+        "match": "YES",
+        "index": 0
+      },
+      {
+        "match": "no",
+        "index": 4
+      },
+      {
+        "match": "MAYBE",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l2-scoped-flags-class": {
+    "matches": [
+      {
+        "match": "Hello",
+        "index": 0
+      },
+      {
+        "match": "WORLD",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "l2-scoped-flags-dot": {
+    "matches": [
+      {
+        "match": "a\nb",
+        "index": 0
+      },
+      {
+        "match": "axb",
+        "index": 4
+      }
+    ],
+    "error": null
+  },
+  "l2-space-boundary-class": {
+    "matches": [
+      {
+        "match": "hello world",
+        "index": 0
+      },
+      {
+        "match": "foo bar",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-time-pattern": {
+    "matches": [
+      {
+        "match": "9:30",
+        "index": 0
+      },
+      {
+        "match": "14:00:59",
+        "index": 5
+      },
+      {
+        "match": "7:45:01",
+        "index": 14
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-case-insensitive": {
+    "matches": [
+      {
+        "match": "Hello",
+        "index": 0
+      },
+      {
+        "match": "WORLD",
+        "index": 6
+      },
+      {
+        "match": "café",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-category-number": {
+    "matches": [
+      {
+        "match": "123",
+        "index": 4
+      },
+      {
+        "match": "٤٥٦",
+        "index": 8
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-digit-boundary": {
+    "matches": [
+      {
+        "match": "123",
+        "index": 4
+      },
+      {
+        "match": "٤٥٦",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-group": {
+    "matches": [
+      {
+        "match": "hello 123",
+        "index": 0
+      },
+      {
+        "match": "世界 456",
+        "index": 10
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-group-boundary": {
+    "matches": [
+      {
+        "match": "Hello",
+        "index": 0
+      },
+      {
+        "match": "世界",
+        "index": 6
+      },
+      {
+        "match": "café",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-prop-anchor": {
+    "matches": [
+      {
+        "match": "H",
+        "index": 0
+      },
+      {
+        "match": "W",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-prop-quantifier": {
+    "matches": [
+      {
+        "match": "Hello",
+        "index": 0
+      },
+      {
+        "match": "世界",
+        "index": 6
+      },
+      {
+        "match": "café",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l2-unicode-script": {
+    "matches": [
+      {
+        "match": "Мир",
+        "index": 6
+      },
+      {
+        "match": "Привет",
+        "index": 19
+      }
+    ],
+    "error": null
+  },
+  "l2-url-parts": {
+    "matches": [
+      {
+        "match": "http://example.com/path",
+        "index": 0
+      },
+      {
+        "match": "https://www.test.org",
+        "index": 24
+      }
+    ],
+    "error": null
+  },
+  "l2-version-number": {
+    "matches": [
+      {
+        "match": "1.0",
+        "index": 0
+      },
+      {
+        "match": "2.3.4",
+        "index": 4
+      },
+      {
+        "match": "10.20.30",
+        "index": 10
+      },
+      {
+        "match": "1.2",
+        "index": 20
+      }
+    ],
+    "error": null
+  },
+  "l2-word-boundary-group": {
+    "matches": [
+      {
+        "match": "over",
+        "index": 26
+      },
+      {
+        "match": "lazy",
+        "index": 31
+      },
+      {
+        "match": "dogs",
+        "index": 36
+      }
+    ],
+    "error": null
+  },
+  "l2-word-nonword-alternation": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "!!! ",
+        "index": 5
+      },
+      {
+        "match": "world",
+        "index": 9
+      },
+      {
+        "match": "??? ",
+        "index": 14
+      },
+      {
+        "match": "foo",
+        "index": 18
+      }
+    ],
+    "error": null
+  },
+  "l3-alternation-anchor-escape": {
+    "matches": [
+      {
+        "match": "12345",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-alternation-backref-lazy": {
+    "matches": [],
+    "error": "regex parse error:\n    (a|b)\\w+?\\1\n             ^^\nerror: backreferences are not supported"
+  },
+  "l3-backref-alternation-anchor": {
+    "matches": [],
+    "error": "regex parse error:\n    ^(a|b)\\1$\n          ^^\nerror: backreferences are not supported"
+  },
+  "l3-capture-inside-lookahead-reuse": {
+    "matches": [],
+    "error": "regex parse error:\n    (?=(cat|dog))\\w+s\n    ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-capture-lazy-alternation": {
+    "matches": [
+      {
+        "match": "foobarbaz",
+        "index": 0
+      },
+      {
+        "match": "foobaz",
+        "index": 10
+      }
+    ],
+    "error": null
+  },
+  "l3-capture-nested-quantifiers": {
+    "matches": [
+      {
+        "match": "hello world foo",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-class-boundary-group-quantifier": {
+    "matches": [
+      {
+        "match": "JavaScript",
+        "index": 0
+      },
+      {
+        "match": "RegexPilot",
+        "index": 11
+      },
+      {
+        "match": "FooBarBaz",
+        "index": 22
+      }
+    ],
+    "error": null
+  },
+  "l3-dot-flag-group-quant": {
+    "matches": [
+      {
+        "match": "ab\ncd ",
+        "index": 0
+      },
+      {
+        "match": "efgh\n",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-alternation-capture-counts": {
+    "matches": [
+      {
+        "match": "ab",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-backref-in-class-literal": {
+    "matches": [],
+    "error": "regex parse error:\n    [\\1]\n     ^^\nerror: backreferences are not supported"
+  },
+  "l3-edge-backref-nonparticipating": {
+    "matches": [],
+    "error": "regex parse error:\n    (a)?(b)\\1\n           ^^\nerror: backreferences are not supported"
+  },
+  "l3-edge-case-folding-eszett": {
+    "matches": [
+      {
+        "match": "strasse",
+        "index": 0
+      },
+      {
+        "match": "straße",
+        "index": 8
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-catastrophic-avoided": {
+    "matches": [
+      {
+        "match": "xxxy",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-crlf-multiline": {
+    "matches": [
+      {
+        "match": "line1\r",
+        "index": 0
+      },
+      {
+        "match": "line2\r",
+        "index": 7
+      },
+      {
+        "match": "line3",
+        "index": 14
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-empty-alternation": {
+    "matches": [
+      {
+        "match": "",
+        "index": 0
+      },
+      {
+        "match": "",
+        "index": 1
+      },
+      {
+        "match": "",
+        "index": 2
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-empty-capture-backref": {
+    "matches": [],
+    "error": "regex parse error:\n    (a?)b\\1\n         ^^\nerror: backreferences are not supported"
+  },
+  "l3-edge-greedy-vs-lazy-capture": {
+    "matches": [
+      {
+        "match": "\"first\" and \"second\"",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-lookahead-at-end": {
+    "matches": [],
+    "error": "regex parse error:\n    \\w+(?=\\s*$)\n       ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-edge-multiline-first-line": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 6
+      },
+      {
+        "match": "foo",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-nested-class-escape": {
+    "matches": [
+      {
+        "match": "]",
+        "index": 1
+      },
+      {
+        "match": "[",
+        "index": 3
+      },
+      {
+        "match": "^",
+        "index": 5
+      },
+      {
+        "match": "-",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-nested-quantifier": {
+    "matches": [
+      {
+        "match": "aab",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-null-in-class": {
+    "matches": [
+      {
+        "match": "\u0000\u0001\u0002",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-overlapping-capture": {
+    "matches": [],
+    "error": "regex parse error:\n    (?=(a+))\\1b\n    ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-edge-unicode-boundary": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "мир",
+        "index": 6
+      },
+      {
+        "match": "世界",
+        "index": 13
+      },
+      {
+        "match": "café",
+        "index": 20
+      }
+    ],
+    "error": null
+  },
+  "l3-edge-zero-width-quantified": {
+    "matches": [],
+    "error": "regex parse error:\n    (?:(?=\\d))+\\d+\n       ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-escape-quant-group-anchor": {
+    "matches": [
+      {
+        "match": "192.168.1.1",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-flag-multiline-lookahead": {
+    "matches": [],
+    "error": "regex parse error:\n    (?m)^(?=\\S)\\w+\n         ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-flag-x-comment-group": {
+    "matches": [
+      {
+        "match": "42 answer",
+        "index": 0
+      },
+      {
+        "match": "7 lucky",
+        "index": 10
+      }
+    ],
+    "error": null
+  },
+  "l3-flavor-rust-unicode-class": {
+    "matches": [
+      {
+        "match": "мир",
+        "index": 6
+      },
+      {
+        "match": "世界",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "l3-group-alternation-escape": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<sep>\\t|\\s)\\w+\\k<sep>\n                    ^^\nerror: unrecognized escape sequence"
+  },
+  "l3-lookahead-backref-group": {
+    "matches": [],
+    "error": "regex parse error:\n    (?=(\\w+))\\1\\s(\\w+)\n    ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookahead-boundary-quantifier": {
+    "matches": [],
+    "error": "regex parse error:\n    \\b(?=[A-Z])\\w{3,}\\b\n      ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookahead-capture-quantified": {
+    "matches": [],
+    "error": "regex parse error:\n    (?=(\\d{2,4}))\\d+\n    ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookahead-lazy-quant-class": {
+    "matches": [],
+    "error": "regex parse error:\n    (?=[A-Z])\\w+?\\d\n    ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookahead-lookbehind-capture": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=\\()([^)]+)(?=\\))\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookahead-negated-class-escape": {
+    "matches": [],
+    "error": "regex parse error:\n    (?=.*\\d)[^\\s]+\n    ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookbehind-dot-quantifier": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=\\.).{1,5}(?=\\.)\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookbehind-negated-class-anchor": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=@)[^.]+$\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-lookbehind-unicode-capture": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=\\p{Lu})(\\p{Ll}+)\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-multiple-lookaround": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=\\d)(?=\\w)(?!_)\\w+\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-multiple-named-groups-backref": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<first>\\w+):(?<second>\\w+)=\\k<first>-\\k<second>\n                                 ^^\nerror: unrecognized escape sequence"
+  },
+  "l3-named-alt-quantifier-anchor": {
+    "matches": [
+      {
+        "match": "https://example.com",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-named-group-flag-backref": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<w>(?i:\\w+))\\s+\\k<w>\n                     ^^\nerror: unrecognized escape sequence"
+  },
+  "l3-negated-lookahead-class-quant": {
+    "matches": [],
+    "error": "regex parse error:\n    \\b(?!un)[a-z]+ed\\b\n      ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-negated-lookbehind-class-boundary": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<!\\d)[a-z]+\\b\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-nested-groups-multi-capture": {
+    "matches": [],
+    "error": "regex parse error:\n    ((a)(b(c)))\\1\\2\\3\\4\n               ^^\nerror: backreferences are not supported"
+  },
+  "l3-nested-noncap-quant-lazy": {
+    "matches": [
+      {
+        "match": "a bb ccc ",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-nested-quantifiers-group": {
+    "matches": [
+      {
+        "match": "hello world foo",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-noncap-nested-alternation": {
+    "matches": [
+      {
+        "match": "acf",
+        "index": 0
+      },
+      {
+        "match": "bcf",
+        "index": 4
+      },
+      {
+        "match": "def",
+        "index": 8
+      },
+      {
+        "match": "gh",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l3-quantified-alt-lookbehind": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=(?:Mr|Mrs|Dr)\\.\\s)\\w+\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-real-camel-to-words": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=[a-z])(?=[A-Z])\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-real-content-type": {
+    "matches": [
+      {
+        "match": "text/html; charset=utf-8",
+        "index": 0
+      },
+      {
+        "match": "app/json",
+        "index": 25
+      }
+    ],
+    "error": null
+  },
+  "l3-real-css-color": {
+    "matches": [
+      {
+        "match": "#fff",
+        "index": 0
+      },
+      {
+        "match": "#aabbcc",
+        "index": 5
+      },
+      {
+        "match": "#123",
+        "index": 13
+      },
+      {
+        "match": "#DEAD00",
+        "index": 18
+      }
+    ],
+    "error": null
+  },
+  "l3-real-csv-quoted": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "\"wo,rld\"",
+        "index": 6
+      },
+      {
+        "match": "\"say \"\"hi\"\"\"",
+        "index": 15
+      }
+    ],
+    "error": null
+  },
+  "l3-real-date-validation": {
+    "matches": [
+      {
+        "match": "25/12/2024",
+        "index": 0
+      },
+      {
+        "match": "01-01-1999",
+        "index": 11
+      },
+      {
+        "match": "31/06/2025",
+        "index": 22
+      }
+    ],
+    "error": null
+  },
+  "l3-real-duplicate-words": {
+    "matches": [],
+    "error": "regex parse error:\n    (?i)\\b(\\w+)\\s+\\1\\b\n                  ^^\nerror: backreferences are not supported"
+  },
+  "l3-real-email-lookahead": {
+    "matches": [],
+    "error": "regex parse error:\n    (?i)(?=[^@]*[A-Z])[\\w.+-]+@[\\w-]+\\.[\\w.]+\n        ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-real-hex-color-named": {
+    "matches": [
+      {
+        "match": "#ff00cc",
+        "index": 0
+      },
+      {
+        "match": "#aabb11",
+        "index": 8
+      },
+      {
+        "match": "#123456",
+        "index": 16
+      }
+    ],
+    "error": null
+  },
+  "l3-real-html-attr": {
+    "matches": [
+      {
+        "match": "class=\"foo\"",
+        "index": 0
+      },
+      {
+        "match": "id='bar'",
+        "index": 12
+      },
+      {
+        "match": "x=\"z\"",
+        "index": 26
+      }
+    ],
+    "error": null
+  },
+  "l3-real-ipv4-octet": {
+    "matches": [
+      {
+        "match": "192.168.1.1",
+        "index": 0
+      },
+      {
+        "match": "255.0.0.0",
+        "index": 12
+      },
+      {
+        "match": "10.0.0.1",
+        "index": 22
+      }
+    ],
+    "error": null
+  },
+  "l3-real-json-string": {
+    "matches": [
+      {
+        "match": "\"hello\"",
+        "index": 0
+      },
+      {
+        "match": "\"say \\\"hi\\\"\"",
+        "index": 8
+      },
+      {
+        "match": "\"a\\nb\"",
+        "index": 21
+      }
+    ],
+    "error": null
+  },
+  "l3-real-log-named-groups": {
+    "matches": [
+      {
+        "match": "2024-01-15T10:30:00 ERROR fail",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-real-markdown-link": {
+    "matches": [
+      {
+        "match": "[click](http://x.co)",
+        "index": 0
+      },
+      {
+        "match": "[go](y.io)",
+        "index": 21
+      }
+    ],
+    "error": null
+  },
+  "l3-real-password-strength": {
+    "matches": [],
+    "error": "regex parse error:\n    (?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%]).{8,}\n    ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-real-phone-intl": {
+    "matches": [
+      {
+        "match": "+1-555-1234",
+        "index": 0
+      },
+      {
+        "match": "(020) 555-6789",
+        "index": 12
+      }
+    ],
+    "error": null
+  },
+  "l3-real-semver": {
+    "matches": [
+      {
+        "match": "1.2.3",
+        "index": 0
+      },
+      {
+        "match": "4.5.6-beta.1",
+        "index": 6
+      },
+      {
+        "match": "7.8.9+build",
+        "index": 19
+      }
+    ],
+    "error": null
+  },
+  "l3-real-time-12h": {
+    "matches": [
+      {
+        "match": "2:30 PM",
+        "index": 0
+      },
+      {
+        "match": "12:00am",
+        "index": 8
+      },
+      {
+        "match": "9:15 AM",
+        "index": 16
+      }
+    ],
+    "error": null
+  },
+  "l3-real-url-optional": {
+    "matches": [
+      {
+        "match": "https://foo.com/p?a=1",
+        "index": 0
+      },
+      {
+        "match": "bar.io",
+        "index": 22
+      }
+    ],
+    "error": null
+  },
+  "l3-real-uuid": {
+    "matches": [
+      {
+        "match": "550e8400-e29b-41d4-a716-446655440000",
+        "index": 0
+      }
+    ],
+    "error": null
+  },
+  "l3-real-xml-tag": {
+    "matches": [
+      {
+        "match": "<div class=\"x\">",
+        "index": 0
+      },
+      {
+        "match": "<br/>",
+        "index": 16
+      },
+      {
+        "match": "<img src=\"y\"/>",
+        "index": 22
+      }
+    ],
+    "error": null
+  },
+  "l3-scoped-flag-lookahead-class": {
+    "matches": [],
+    "error": "regex parse error:\n    (?i:(?=[a-z])\\w+)\n        ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-unicode-prop-lookaround-quantifier": {
+    "matches": [],
+    "error": "regex parse error:\n    (?<=\\p{L})\\d+(?=\\p{L})\n    ^^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-unicode-script-lookahead-quant": {
+    "matches": [],
+    "error": "regex parse error:\n    \\p{Script=Latin}+(?=\\s)\n                     ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "l3-word-boundary-class-backref": {
+    "matches": [],
+    "error": "regex parse error:\n    (?i)\\b([a-z]+)\\s+\\1\\b\n                     ^^\nerror: backreferences are not supported"
+  },
+  "lib-inline-i-rust-case-insensitive-http-method": {
+    "matches": [
+      {
+        "match": "GET",
+        "index": 0
+      },
+      {
+        "match": "Post",
+        "index": 9
+      },
+      {
+        "match": "delete",
+        "index": 21
+      }
+    ],
+    "error": null
+  },
+  "lib-negative-inline-u-ascii-only-word-boundary": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 6
+      },
+      {
+        "match": "ASCII",
+        "index": 12
+      },
+      {
+        "match": "caf",
+        "index": 18
+      },
+      {
+        "match": "na",
+        "index": 24
+      },
+      {
+        "match": "ve",
+        "index": 28
+      },
+      {
+        "match": "unicode",
+        "index": 31
+      }
+    ],
+    "error": null
+  },
+  "lib-unicode-property-p-han-detect-cjk-runs": {
+    "matches": [
+      {
+        "match": "你好",
+        "index": 6
+      },
+      {
+        "match": "世界",
+        "index": 19
+      }
+    ],
+    "error": null
+  },
+  "lib-verbose-x-self-documenting-hex-color": {
+    "matches": [
+      {
+        "match": "#fff",
+        "index": 0
+      },
+      {
+        "match": "#FF5733",
+        "index": 5
+      },
+      {
+        "match": "#abc123",
+        "index": 13
+      }
+    ],
+    "error": null
+  },
+  "quant-exact": {
+    "matches": [
+      {
+        "match": "aaa",
+        "index": 3
+      },
+      {
+        "match": "aaa",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "quant-lazy": {
+    "matches": [
+      {
+        "match": "a",
+        "index": 0
+      },
+      {
+        "match": "a",
+        "index": 1
+      },
+      {
+        "match": "a",
+        "index": 2
+      },
+      {
+        "match": "a",
+        "index": 4
+      },
+      {
+        "match": "a",
+        "index": 5
+      },
+      {
+        "match": "a",
+        "index": 7
+      }
+    ],
+    "error": null
+  },
+  "quant-min": {
+    "matches": [
+      {
+        "match": "aa",
+        "index": 2
+      },
+      {
+        "match": "aaa",
+        "index": 5
+      },
+      {
+        "match": "aaaa",
+        "index": 9
+      }
+    ],
+    "error": null
+  },
+  "quant-optional": {
+    "matches": [
+      {
+        "match": "color",
+        "index": 0
+      },
+      {
+        "match": "colour",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "quant-plus": {
+    "matches": [
+      {
+        "match": "a",
+        "index": 0
+      },
+      {
+        "match": "aa",
+        "index": 2
+      },
+      {
+        "match": "aaa",
+        "index": 5
+      }
+    ],
+    "error": null
+  },
+  "quant-range": {
+    "matches": [
+      {
+        "match": "aa",
+        "index": 2
+      },
+      {
+        "match": "aaa",
+        "index": 5
+      },
+      {
+        "match": "aaaa",
+        "index": 9
+      },
+      {
+        "match": "aaaa",
+        "index": 14
+      }
+    ],
+    "error": null
+  },
+  "quant-star": {
+    "matches": [
+      {
+        "match": "b",
+        "index": 0
+      },
+      {
+        "match": "ba",
+        "index": 2
+      },
+      {
+        "match": "baa",
+        "index": 5
+      },
+      {
+        "match": "baaa",
+        "index": 9
+      }
+    ],
+    "error": null
+  },
+  "rust-named-python-style": {
+    "matches": [
+      {
+        "match": "hello",
+        "index": 0
+      },
+      {
+        "match": "world",
+        "index": 6
+      }
+    ],
+    "error": null
+  },
+  "rust-no-backref-note": {
+    "matches": [],
+    "error": "regex parse error:\n    (a)\\1\n       ^^\nerror: backreferences are not supported"
+  },
+  "rust-no-lookaround-note": {
+    "matches": [],
+    "error": "regex parse error:\n    foo(?=bar)\n       ^^^\nerror: look-around, including look-ahead and look-behind, is not supported"
+  },
+  "rust-unicode-category": {
+    "matches": [
+      {
+        "match": "H",
+        "index": 0
+      },
+      {
+        "match": "WORLD",
+        "index": 6
+      },
+      {
+        "match": "ABC",
+        "index": 17
+      }
+    ],
+    "error": null
+  },
+  "rust-unicode-prop": {
+    "matches": [
+      {
+        "match": "αβγ",
+        "index": 6
+      },
+      {
+        "match": "δεζ",
+        "index": 19
+      }
+    ],
+    "error": null
+  }
+}
