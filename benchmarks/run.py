@@ -12,11 +12,15 @@ Must be run against a release build: `maturin develop --release`.
 """
 
 import json
+import os
 import pathlib
 import platform
 import signal
 import statistics
+import subprocess
 import sys
+import tempfile
+import threading
 import time
 import timeit
 
@@ -38,6 +42,41 @@ def time_per_call(op, quick=False):
     return statistics.median(times)
 
 
+def threaded_pile_point(pattern, text, nthreads, pile):
+    """One threading benchmark point: a fixed pile of `pile` searches
+    split across `nthreads` barrier-started workers; returns the
+    wall-clock seconds to finish the whole pile (max of per-thread
+    walls, which are equal by construction). One measurement per
+    point — each is already an aggregate of thousands of ops."""
+    import re as stdre
+
+    import rurex
+
+    rx = rurex.compile(pattern)
+    rre = stdre.compile(pattern)
+    iters = max(1, pile // nthreads)
+    barrier = threading.Barrier(nthreads)
+
+    def run_engine(engine):
+        walls = [None] * nthreads
+
+        def work(i):
+            barrier.wait()
+            t0 = time.perf_counter()
+            for _ in range(iters):
+                engine.search(text)
+            walls[i] = time.perf_counter() - t0
+
+        threads = [threading.Thread(target=work, args=(i,)) for i in range(nthreads)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        return max(walls)
+
+    return run_engine(rre), run_engine(rx)
+
+
 def guarded_once(op, timeout_s):
     """Run op once, returning seconds or None on timeout."""
 
@@ -57,10 +96,12 @@ def guarded_once(op, timeout_s):
         signal.signal(signal.SIGALRM, old)
 
 
-def measure_point(op_name, pattern, text, quick):
+def measure_point(op_name, pattern, text, quick, value=None, pile=8000):
     re_rx = stdre.compile(pattern)
     rurex_rx = rurex.compile(pattern)
 
+    if op_name == "threaded_search":
+        return threaded_pile_point(pattern, text, value, pile)
     if op_name == "search":
         op_re = lambda: re_rx.search(text)
         op_ru = lambda: rurex_rx.search(text)
@@ -92,7 +133,10 @@ def run_test(test, quick):
         points = []
         for value in sweep["values"]:
             text = sweep["make"](value)
-            re_s, ru_s = measure_point(test["op"], test["pattern"], text, quick)
+            re_s, ru_s = measure_point(
+                test["op"], test["pattern"], text, quick,
+                value=value, pile=test.get("pile", 8000),
+            )
             points.append(
                 {"value": value, "re_s": re_s, "rurex_s": ru_s}
             )
@@ -158,21 +202,98 @@ def fmt(seconds):
     return f"{seconds:.2f} s"
 
 
+def free_python():
+    """Interpreter for the free-threaded tests: env override first,
+    then the conventional .venv-t."""
+    cand = os.environ.get("RUREX_FREE_PYTHON")
+    if cand and pathlib.Path(cand).exists():
+        return cand
+    cand = HERE.parent / ".venv-t" / "bin" / "python"
+    if cand.exists():
+        return str(cand)
+    return None
+
+
+def is_freethreaded():
+    return not getattr(sys, "_is_gil_enabled", lambda: True)()
+
+
 def main():
     quick = "--quick" in sys.argv
     only = None
     if "--test" in sys.argv:
         only = sys.argv[sys.argv.index("--test") + 1]
 
+    # Child mode: run ONLY the free-threaded tests (we ARE the
+    # free-threaded interpreter) and write them to the given path.
+    if "--free-child" in sys.argv:
+        out_path = pathlib.Path(sys.argv[sys.argv.index("--free-child") + 1])
+        child = {
+            "environment": {"free_python": platform.python_version()},
+            "tests": [],
+        }
+        if not is_freethreaded():
+            raise SystemExit("--free-child requires a free-threaded interpreter")
+        for test in TESTS:
+            if test.get("interpreter") != "freethreaded":
+                continue
+            if only and test["name"] != only:
+                continue
+            print(test["title"])
+            child["tests"].append(run_test(test, quick))
+            print()
+        with open(out_path, "w") as f:
+            json.dump(child, f, indent=2)
+        print(f"wrote {out_path}")
+        return
+
     results = {"environment": environment(), "tests": []}
+    results["environment"]["cpus"] = os.cpu_count()
     print(f"environment: {results['environment']['cpu']}\n")
 
+    # GIL tests run in-process.
     for test in TESTS:
+        if test.get("interpreter") == "freethreaded":
+            continue
         if only and test["name"] != only:
             continue
         print(test["title"])
         results["tests"].append(run_test(test, quick))
         print()
+
+    # Free-threaded tests run in a free-threaded subprocess.
+    free_tests = [
+        t for t in TESTS if t.get("interpreter") == "freethreaded"
+        and (only is None or t["name"] == only)
+    ]
+    if free_tests:
+        fp = free_python()
+        if fp is None:
+            print(
+                "skipping free-threaded tests: no free-threaded "
+                "interpreter found. Prepare one with:\n"
+                "  uv venv --python 3.14t .venv-t\n"
+                "  VIRTUAL_ENV=.venv-t uv pip install maturin pytest\n"
+                "  .venv-t/bin/maturin develop --release\n"
+                "or point RUREX_FREE_PYTHON at a t-interpreter with "
+                "rurex installed."
+            )
+        else:
+            print(f"free-threaded interpreter: {fp}")
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
+                child_path = tf.name
+            cmd = [fp, str(HERE / "run.py"), "--free-child", child_path]
+            if quick:
+                cmd.append("--quick")
+            if only:
+                cmd += ["--test", only]
+            subprocess.run(cmd, check=True)
+            child = json.loads(pathlib.Path(child_path).read_text())
+            pathlib.Path(child_path).unlink()
+            results["tests"].extend(child["tests"])
+            results["environment"]["free_python"] = child["environment"][
+                "free_python"
+            ]
 
     out = HERE / "results.json"
     with open(out, "w") as f:

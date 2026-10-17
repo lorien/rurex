@@ -5,7 +5,9 @@
     "os": "Linux 6.12.101+deb13-amd64",
     "rurex": "0.1.0",
     "build": "maturin develop --release (opt-level=3, LTO=fat)",
-    "timeout_s": 2.0
+    "timeout_s": 2.0,
+    "cpus": 8,
+    "free_python": "3.14.8"
   },
   "tests": [
     {
@@ -23,28 +25,28 @@
           "points": [
             {
               "value": 64,
-              "re_s": 8.22535278275609e-05,
-              "rurex_s": 6.311189001426101e-06
+              "re_s": 7.712198300287128e-05,
+              "rurex_s": 5.904867239296436e-06
             },
             {
               "value": 256,
-              "re_s": 0.00032898964965716006,
-              "rurex_s": 2.5358244124799965e-05
+              "re_s": 0.0003158469521440566,
+              "rurex_s": 2.4201312894001603e-05
             },
             {
               "value": 1024,
-              "re_s": 0.0013180732005275786,
-              "rurex_s": 0.00010118770343251526
+              "re_s": 0.0012506747199222444,
+              "rurex_s": 9.459667913615703e-05
             },
             {
               "value": 4096,
-              "re_s": 0.005337979821488262,
-              "rurex_s": 0.0004977615838870406
+              "re_s": 0.005008215000852943,
+              "rurex_s": 0.0004577844198793173
             },
             {
               "value": 16384,
-              "re_s": 0.021886323997750878,
-              "rurex_s": 0.003369529782794416
+              "re_s": 0.02040530079975724,
+              "rurex_s": 0.003113085157237947
             }
           ]
         }
@@ -65,28 +67,28 @@
           "points": [
             {
               "value": 0,
-              "re_s": 1.7894851742312312e-07,
-              "rurex_s": 4.7105840872973205e-07
+              "re_s": 1.7042494448833167e-07,
+              "rurex_s": 4.400528222322464e-07
             },
             {
               "value": 25,
-              "re_s": 0.00264568371232599,
-              "rurex_s": 0.00020763456728309392
+              "re_s": 0.002506276210770011,
+              "rurex_s": 0.00019191989814862609
             },
             {
               "value": 50,
-              "re_s": 0.005530058881267905,
-              "rurex_s": 0.0005378666464239359
+              "re_s": 0.005027424143627286,
+              "rurex_s": 0.0004404302937909961
             },
             {
               "value": 75,
-              "re_s": 0.008095693197101355,
-              "rurex_s": 0.0010116481594741344
+              "re_s": 0.007746178936213255,
+              "rurex_s": 0.0008896501921117306
             },
             {
               "value": 100,
-              "re_s": 0.011065076012164355,
-              "rurex_s": 0.0014888180745765568
+              "re_s": 0.010137336049228906,
+              "rurex_s": 0.0013491545850411058
             }
           ]
         }
@@ -107,23 +109,23 @@
           "points": [
             {
               "value": 64,
-              "re_s": 0.001658637784421444,
-              "rurex_s": 0.0011402264353819191
+              "re_s": 0.0015104543208144606,
+              "rurex_s": 0.0010557168792001902
             },
             {
               "value": 256,
-              "re_s": 0.006592001738026738,
-              "rurex_s": 0.004592256443575024
+              "re_s": 0.006198719702661037,
+              "rurex_s": 0.004195734281092882
             },
             {
               "value": 1024,
-              "re_s": 0.030105239385738967,
-              "rurex_s": 0.021512761898338794
+              "re_s": 0.026099200593307614,
+              "rurex_s": 0.018433941644616425
             },
             {
               "value": 4096,
-              "re_s": 0.11940375040285289,
-              "rurex_s": 0.08808663999661803
+              "re_s": 0.10576186096295714,
+              "rurex_s": 0.07600580602884292
             }
           ]
         }
@@ -144,23 +146,23 @@
           "points": [
             {
               "value": 5,
-              "re_s": 0.019749353360384702,
-              "rurex_s": 0.0031169534288346765
+              "re_s": 0.017273159441538156,
+              "rurex_s": 0.0026974526699632406
             },
             {
               "value": 20,
-              "re_s": 0.024091160809621214,
-              "rurex_s": 0.006213023755699396
+              "re_s": 0.01889002958778292,
+              "rurex_s": 0.0056451845075935125
             },
             {
               "value": 80,
-              "re_s": 0.03026019809767604,
-              "rurex_s": 0.024302221601828933
+              "re_s": 0.025371531024575233,
+              "rurex_s": 0.018190984870307146
             },
             {
               "value": 160,
-              "re_s": 0.04796895645558834,
-              "rurex_s": 0.037975114211440085
+              "re_s": 0.03313558087684214,
+              "rurex_s": 0.03398579610511661
             }
           ]
         }
@@ -181,58 +183,132 @@
           "points": [
             {
               "value": 8,
-              "re_s": 2.635922282934189e-05,
-              "rurex_s": 2.612346070818603e-07
+              "re_s": 2.215895801782608e-05,
+              "rurex_s": 2.3524885019287467e-07
             },
             {
               "value": 10,
-              "re_s": 7.023429498076439e-05,
-              "rurex_s": 2.5039332080632447e-07
+              "re_s": 6.761820986866951e-05,
+              "rurex_s": 2.337425509467721e-07
             },
             {
               "value": 12,
-              "re_s": 0.00024321582168340683,
-              "rurex_s": 2.6086451904848216e-07
+              "re_s": 0.00024101464077830315,
+              "rurex_s": 2.388099697418511e-07
             },
             {
               "value": 14,
-              "re_s": 0.0009857937693595886,
-              "rurex_s": 2.6102804159745574e-07
+              "re_s": 0.0009120614267885685,
+              "rurex_s": 2.3734690295532347e-07
             },
             {
               "value": 16,
-              "re_s": 0.003891346976161003,
-              "rurex_s": 2.6495765009894966e-07
+              "re_s": 0.003748264629393816,
+              "rurex_s": 2.421509730629623e-07
             },
             {
               "value": 18,
-              "re_s": 0.015619490761309862,
-              "rurex_s": 2.6771013578400016e-07
+              "re_s": 0.01496406365185976,
+              "rurex_s": 2.408242621459067e-07
             },
             {
               "value": 20,
-              "re_s": 0.06335642701014876,
-              "rurex_s": 2.6691547967493536e-07
+              "re_s": 0.059699769131839275,
+              "rurex_s": 2.489331252872944e-07
             },
             {
               "value": 22,
-              "re_s": 0.26041858503594995,
-              "rurex_s": 2.6461054617539046e-07
+              "re_s": 0.2395875472575426,
+              "rurex_s": 2.485116389580071e-07
             },
             {
               "value": 24,
-              "re_s": 1.0416277251206338,
-              "rurex_s": 2.6870842278003695e-07
+              "re_s": 0.9637399478815496,
+              "rurex_s": 2.5181993842124936e-07
             },
             {
               "value": 26,
               "re_s": null,
-              "rurex_s": 2.691819821484387e-07
+              "rurex_s": 2.558596786111593e-07
             },
             {
               "value": 28,
               "re_s": null,
-              "rurex_s": 3.1320276390761136e-07
+              "rurex_s": 2.5519815366715193e-07
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "threads_gil",
+      "title": "Test 6 \u2014 Concurrency: threads on GIL Python",
+      "description": "One fixed pile of 8000 whole-haystack searches (1 MB each, needle at the end), split across N worker threads; the chart shows wall-clock time to finish the whole pile. On GIL Python no engine spends threads on throughput: `re` serializes on the GIL (its per-op time inflates with the thread count), and rurex \u2014 far faster per op at every thread count \u2014 flattens once the GIL-held part of each call (Match construction) dominates its fast scans. Threads pay off only on free-threaded Python (Test 7).",
+      "pattern": "the-needle-string",
+      "data_example": "text fox the value lorem dog dog jumps value fox line value code gamma brown delta hello quick the brown lazy \u2026",
+      "op": "threaded_search",
+      "sweeps": [
+        {
+          "param": "threads",
+          "unit": "workers",
+          "label": "worker threads sharing one fixed pile of 8000 searches over a 1024 KB haystack (needle at the end)",
+          "points": [
+            {
+              "value": 1,
+              "re_s": 10.0924187223427,
+              "rurex_s": 0.7820572787895799
+            },
+            {
+              "value": 2,
+              "re_s": 10.658359629102051,
+              "rurex_s": 0.5101683181710541
+            },
+            {
+              "value": 4,
+              "re_s": 13.529945570975542,
+              "rurex_s": 0.7490019807592034
+            },
+            {
+              "value": 8,
+              "re_s": 13.413732043933123,
+              "rurex_s": 0.8403042182326317
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "threads_free",
+      "title": "Test 7 \u2014 Concurrency: threads on free-threaded Python",
+      "description": "The same pile as Test 6 \u2014 8000 whole-haystack searches (1 MB each), split across N worker threads, wall-clock time for the whole pile \u2014 run on free-threaded CPython (3.14t, GIL off). With no GIL both engines turn threads into throughput (4-5x at 8 workers on this 4-core/8-thread machine), and rurex keeps its single-thread lead at every point.",
+      "pattern": "the-needle-string",
+      "data_example": "text fox the value lorem dog dog jumps value fox line value code gamma brown delta hello quick the brown lazy \u2026",
+      "op": "threaded_search",
+      "sweeps": [
+        {
+          "param": "threads",
+          "unit": "workers",
+          "label": "worker threads sharing one fixed pile of 8000 searches over a 1024 KB haystack (needle at the end), GIL off",
+          "points": [
+            {
+              "value": 1,
+              "re_s": 11.407341367099434,
+              "rurex_s": 0.7746924450621009
+            },
+            {
+              "value": 2,
+              "re_s": 5.875465789809823,
+              "rurex_s": 0.4143064930103719
+            },
+            {
+              "value": 4,
+              "re_s": 3.1853803070262074,
+              "rurex_s": 0.26080237701535225
+            },
+            {
+              "value": 8,
+              "re_s": 2.6715690209530294,
+              "rurex_s": 0.21521910512819886
             }
           ]
         }

@@ -103,7 +103,10 @@ def sweep_chart(test, sweep, out_name, logx=False, logy=True):
     if logy:
         ax.set_yscale("log")
     ax.set_xlabel(f"{sweep['param']} ({sweep['unit']})")
-    ax.set_ylabel("time per operation" + (" (log scale)" if logy else ""))
+    if test["name"].startswith("threads"):
+        ax.set_ylabel("wall time for the whole pile (s)")
+    else:
+        ax.set_ylabel("time per operation" + (" (log scale)" if logy else ""))
     ax.set_title(test["title"], loc="left", fontsize=13,
                  fontweight="bold", pad=12)
     ax.text(0, 1.02, sweep["label"], transform=ax.transAxes, fontsize=9.5,
@@ -123,6 +126,8 @@ PRESENTATION = {
     ("extract_size", "data_size"): dict(logx=True, logy=True),
     ("extract_density", "match_density"): dict(logx=False, logy=False),
     ("pathological", "input_length"): dict(logx=False, logy=True),
+    ("threads_gil", "threads"): dict(logx=False, logy=False),
+    ("threads_free", "threads"): dict(logx=False, logy=False),
 }
 
 

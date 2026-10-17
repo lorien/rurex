@@ -66,6 +66,8 @@ PATHO_PATTERN = r"(x+x+)+y"
 SCAN_POSITION_FIXED_KB = 8192
 EXTRACT_SIZE_FIXED_DENSITY = 80
 EXTRACT_DENSITY_FIXED_KB = 1024
+THREADS_DOC_KB = 1024
+THREADS_PILE = 8000
 
 
 def _example(text, width=110):
@@ -211,6 +213,75 @@ TESTS = [
                 "values": list(range(8, 27, 2)),
                 "values_rurex": list(range(8, 29, 4)),
                 "make": lambda n: "x" * n,
+            },
+        ],
+    },
+    {
+        "name": "threads_gil",
+        "title": "Test 6 — Concurrency: threads on GIL Python",
+        "description": (
+            "One fixed pile of 8000 whole-haystack searches (1 MB "
+            "each, needle at the end), split across N worker threads; "
+            "the chart shows wall-clock time to finish the whole "
+            "pile. On GIL Python no engine spends threads on "
+            "throughput: `re` serializes on the GIL (its per-op time "
+            "inflates with the thread count), and rurex — far faster "
+            "per op at every thread count — flattens once the "
+            "GIL-held part of each call (Match construction) "
+            "dominates its fast scans. Threads pay off only on "
+            "free-threaded Python (Test 7)."
+        ),
+        "pattern": SCAN_PATTERN,
+        "data_example": _example(with_needle_at(4096, SCAN_PATTERN, 100)),
+        "op": "threaded_search",
+        "interpreter": "gil",
+        "pile": THREADS_PILE,
+        "sweeps": [
+            {
+                "param": "threads",
+                "unit": "workers",
+                "label": (
+                    "worker threads sharing one fixed pile of "
+                    f"{THREADS_PILE} searches over a {THREADS_DOC_KB} KB "
+                    "haystack (needle at the end)"
+                ),
+                "values": [1, 2, 4, 8],
+                "make": lambda n: with_needle_at(
+                    THREADS_DOC_KB * 1024, SCAN_PATTERN, 100
+                ),
+            },
+        ],
+    },
+    {
+        "name": "threads_free",
+        "title": "Test 7 — Concurrency: threads on free-threaded Python",
+        "description": (
+            "The same pile as Test 6 — 8000 whole-haystack searches "
+            "(1 MB each), split across N worker threads, wall-clock "
+            "time for the whole pile — run on free-threaded CPython "
+            "(3.14t, GIL off). With no GIL both engines turn threads "
+            "into throughput (4-5x at 8 workers on this 4-core/"
+            "8-thread machine), and rurex keeps its single-thread "
+            "lead at every point."
+        ),
+        "pattern": SCAN_PATTERN,
+        "data_example": _example(with_needle_at(4096, SCAN_PATTERN, 100)),
+        "op": "threaded_search",
+        "interpreter": "freethreaded",
+        "pile": THREADS_PILE,
+        "sweeps": [
+            {
+                "param": "threads",
+                "unit": "workers",
+                "label": (
+                    "worker threads sharing one fixed pile of "
+                    f"{THREADS_PILE} searches over a {THREADS_DOC_KB} KB "
+                    "haystack (needle at the end), GIL off"
+                ),
+                "values": [1, 2, 4, 8],
+                "make": lambda n: with_needle_at(
+                    THREADS_DOC_KB * 1024, SCAN_PATTERN, 100
+                ),
             },
         ],
     },
