@@ -67,3 +67,15 @@ must be Markdown, not HTML.
 - Table-refresh scripts for hand-formatted docs must anchor on
   section headings, not on first-row values (values repeat across
   sections), and the speedup direction must be derived, not assumed.
+
+### Postscript: bytes variant added to the Telegram benchmark
+
+Owner follow-up: every point now runs two input forms (str and
+pre-encoded UTF-8 bytes, preparation untimed, one compile per matrix
+item). 32 cold runs. The bytes variant is the headline resolution of
+the ×3 discussion: rurex bytes **0.35 s beats re bytes 0.51 s
+(×1.5)** single-threaded on GIL Python — the feed-UTF-8-bytes shape
+RE2's own binding recommends — while the str variant keeps the
+honest ×3 story (CPython's per-string transcode; near-parity warm).
+Free-threaded: both variants scale (rurex bytes 0.43 → 0.30 s at
+4 workers). Committed as 07b3423.
