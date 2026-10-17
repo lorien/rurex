@@ -90,6 +90,9 @@ engines), mention checksum 334,136 per run.
   threads): candidate mitigations if scan-once-under-threads on GIL
   Python matters to users — move the haystack extraction (UTF-8
   materialization) inside the detached region, or batch per-thread.
+  [acted — fixed in report-1792259247-gil-release-threshold: release
+  the GIL only for ≥4 KB haystacks; GIL cold scan now flat at
+  1.55–1.88 s across 1–4 workers.]
 
 ### Tooling/process
 

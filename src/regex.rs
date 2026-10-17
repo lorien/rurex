@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use pyo3::exceptions::{PyIndexError, PyTypeError, PyValueError};
+use pyo3::marker::Ungil;
 use pyo3::prelude::*;
 use pyo3::types::PyGenericAlias;
 use pyo3::types::{PyAny, PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
@@ -108,6 +109,31 @@ fn next_boundary(s: &str, at: usize) -> usize {
         s.len() + 1
     } else {
         at + s[at..].chars().next().map_or(1, char::len_utf8)
+    }
+}
+
+/// Release the GIL around a scan only when the haystack is large
+/// enough that the parallel window pays for the GIL handoff
+/// (~1-4 µs under contention, measured on the Telegram benchmark:
+/// 1.65 s single-threaded vs 5.38 s across four when every tiny
+/// scan detached). Below the threshold, detaching costs more than
+/// the scan itself and convoys the lock across threads. 4 KB is
+/// ~0.4 µs of scanning at the engine's ~11 GB/s; even a 100x-slower
+/// pattern stays well under a millisecond GIL-held (and `re` never
+/// releases the GIL during matching at any size).
+const GIL_RELEASE_MIN_HAY: usize = 4 * 1024;
+
+/// `py.detach(f)` when the scan window is large enough to be worth
+/// releasing the GIL for; `f()` GIL-held otherwise.
+fn maybe_detach<F, T>(py: Python<'_>, hay_len: usize, f: F) -> T
+where
+    F: Ungil + FnOnce() -> T,
+    T: Ungil,
+{
+    if hay_len >= GIL_RELEASE_MIN_HAY {
+        py.detach(f)
+    } else {
+        f()
     }
 }
 
@@ -674,14 +700,14 @@ impl Regex {
                     Inner::Text(re) => re,
                     Inner::Bytes(_) => unreachable!(),
                 };
-                Ok(py.detach(|| re.is_match(s)))
+                Ok(maybe_detach(py, s.len(), || re.is_match(s)))
             }
             Hay::Bytes(b) => {
                 let re = match &self.inner {
                     Inner::Bytes(re) => re,
                     Inner::Text(_) => unreachable!(),
                 };
-                Ok(py.detach(|| re.is_match(b)))
+                Ok(maybe_detach(py, b.len(), || re.is_match(b)))
             }
         }
     }
@@ -711,7 +737,7 @@ impl Regex {
                     Inner::Bytes(_) => unreachable!(),
                 };
                 let hay = &s[..eb];
-                let spans = py.detach(|| captures_spans_text(engine, hay, pb));
+                let spans = maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, pb));
                 Ok(spans.map(|sp| {
                     Match::new(
                         re,
@@ -733,7 +759,7 @@ impl Regex {
                     Inner::Text(_) => unreachable!(),
                 };
                 let hay = &b[..eb];
-                let spans = py.detach(|| captures_spans_bytes(engine, hay, pb));
+                let spans = maybe_detach(py, hay.len(), || captures_spans_bytes(engine, hay, pb));
                 Ok(spans.map(|sp| {
                     Match::new(
                         re,
@@ -827,7 +853,8 @@ impl Regex {
                 let hay = &s[pb..eb];
                 match slf.anchored() {
                     Some(Inner::Text(engine)) => {
-                        let spans = py.detach(|| captures_spans_text(engine, hay, 0));
+                        let spans =
+                            maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, 0));
                         Ok(spans.map(|sp| {
                             let sp = offset_spans(sp, pb);
                             Match::new(
@@ -848,7 +875,9 @@ impl Regex {
                             Inner::Bytes(_) => unreachable!(),
                         };
                         let whole = &s[..eb];
-                        let spans = py.detach(|| captures_spans_text(engine, whole, pb));
+                        let spans = maybe_detach(py, whole.len(), || {
+                            captures_spans_text(engine, whole, pb)
+                        });
                         Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|sp| {
                             Match::new(
                                 re,
@@ -870,7 +899,8 @@ impl Regex {
                 let hay = &b[pb..eb];
                 match slf.anchored() {
                     Some(Inner::Bytes(engine)) => {
-                        let spans = py.detach(|| captures_spans_bytes(engine, hay, 0));
+                        let spans =
+                            maybe_detach(py, hay.len(), || captures_spans_bytes(engine, hay, 0));
                         Ok(spans.map(|sp| {
                             let sp = offset_spans(sp, pb);
                             Match::new(
@@ -890,7 +920,9 @@ impl Regex {
                             Inner::Text(_) => unreachable!(),
                         };
                         let whole = &b[..eb];
-                        let spans = py.detach(|| captures_spans_bytes(engine, whole, pb));
+                        let spans = maybe_detach(py, whole.len(), || {
+                            captures_spans_bytes(engine, whole, pb)
+                        });
                         Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|sp| {
                             Match::new(
                                 re,
@@ -988,7 +1020,7 @@ impl Regex {
                     return Ok(PyList::empty(py));
                 };
                 let retry = slf.retry_engine().map(Arc::as_ref);
-                let all_spans = py.detach(|| scan_all_text(engine, retry, s, pb, eb));
+                let all_spans = maybe_detach(py, eb, || scan_all_text(engine, retry, s, pb, eb));
                 let mut items = Vec::with_capacity(all_spans.len());
                 for spans in &all_spans {
                     items.push(findall_item_text(py, s, slf.groups, spans)?);
@@ -1000,7 +1032,7 @@ impl Regex {
                     return Ok(PyList::empty(py));
                 };
                 let retry = slf.retry_engine().map(Arc::as_ref);
-                let all_spans = py.detach(|| scan_all_bytes(engine, retry, b, pb, eb));
+                let all_spans = maybe_detach(py, eb, || scan_all_bytes(engine, retry, b, pb, eb));
                 let mut items = Vec::with_capacity(all_spans.len());
                 for spans in &all_spans {
                     items.push(findall_item_bytes(py, b, slf.groups, spans)?);
@@ -1035,7 +1067,7 @@ impl Regex {
                     if maxsplit != 0 && n == maxsplit {
                         break;
                     }
-                    let Some(spans) = py.detach(|| {
+                    let Some(spans) = maybe_detach(py, s.len(), || {
                         cpython_step(
                             s.as_bytes(),
                             scan,
@@ -1071,7 +1103,7 @@ impl Regex {
                     if maxsplit != 0 && n == maxsplit {
                         break;
                     }
-                    let Some(spans) = py.detach(|| {
+                    let Some(spans) = maybe_detach(py, b.len(), || {
                         cpython_step(
                             b,
                             scan,
@@ -1449,7 +1481,7 @@ fn substitute(
                 if count != 0 && n == count {
                     break;
                 }
-                let Some(spans) = py.detach(|| {
+                let Some(spans) = maybe_detach(py, s.len(), || {
                     cpython_step(
                         s.as_bytes(),
                         scan,
@@ -1510,7 +1542,7 @@ fn substitute(
                 if count != 0 && n == count {
                     break;
                 }
-                let Some(spans) = py.detach(|| {
+                let Some(spans) = maybe_detach(py, b.len(), || {
                     cpython_step(
                         b,
                         scan,
@@ -1638,7 +1670,7 @@ impl FindIter {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = py.detach(|| {
+                let spans = maybe_detach(py, self.end_b, || {
                     cpython_step(
                         hay.as_bytes(),
                         scan,
@@ -1691,7 +1723,7 @@ impl FindIter {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = py.detach(|| {
+                let spans = maybe_detach(py, self.end_b, || {
                     cpython_step(
                         hay,
                         scan,
@@ -1765,7 +1797,7 @@ impl SreScanner {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = py.detach(|| {
+                let spans = maybe_detach(py, self.end_b, || {
                     cpython_step(
                         hay.as_bytes(),
                         scan,
@@ -1831,7 +1863,7 @@ impl SreScanner {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = py.detach(|| {
+                let spans = maybe_detach(py, self.end_b, || {
                     cpython_step(
                         hay,
                         scan,

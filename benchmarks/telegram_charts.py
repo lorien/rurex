@@ -1,49 +1,68 @@
-"""Generate docs/telegram-benchmarks.html from telegram_results.json.
+"""Generate the Telegram benchmark charts (PNG), the Markdown results
+page, and (with --html) the standalone HTML twin.
 
-Standalone HTML: charts embedded as base64 PNGs, tables, methodology
-and data-provenance sections. The document is committed.
+    python benchmarks/telegram_charts.py          # docs/img/*.png + docs/telegram-benchmarks.md
+    python benchmarks/telegram_charts.py --html   # + docs/telegram-benchmarks.html (gitignored twin)
 
-    python benchmarks/telegram_charts.py
+Numbers come from telegram_results.json (written by telegram.py);
+this file only renders them.
 """
 
 import base64
-import io
 import json
 import pathlib
+import sys
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
+try:
+    import markdown  # pip install markdown
+except ImportError:
+    markdown = None
+
 HERE = pathlib.Path(__file__).parent
+DOCS = HERE.parent / "docs"
+IMG = DOCS / "img"
 RESULTS = HERE / "telegram_results.json"
-OUT = HERE.parent / "docs" / "telegram-benchmarks.html"
 
 COLOR_RE = "#4C72B0"
 COLOR_RUREX = "#CE422B"
 
-plt.rcParams.update({
-    "figure.dpi": 110, "savefig.dpi": 200,
-    "font.family": "DejaVu Sans", "font.size": 11,
-    "axes.edgecolor": "#666666", "axes.labelcolor": "#333333",
-    "xtick.color": "#555555", "ytick.color": "#333333",
-    "axes.spines.top": False, "axes.spines.right": False,
-    "axes.grid": True, "grid.color": "#d9d9d9", "grid.linewidth": 0.6,
-    "axes.axisbelow": True, "figure.facecolor": "white",
-    "legend.frameon": True, "legend.framealpha": 0.9,
-})
+plt.rcParams.update(
+    {
+        "figure.dpi": 110,
+        "savefig.dpi": 200,
+        "font.family": "DejaVu Sans",
+        "font.size": 11,
+        "axes.edgecolor": "#666666",
+        "axes.labelcolor": "#333333",
+        "xtick.color": "#555555",
+        "ytick.color": "#333333",
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "axes.grid": True,
+        "grid.color": "#d9d9d9",
+        "grid.linewidth": 0.6,
+        "axes.axisbelow": True,
+        "figure.facecolor": "white",
+        "legend.frameon": True,
+        "legend.framealpha": 0.9,
+    }
+)
 
 TITLES = {
-    "gil": "GIL Python 3.13 — one cold run per point",
-    "free": "Free-threaded 3.14t — one cold run per point",
+    "gil": "Telegram @mentions — GIL Python",
+    "free": "Telegram @mentions — free-threaded Python",
 }
 
 
-def section(data, interp):
+def chart(data, interp, out_name):
     pts = [p for p in data["points"] if p["interpreter"] == interp]
     xs = sorted({p["threads"] for p in pts})
-    fig, ax = plt.subplots(figsize=(8.6, 5.0))
+    fig, ax = plt.subplots(figsize=(9.5, 5.4))
     for engine, color, label in (("re", COLOR_RE, "re (stdlib)"),
                                   ("rurex", COLOR_RUREX, "rurex")):
         ys = [next(p["wall_s"] for p in pts
@@ -51,19 +70,19 @@ def section(data, interp):
               for x in xs]
         ax.plot(xs, ys, marker="o", color=color, linewidth=2.2,
                 markersize=6, label=label, zorder=3)
-        ax.text(xs[-1], ys[-1], f"  {ys[-1]:.2f} s", color=color,
-                fontsize=9, va="center", ha="left")
+        ax.text(xs[-1], ys[-1], "  " + f"{ys[-1]:.2f} s",
+                color=color, fontsize=9, va="center", ha="left")
     ax.set_xticks(xs)
     ax.set_xlabel("worker threads")
     ax.set_ylabel("wall time for the whole pile (s)")
     ax.set_title(TITLES[interp], loc="left", fontsize=13,
-                 fontweight="bold", pad=10)
+                 fontweight="bold", pad=12)
     ax.legend(loc="upper left")
     fig.tight_layout()
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
+    path = IMG / out_name
+    fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode()
+    return path
 
 
 def table(data, interp, n_posts):
@@ -74,30 +93,121 @@ def table(data, interp, n_posts):
         re_s = by[(x, "re")]
         ru_s = by[(x, "rurex")]
         rows.append(
-            f"<tr><td class='num'>{x}</td>"
-            f"<td class='num'>{re_s:.2f} s</td>"
-            f"<td class='num'>{re_s * 1e6 / n_posts:.2f} µs</td>"
-            f"<td class='num'>{ru_s:.2f} s</td>"
-            f"<td class='num'>{ru_s * 1e6 / n_posts:.2f} µs</td>"
-            f"<td class='num'>re ×{ru_s / re_s:.2f}</td></tr>"
+            f"| {x} | {re_s:.2f} s | {re_s * 1e6 / n_posts:.2f} µs "
+            f"| {ru_s:.2f} s | {ru_s * 1e6 / n_posts:.2f} µs "
+            f"| `re` ×{ru_s / re_s:.1f} |"
         )
-    return ("<table><thead><tr><th>Threads</th><th>re</th>"
-            "<th>re, per post</th><th>rurex</th><th>rurex, per post</th>"
-            f"<th>Speedup</th></tr></thead><tbody>{''.join(rows)}</tbody></table>")
+    return ("| Workers | `re` | `re`, per post | rurex | rurex, per post "
+            "| Speedup |\n|---:|---:|---:|---:|---:|---:|\n"
+            + "\n".join(rows))
 
 
-def main():
+def render_md():
     data = json.loads(RESULTS.read_text())
-    stats = data["stats"]
-    n = stats["posts"]
-    charts = {i: section(data, i) for i in ("gil", "free")}
-    free_html = (
-        f"<h2>Free-threaded Python</h2>\n"
-        f"<img alt='free-threaded chart' src='data:image/png;base64,"
-        f"{charts['free']}'/>\n{table(data, 'free', n)}\n"
-    ) if any(p["interpreter"] == "free" for p in data["points"]) else ""
+    s = data["stats"]
+    n = s["posts"]
+    chart(data, "gil", "telegram_threads_gil.png")
+    chart(data, "free", "telegram_threads_free.png")
 
-    html = f"""<!DOCTYPE html>
+    md = f"""# Telegram @mention extraction: rurex vs `re`
+
+Real-world task, measured exactly as performed: **one** pass of
+`.findall(text)` over every post — one search, once, on a corpus that
+has never been scanned before. Each measured point is a **fresh
+interpreter process** that loads the corpus and performs the single
+pass split across N barrier-started workers; there is no warm-up and
+no repeat scan. This is the extraction-bound regime (short texts,
+≈0.33 matches per post) — the opposite of the scan-bound workloads of
+[the main benchmark page](benchmarks.md), where rurex leads ×7–13
+single-threaded.
+
+## Methodology
+
+- **Pattern** (Telegram username rules — 5–32 chars,
+  `[a-zA-Z0-9_]`, starts with a letter):
+  `@[a-zA-Z][a-zA-Z0-9_]{{4,31}}`
+- **Corpus**: {n:,} posts, {s['total_bytes'] / 1e6:.0f} MB of text
+  (mostly Arabic/Persian), {s['total_mentions']:,} mentions in
+  {s['posts_with_mentions']:,} posts ({100 * s['posts_with_mentions'] / n:.1f}%
+  of posts). Downloaded automatically from the
+  [`bench-data-telegram-v1` release](https://github.com/lorien/rurex/releases/tag/bench-data-telegram-v1)
+  and sha256-verified; see
+  [`benchmarks/telegram/PROVENANCE.md`](../benchmarks/telegram/PROVENANCE.md).
+- **Timing window**: from the instant a worker passes the barrier to
+  the instant its slice is finished; a point is the max across
+  workers. Load and pattern compile are outside the window,
+  identically for both engines. Every run's mention count must equal
+  {s['total_mentions']:,}.
+- **Interpreters**: GIL CPython 3.13 and free-threaded 3.14t, one
+  fresh subprocess per point. CPU: {data['environment']['cpu']}.
+
+## GIL Python
+
+![Threads on GIL Python](img/telegram_threads_gil.png)
+
+{table(data, "gil", n)}
+
+Single-threaded, `re` answers the pile in 0.48 s and rurex in
+1.58 s. Most of rurex's gap is **CPython's first-touch UTF-8
+materialization**: CPython stores `str` in UCS form and lazily
+encodes-and-caches a UTF-8 copy inside each string the first time
+anything asks for it (`PyUnicode_AsUTF8AndSize`) — which rurex, like
+any UTF-8 engine consuming Python strings, must. `re` never converts.
+Over 470 MB of mostly non-ASCII text that is a one-time ~1 s encode,
+paid inside the measured run because a scan-once user pays it.
+
+Adding threads, rurex is now **flat** (1.55–1.88 s at 1–4 workers).
+An earlier build degraded badly here (1.65 s → 5.38 s): every tiny
+scan released and re-acquired the GIL, and a million handoffs
+convoyed the lock. rurex now releases the GIL only when the haystack
+is ≥ 4 KB (see `GIL_RELEASE_MIN_HAY`); short-text scans stay
+GIL-held, matching `re`'s own behavior (sre never releases the GIL
+during matching at any size).
+
+## Free-threaded Python
+
+![Threads on free-threaded Python](img/telegram_threads_free.png)
+
+{table(data, "free", n)}
+
+Without the GIL the same cold scan scales: rurex 1.76 s → 0.53 s at
+four workers (3.3×) — the first-touch UTF-8 encoding parallelizes
+like any other work — and `re` 0.44 s → 0.20 s. On this scan-once
+task, free-threaded Python is the fastest way to run rurex at every
+thread count.
+
+## Reading the numbers
+
+`re` wins every point on this workload: partly per-call fixed cost,
+and partly the one-time UTF-8 tax that only the UTF-8 engine pays.
+Users who scan each text exactly once pay it once; users re-scanning
+re-use the cached UTF-8 form and the tax vanishes (steady-state
+single-thread is near-parity, ≈0.55 vs ≈0.49 µs/post). The
+scan-bound leads on the main page do not transfer to short-text
+per-call extraction. Machine-specific; expect different absolute
+numbers elsewhere.
+
+## Reproducing
+
+```sh
+python benchmarks/telegram.py            # downloads the corpus on first run,
+                                         # then 16 cold runs, ~5 min
+python benchmarks/telegram_charts.py     # regenerates this page
+python benchmarks/telegram_charts.py --html   # + standalone HTML twin
+```
+
+---
+
+*Raw results: [`benchmarks/telegram_results.json`](../benchmarks/telegram_results.json).
+Numbers on this page were measured on 2026-10-17 with rurex 0.1.0
+(GIL-release threshold fix included).*
+"""
+    out = DOCS / "telegram-benchmarks.md"
+    out.write_text(md)
+    return out
+
+
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -109,94 +219,50 @@ def main():
   code {{ background: #f6f8fa; padding: .2em .4em; border-radius: 6px;
          font-size: 85%; font-family: ui-monospace, Menlo, Consolas,
          monospace; }}
+  pre {{ background: #f6f8fa; padding: 14px 16px; border-radius: 8px; }}
   table {{ border-collapse: collapse; margin: 1rem 0; }}
   th, td {{ border: 1px solid #d1d9e0; padding: 6px 13px; }}
   th {{ background: #f6f8fa; }}
-  td.num, th.num {{ text-align: right; }}
   img {{ max-width: 100%; }}
-  h2 {{ border-bottom: 1px solid #d1d9e0; padding-bottom: .3em; }}
+  h1, h2 {{ border-bottom: 1px solid #d1d9e0; padding-bottom: .3em; }}
 </style>
 </head>
 <body>
-
-<h1>rurex — Telegram @mention extraction benchmark</h1>
-
-<p>Real-world task, measured exactly as performed: <b>one</b> pass of
-<code>findall</code> over every post's text — one search, once, on a
-corpus that has never been scanned before. Each measured point is a
-<b>fresh interpreter process</b> that loads the corpus and performs the
-single pass split across N barrier-started workers. There is no
-warm-up and no repeat scan; nothing is measured twice.</p>
-
-<ul>
-<li><b>Pattern</b> (Telegram username rules — 5–32 chars,
-<code>[a-zA-Z0-9_]</code>, starts with a letter):
-<code>@[a-zA-Z][a-zA-Z0-9_]{{4,31}}</code></li>
-<li><b>Corpus</b>: {n:,} posts, {stats['total_bytes'] / 1e6:.0f} MB of
-text (mostly Arabic/Persian), {stats['total_mentions']:,} mentions in
-{stats['posts_with_mentions']:,} posts ({100 * stats['posts_with_mentions'] / n:.1f}%
-of posts, ≈0.33 mentions per post). Provenance and SHA-256:
-<code>benchmarks/telegram/PROVENANCE.md</code>.</li>
-<li><b>Timing window</b>: from the instant a worker passes the barrier
-to the instant its slice is finished; the point is the max across
-workers. JSONL load and pattern compile are outside the window,
-identically for both engines. Verified by a mention-count checksum
-({stats['total_mentions']:,} per run).</li>
-<li><b>Interpreters</b>: GIL CPython 3.13 and free-threaded 3.14t,
-each as fresh subprocesses. CPU: {data['environment']['cpu']}.</li>
-</ul>
-
-<h2>GIL Python</h2>
-<img alt="GIL chart" src="data:image/png;base64,{charts['gil']}"/>
-{table(data, 'gil', n)}
-
-<p>Single-threaded, <code>re</code> answers the whole pile in 0.48 s
-and rurex in 1.65 s. Most of rurex's gap is <b>CPython's first-touch
-UTF-8 materialization</b>: CPython stores <code>str</code> in a
-UCS-1/2/4 form and lazily encodes-and-caches a UTF-8 copy inside each
-string the first time anything asks for it — which is exactly what
-rurex (like any UTF-8 engine consuming Python strings) must do, via
-<code>PyUnicode_AsUTF8AndSize</code>. <code>re</code> never converts
-— its engine walks the native form — so it pays nothing. Over 470 MB
-of mostly non-ASCII text that is a one-time ~1 s encode, inside the
-measured run because a scan-once user pays it.</p>
-
-<p>Adding threads makes rurex's cold scan <b>worse</b> on the GIL
-build (1.65 s → 5.38 s at four workers): the per-string UTF-8
-allocation happens in rurex's GIL-held section, and the pile performs
-a million detach/attach cycles around the scans — a GIL convoy whose
-overhead grows with the thread count. <code>re</code> is roughly flat
-(0.48–0.66 s).</p>
-
-{free_html}
-<p>Without the GIL the same cold scan scales cleanly: rurex 1.46 s →
-0.52 s at four workers (2.8×) — the first-touch UTF-8 encoding
-parallelizes like any other work — and <code>re</code> 0.42 s →
-0.33 s. On this scan-once task free-threaded Python is the fastest
-way to run rurex at every thread count.</p>
-
-<h2>Reading the numbers</h2>
-
-<p>This is the extraction-bound regime — short texts, ≈0.33 matches
-per post, per-call overhead dominating — the opposite of the
-scan-bound workloads on <a href="benchmarks.md">the main benchmark
-page</a>, where rurex leads by 7–13× single-threaded. Here
-<code>re</code> wins every point: partly per-call fixed cost, and
-partly the one-time UTF-8 tax that only the UTF-8 engine pays. Users
-who scan each text exactly once pay it once; users re-scanning
-re-use the cached UTF-8 form and the tax vanishes. Machine-specific;
-expect different absolute numbers elsewhere.</p>
-
-<p>Reproduce:</p>
-<pre><code>python benchmarks/telegram.py            # downloads the corpus on first run,
-                                         # then 16 cold runs, ~5 min
-python benchmarks/telegram_charts.py    # regenerates this page</code></pre>
-
+<div class="banner" style="background:#fff8c5;border:1px solid #d4a72c;
+     border-radius:8px;padding:.6rem 1rem;margin-bottom:2rem;font-size:90%%;">
+Rendered from <code>docs/telegram-benchmarks.md</code> with embedded
+images — regenerate with <code>python benchmarks/telegram_charts.py --html</code>.</div>
+{body}
 </body>
 </html>
 """
-    OUT.write_text(html)
-    print("wrote", OUT)
+
+
+def render_html():
+    if markdown is None:
+        print("markdown package missing; skipping HTML twin")
+        return None
+    md_text = (DOCS / "telegram-benchmarks.md").read_text()
+    body = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
+
+    def embed(match):
+        src = match.group(1)
+        b64 = base64.b64encode((DOCS / src).read_bytes()).decode()
+        return f'src="data:image/png;base64,{b64}"'
+
+    import re
+
+    body = re.sub(r'src="(img/[^"]+)"', embed, body)
+    out = DOCS / "telegram-benchmarks.html"
+    out.write_text(HTML_TEMPLATE.format(body=body))
+    return out
+
+
+def main():
+    IMG.mkdir(parents=True, exist_ok=True)
+    print("wrote", render_md())
+    if "--html" in sys.argv:
+        print("wrote", render_html())
 
 
 if __name__ == "__main__":
