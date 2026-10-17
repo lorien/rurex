@@ -14,6 +14,9 @@
 //!    producing an empty match at the search start is dropped and
 //!    lower-priority threads keep running, so the search returns the
 //!    best *non-empty* match in preference order, or none.
+//! 4. Two `core::usize::MAX` sentinel comparisons written `usize::MAX`:
+//!    the module-qualified form is deprecated, which is a hard error
+//!    under the project's `-D warnings` wall on current stable Rust.
 //!
 //! Everything else is verbatim, including doc comments.
 
@@ -1269,7 +1272,7 @@ impl PikeVM {
         // length that fits into isize, and so this assert should always pass.
         // But we put it here to make our assumption explicit.
         assert!(
-            input.haystack().len() < core::usize::MAX,
+            input.haystack().len() < usize::MAX,
             "byte slice lengths must be less than usize MAX",
         );
         instrument!(|c| c.reset(&self.nfa));
@@ -1438,7 +1441,7 @@ impl PikeVM {
             return;
         }
         assert!(
-            input.haystack().len() < core::usize::MAX,
+            input.haystack().len() < usize::MAX,
             "byte slice lengths must be less than usize MAX",
         );
         instrument!(|c| c.reset(&self.nfa));
