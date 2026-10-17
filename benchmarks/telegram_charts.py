@@ -59,10 +59,10 @@ TITLES = {
 }
 
 SERIES = (
-    ("re", "str", "#4C72B0", "-", "re / str"),
-    ("re", "bytes", "#4C72B0", "--", "re / bytes"),
-    ("rurex", "str", "#CE422B", "-", "rurex / str"),
-    ("rurex", "bytes", "#CE422B", "--", "rurex / bytes"),
+    ("re", "str", "#4C72B0", "o", "re / str"),
+    ("re", "bytes", "#93AED1", "s", "re / bytes"),
+    ("rurex", "str", "#CE422B", "o", "rurex / str"),
+    ("rurex", "bytes", "#E08D75", "s", "rurex / bytes"),
 )
 
 
@@ -70,12 +70,12 @@ def chart(data, interp, out_name):
     pts = [p for p in data["points"] if p["interpreter"] == interp]
     xs = sorted({p["threads"] for p in pts})
     fig, ax = plt.subplots(figsize=(9.5, 5.4))
-    for engine, form, color, ls, label in SERIES:
+    for engine, form, color, marker, label in SERIES:
         ys = [next(p["wall_s"] for p in pts
                    if p["threads"] == x and p["engine"] == engine
                    and p["input"] == form)
               for x in xs]
-        ax.plot(xs, ys, marker="o", linestyle=ls, color=color,
+        ax.plot(xs, ys, marker=marker, linestyle="-", color=color,
                 linewidth=2.2, markersize=6, label=label, zorder=3)
         ax.text(xs[-1], ys[-1], "  " + f"{ys[-1]:.2f} s",
                 color=color, fontsize=9, va="center", ha="left")
