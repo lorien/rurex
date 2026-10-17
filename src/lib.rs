@@ -14,6 +14,7 @@ mod regex;
 mod regexset;
 mod retry;
 mod template;
+mod utf8;
 mod vendor;
 
 use match_::Match;

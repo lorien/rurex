@@ -311,7 +311,7 @@ pub(crate) fn bytes_like<'py>(
 /// of a bytes-like input (bytearray, memoryview, array, ...). `hay()`
 /// derives the borrowed view, so call sites bind the `HayKeep` first.
 pub(crate) enum HayKeep<'py> {
-    Text(Bound<'py, PyString>),
+    Text(Bound<'py, PyString>, Option<String>),
     /// `copied` is true when `bound` is a snapshot of a bytes-like
     /// object rather than the input itself (iterators keep it).
     Bytes {
@@ -321,9 +321,21 @@ pub(crate) enum HayKeep<'py> {
 }
 
 impl<'py> HayKeep<'py> {
-    pub(crate) fn hay(&self) -> PyResult<Hay<'_>> {
+    /// The haystack view. str inputs go through the three-way UTF-8
+    /// borrow (`crate::utf8`): ASCII strings and strings whose
+    /// CPython UTF-8 cache is warm are borrowed zero-copy; cold
+    /// non-ASCII strings are transcoded in Rust (several times
+    /// faster than CPython's encoder) into `owned`. CPython's cache
+    /// is never populated by us.
+    pub(crate) fn hay(&mut self) -> PyResult<Hay<'_>> {
         match self {
-            HayKeep::Text(s) => Ok(Hay::Text(s.to_str()?)),
+            HayKeep::Text(bound, owned) => match crate::utf8::utf8_of(bound)? {
+                crate::utf8::Utf8Buf::Borrowed(s) => Ok(Hay::Text(s)),
+                crate::utf8::Utf8Buf::Owned(s) => {
+                    *owned = Some(s);
+                    Ok(Hay::Text(owned.as_deref().expect("just stored")))
+                }
+            },
             HayKeep::Bytes { bound, .. } => Ok(Hay::Bytes(bound.as_bytes())),
         }
     }
@@ -367,7 +379,7 @@ pub(crate) fn extract_hay<'py>(
                 ))
             }
         })?;
-        Ok(HayKeep::Text(s.clone()))
+        Ok(HayKeep::Text(s.clone(), None))
     }
 }
 
@@ -615,7 +627,7 @@ impl Regex {
         // exactly at the (length-clamped) window start; leftmost-first
         // guarantees the match there is found first when it exists.
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let keep = extract_hay(bytes_mode, string)?;
+        let mut keep = extract_hay(bytes_mode, string)?;
         let hay = keep.hay()?;
         let start = match hay {
             // `pos == 0` skips the walk: counting every character of a
@@ -692,7 +704,7 @@ impl Regex {
 
     /// True if the pattern matches anywhere in `text`.
     fn is_match<'py>(&self, py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<bool> {
-        let keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
+        let mut keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
         let hay = keep.hay()?;
         match hay {
             Hay::Text(s) => {
@@ -725,7 +737,7 @@ impl Regex {
     ) -> PyResult<Option<Match>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = py_handle(&slf, py);
-        let keep = extract_hay(bytes_mode, string)?;
+        let mut keep = extract_hay(bytes_mode, string)?;
         let hay = keep.hay()?;
         match hay {
             Hay::Text(s) => {
@@ -843,7 +855,7 @@ impl Regex {
     ) -> PyResult<Option<Match>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = py_handle(&slf, py);
-        let keep = extract_hay(bytes_mode, string)?;
+        let mut keep = extract_hay(bytes_mode, string)?;
         let hay = keep.hay()?;
         match hay {
             Hay::Text(s) => {
@@ -950,27 +962,25 @@ impl Regex {
         endpos: Option<usize>,
     ) -> PyResult<FindIter> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let keep = extract_hay(bytes_mode, string)?;
-        let hay = keep.hay()?;
+        let mut keep = extract_hay(bytes_mode, string)?;
         // A bytes-like input (bytearray, memoryview, ...) is copied
         // once here: the iterator sees a snapshot, like `re` sees a
         // locked buffer (resize during iteration is invisible instead
-        // of raising `BufferError`).
-        let (window_ok, names, snapshot) = match (&hay, &keep) {
-            (Hay::Text(s), _) => (window_bytes(s, pos, endpos), slf.names.clone(), None),
-            (
-                Hay::Bytes(b),
-                HayKeep::Bytes {
-                    bound,
-                    copied: true,
-                },
-            ) => (
-                window(pos, endpos, b.len()),
-                slf.names.clone(),
-                Some(bound.clone().unbind()),
-            ),
-            (Hay::Bytes(b), _) => (window(pos, endpos, b.len()), slf.names.clone(), None),
+        // of raising `BufferError`). The snapshot is taken before the
+        // mutable hay() borrow.
+        let snapshot = match &keep {
+            HayKeep::Bytes {
+                bound,
+                copied: true,
+            } => Some(bound.clone().unbind()),
+            _ => None,
         };
+        let hay = keep.hay()?;
+        let window_ok = match &hay {
+            Hay::Text(s) => window_bytes(s, pos, endpos),
+            Hay::Bytes(b) => window(pos, endpos, b.len()),
+        };
+        let names = slf.names.clone();
         // An invalid window (endpos < pos after clamping) yields an
         // exhausted iterator immediately.
         let (scan, end_b, done) = match window_ok {
@@ -1012,7 +1022,7 @@ impl Regex {
         endpos: Option<usize>,
     ) -> PyResult<Bound<'py, PyList>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let keep = extract_hay(bytes_mode, string)?;
+        let mut keep = extract_hay(bytes_mode, string)?;
         let hay = keep.hay()?;
         match (hay, &slf.inner) {
             (Hay::Text(s), Inner::Text(engine)) => {
@@ -1054,7 +1064,7 @@ impl Regex {
     ) -> PyResult<Bound<'py, PyList>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut items: Vec<Bound<'_, PyAny>> = Vec::new();
-        let keep = extract_hay(bytes_mode, string)?;
+        let mut keep = extract_hay(bytes_mode, string)?;
         let hay = keep.hay()?;
         match (hay, &slf.inner) {
             (Hay::Text(s), Inner::Text(engine)) => {
@@ -1466,7 +1476,7 @@ fn substitute(
         )
     };
 
-    let keep = extract_hay(bytes_mode, string)?;
+    let mut keep = extract_hay(bytes_mode, string)?;
     let hay = keep.hay()?;
     match (hay, &reg.inner) {
         (Hay::Text(s), Inner::Text(engine)) => {
