@@ -14,8 +14,8 @@ Run: `cargo test`
 
 ## Python test suite
 
-Run: `maturin develop && pytest` (the extension must be built into the
-running environment first).
+Run: `make test` (or `maturin develop && pytest`; the extension must be
+built into the running environment first).
 
 - Files: `tests/test_*.py`.
 - Cover every public name in `spec/docs/api.md`: compilation, flags,
@@ -30,7 +30,9 @@ running environment first).
 
 1. `cargo fmt --check` and `cargo clippy -- -D warnings` — clean.
 2. `cargo test` — pass.
-3. `maturin develop && pytest` — pass.
+3. `make test-all` — pass. It builds the extension, runs the pytest
+   suite, and runs each conformance suite in its own process (see
+   "Oracle guard" below).
 4. `python -c "import rurex"` — imports cleanly in a fresh interpreter.
 5. No hard-coded credentials anywhere in the change.
 
@@ -39,6 +41,26 @@ CI runs the same checks on every push and PR to `main`
 job builds the extension with `maturin develop` and runs `pytest`
 across Python 3.10–3.15. Runs and logs:
 https://github.com/lorien/rurex/actions
+
+## Oracle guard: never share a process with the `re` shim
+
+`tests/cpython/conftest.py` replaces `sys.modules["re"]` with rurex
+for the rest of the process. The parity layers (Layer B, Mode L) use
+stdlib `re` as their oracle, so in a shared process they would
+compare rurex with itself and pass vacuously — green, and no longer
+testing anything. Run the CPython harness and the oracle-based suites
+as separate pytest invocations; `make test-conformance` does exactly
+that, one process per line.
+
+`tests/re_guard.py` fails loudly if `re` is not the module CPython
+ships (provenance via `__spec__`/`__file__`, plus CPython-only
+attributes), independent of what replaced it. It runs at conftest
+import (`tests/conftest.py`) and, authoritatively, where the oracle is
+bound (`tests/rustregex/parity.py`, `tests/divergences/red_live.py`):
+the shim is installed during collection, after the root conftest has
+run, so the binding site is the check that catches a mixed
+invocation. `tests/test_re_guard.py` covers the detector against
+non-rurex fakes.
 
 ## CPython conformance harness
 
@@ -51,7 +73,9 @@ verbatim from the `v3.13.5` tag with a provenance header (ADR-0009).
 `tests/cpython/conftest.py` installs a shim so `import re` resolves
 to rurex (`__name__="re"`, `Pattern`/`Match`/`Scanner`, module
 functions, `_compile`) and stubs the `test.support` helpers the file
-imports. Not collected by a plain `pytest` run — invoke explicitly.
+imports. Not collected by a plain `pytest` run — invoke explicitly,
+and never in the same pytest process as an oracle-based suite (see
+"Oracle guard" above).
 
 Every test either passes or is listed in the `EXPECTED` ledger in the
 conftest with a bucketed reason: by-design (citing ADR/api.md),

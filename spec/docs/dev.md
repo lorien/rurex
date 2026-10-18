@@ -32,7 +32,11 @@ Smoke check:
     cargo fmt --check
     cargo clippy -- -D warnings
     cargo test
-    maturin develop && pytest
+    make test-all
+
+`make test-all` builds the extension, runs `pytest tests/`, and runs
+the conformance suites — each in its own process, because the CPython
+harness replaces `re` process-wide (see `spec/docs/testing.md`).
 
 See `spec/docs/testing.md` for what each of these covers.
 

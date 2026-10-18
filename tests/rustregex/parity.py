@@ -11,11 +11,22 @@ entry.
 
 from __future__ import annotations
 
+import pathlib
 import re as stdre
+import sys
 
 import rurex
 
 from corpus import IGNORECASE, byte_bounds_to_char, unescape_haystack
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from re_guard import require_stdlib_re  # noqa: E402
+
+# The oracle must be bound here, not only at suite start: the
+# tests/cpython shim is installed during collection, after the root
+# conftest has run. A shadowed oracle would silently compare rurex
+# with itself.
+require_stdlib_re(stdre)
 
 
 def _groups_of(match, ngroups):
