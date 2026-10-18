@@ -147,6 +147,7 @@ def single_point(nthreads, engine, form):
     run = threading.Barrier(nthreads)
     walls = [0.0] * nthreads
     counts = [0] * nthreads
+    thread_cpu = [0.0] * nthreads
     warm_freq = [None] * nthreads
     worker_pinned = [False] * nthreads
     pin_workers = not measurement.gil_enabled()
@@ -161,12 +162,14 @@ def single_point(nthreads, engine, form):
             measurement.warm_up(warm_s, warm_buf)
         warm_freq[i] = measurement.cpu_freq_khz([cpus[i]])
         run.wait()                                # all workers released
+        cpu0 = time.thread_time()
         t0 = time.perf_counter()                  # === START ===
         c = 0
         for t in part:                            # one pass, each post
             c += len(rx.findall(t))               # exactly once
         counts[i] = c
         walls[i] = time.perf_counter() - t0       # === STOP ===
+        thread_cpu[i] = time.thread_time() - cpu0
 
     threads = [threading.Thread(target=work, args=(i,)) for i in range(nthreads)]
     for th in threads:
@@ -174,10 +177,15 @@ def single_point(nthreads, engine, form):
     for th in threads:
         th.join()
     env_after = measurement.environment(cpus)
+    eff, eff_kind = measurement.efficiency(thread_cpu, walls)
     info = measurement.warmup_summary(warm_s, distinct, cpus, pinned)
     info.update({
         "worker_affinity_pinned": worker_pinned,
         "worker_pinning": "per-core" if pin_workers else "process",
+        "worker_wall_s": walls,
+        "worker_cpu_s": thread_cpu,
+        "efficiency": eff,
+        "efficiency_kind": eff_kind,
         "frequency_before_khz": env_before["freq_khz"],
         "frequency_after_warmup_khz": [
             vals[0] if vals else None for vals in warm_freq
@@ -219,12 +227,32 @@ def _child_main():
     else:
         engine, nthreads, form, out = (sys.argv[i + 1], int(sys.argv[i + 2]),
                                        sys.argv[i + 3], sys.argv[i + 4])
-        wall, mentions, info = single_point(nthreads, engine, form)
+        min_eff = measurement.min_efficiency()
+        max_load = measurement.max_load()
+        rejected = []
+        for attempt in range(measurement.retries() + 1):
+            wall, mentions, info = single_point(nthreads, engine, form)
+            ok, reason = measurement.quality_ok(info, min_eff, max_load)
+            if ok:
+                break
+            rejected.append({"reason": reason,
+                             "efficiency": info["efficiency"],
+                             "loadavg": info.get("loadavg_before")})
+            print(f"  rejected {engine} {form} threads={nthreads}: {reason}",
+                  flush=True)
+        else:
+            raise SystemExit(
+                f"benchmark point rejected after {measurement.retries() + 1} "
+                f"attempts: {rejected[-1]['reason']}"
+            )
         result = {"engine": engine, "threads": nthreads, "input": form,
-                  "wall_s": wall, "mentions": mentions, "measurement": info}
+                  "wall_s": wall, "mentions": mentions, "measurement": info,
+                  "attempts": attempt + 1, "rejected": rejected,
+                  "min_efficiency": min_eff}
         print(f"  {engine:5} {form:5} threads={nthreads} {wall:.2f}s "
               f"({mentions:,} mentions, cpus={info['affinity_cpus']}, "
-              f"warmup={info['warmup_s']:.2f}s)", flush=True)
+              f"warmup={info['warmup_s']:.2f}s, eff={info['efficiency']:.2f})",
+              flush=True)
     pathlib.Path(sys.argv[i + 4]).write_text(json.dumps(result))
 
 

@@ -34,6 +34,12 @@ and capture groups are part of the result.
 - **Core lease**: the whole matrix holds `/tmp/core4.lock` (mode
   0666). A second run prints the owner metadata, waits up to 600 s, and
   then fails instead of running on the same cores.
+- **Contamination guard**: each point compares CPU time with wall time.
+  GIL points use process CPU / wall; free-threaded points require every
+  worker's CPU / wall to stay above `RUREX_MIN_EFFICIENCY` (default
+  0.90). A point above `RUREX_MAX_LOAD` or below the efficiency floor is
+  rejected and retried up to `RUREX_RETRIES` (default 2); repeated
+  failure aborts the run.
 - **Timing window**: from the instant the post-warm-up barrier releases
   to the instant the slice is finished; a point is the max across
   workers. Load and pattern compile are outside the window, identically
@@ -51,9 +57,9 @@ and capture groups are part of the result.
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
 | 1 | 3.42 s | 1.70 s | 0.61 s | 0.49 s | ×0.18 | ×0.29 |
-| 2 | 3.45 s | 1.72 s | 0.35 s | 0.28 s | ×0.10 | ×0.16 |
+| 2 | 3.46 s | 1.72 s | 0.35 s | 0.28 s | ×0.10 | ×0.16 |
 | 3 | 3.46 s | 1.73 s | 0.28 s | 0.24 s | ×0.08 | ×0.14 |
-| 4 | 3.46 s | 1.72 s | 0.26 s | 0.22 s | ×0.07 | ×0.13 |
+| 4 | 3.45 s | 1.72 s | 0.26 s | 0.22 s | ×0.07 | ×0.13 |
 
 *(ratio < 1 = rurex faster)*
 
@@ -79,7 +85,7 @@ transcode itself, so one worker's encode does not block the others:
 0.49 to
 0.22 s at four workers. `re` stays flat
 on `str` (3.42 to
-3.46 s) because it never releases the GIL
+3.45 s) because it never releases the GIL
 during matching.
 
 ## Free-threaded Python
@@ -88,21 +94,21 @@ during matching.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 3.18 s | 1.91 s | 0.60 s | 0.48 s | ×0.19 | ×0.25 |
-| 2 | 1.62 s | 0.97 s | 0.34 s | 0.28 s | ×0.21 | ×0.29 |
-| 3 | 1.12 s | 0.67 s | 0.28 s | 0.23 s | ×0.25 | ×0.35 |
-| 4 | 0.85 s | 0.51 s | 0.25 s | 0.21 s | ×0.29 | ×0.42 |
+| 1 | 3.17 s | 1.91 s | 0.60 s | 0.49 s | ×0.19 | ×0.25 |
+| 2 | 1.62 s | 0.98 s | 0.34 s | 0.28 s | ×0.21 | ×0.28 |
+| 3 | 1.13 s | 0.67 s | 0.27 s | 0.23 s | ×0.24 | ×0.35 |
+| 4 | 0.85 s | 0.50 s | 0.25 s | 0.22 s | ×0.29 | ×0.43 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both engines scale. rurex goes from
 0.60 to
 0.25 s on `str` and from
-0.48 to
-0.21 s on bytes; `re` goes from
-3.18 to 0.85 s
+0.49 to
+0.22 s on bytes; `re` goes from
+3.17 to 0.85 s
 on `str` and from 1.91 to
-0.51 s on bytes. rurex keeps the lead at
+0.50 s on bytes. rurex keeps the lead at
 every thread count. The `str` and bytes rows are close for rurex
 because the transcode is a small part of a long-document pass.
 

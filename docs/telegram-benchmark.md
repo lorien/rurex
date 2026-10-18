@@ -33,6 +33,12 @@ single-threaded.
 - **Core lease**: the whole matrix holds `/tmp/core4.lock` (mode
   0666). A second run prints the owner metadata, waits up to 600 s, and
   then fails instead of running on the same cores.
+- **Contamination guard**: each point compares CPU time with wall time.
+  GIL points use process CPU / wall; free-threaded points require every
+  worker's CPU / wall to stay above `RUREX_MIN_EFFICIENCY` (default
+  0.90). A point above `RUREX_MAX_LOAD` or below the efficiency floor is
+  rejected and retried up to `RUREX_RETRIES` (default 2); repeated
+  failure aborts the run.
 - **Timing window**: from the instant the post-warm-up barrier releases
   to the instant the slice is finished; a point is the max across
   workers. Load and pattern compile are outside the window,
@@ -49,17 +55,17 @@ single-threaded.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.19 s | 0.19 s | 0.25 s | 0.12 s | ×1.3 | ×0.6 |
-| 2 | 0.19 s | 0.19 s | 0.27 s | 0.14 s | ×1.4 | ×0.7 |
-| 3 | 0.19 s | 0.19 s | 0.27 s | 0.15 s | ×1.4 | ×0.8 |
-| 4 | 0.19 s | 0.19 s | 0.28 s | 0.15 s | ×1.5 | ×0.8 |
+| 1 | 0.18 s | 0.19 s | 0.25 s | 0.12 s | ×1.4 | ×0.6 |
+| 2 | 0.19 s | 0.19 s | 0.26 s | 0.14 s | ×1.4 | ×0.7 |
+| 3 | 0.19 s | 0.19 s | 0.28 s | 0.15 s | ×1.4 | ×0.8 |
+| 4 | 0.19 s | 0.18 s | 0.28 s | 0.15 s | ×1.5 | ×0.9 |
 
 *(ratio < 1 = rurex faster)*
 
 Each point runs both input forms. The **str** variant is the real
 task on parsed text: `re` matches the UCS buffer directly, while
 rurex's engine matches UTF-8 and must materialize it. On these short
-posts `re` still wins the str row (×1.3
+posts `re` still wins the str row (×1.4
 single-threaded, ×1.5 at four workers), even
 though the required-first-byte prefilter (ADR-0013) skips the
 transcode for the 77% of posts that cannot contain a match and the
@@ -76,7 +82,7 @@ bytes never pays the transcode: rurex answers in
 0.19 s (×0.6)**
 single-threaded, and remains ahead at four workers
 (0.15 s vs
-0.19 s). That is the
+0.18 s). That is the
 RE2-binding-recommended shape (feed UTF-8 bytes), and rurex makes it
 a first-class mode.
 
@@ -86,7 +92,7 @@ bytes 0.12 → 0.15 s
 at four workers): the scans are sub-µs, so the GIL-held per-call result
 building dominates and the workers convoy on the lock. `re` bytes
 shows the same shape
-(0.19 → 0.19 s). An earlier
+(0.19 → 0.18 s). An earlier
 build degraded to 5.38 s before the 4 KB GIL-release threshold landed;
 releasing the GIL for every tiny scan was worse.
 
@@ -97,20 +103,20 @@ releasing the GIL for every tiny scan was worse.
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
 | 1 | 0.19 s | 0.20 s | 0.28 s | 0.16 s | ×1.5 | ×0.8 |
-| 2 | 0.13 s | 0.13 s | 0.18 s | 0.16 s | ×1.5 | ×1.3 |
-| 3 | 0.11 s | 0.11 s | 0.16 s | 0.16 s | ×1.6 | ×1.5 |
-| 4 | 0.10 s | 0.10 s | 0.16 s | 0.16 s | ×1.7 | ×1.6 |
+| 2 | 0.12 s | 0.13 s | 0.18 s | 0.16 s | ×1.4 | ×1.2 |
+| 3 | 0.11 s | 0.11 s | 0.17 s | 0.16 s | ×1.6 | ×1.5 |
+| 4 | 0.11 s | 0.10 s | 0.15 s | 0.16 s | ×1.4 | ×1.6 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both variants scale: rurex str
-0.28 s → 0.16 s
+0.28 s → 0.15 s
 and bytes
 0.16 s → 0.16 s;
-`re` 0.19 s → 0.10 s str,
+`re` 0.19 s → 0.11 s str,
 0.20 s → 0.10 s bytes.
 `re` scales further on these short texts: at four workers it wins both
-forms (str ×1.7, bytes
+forms (str ×1.4, bytes
 ×1.6), while rurex bytes still wins
 single-threaded (×0.8). The four-worker rurex
 cost is per-call result building and allocator work, not the scan.

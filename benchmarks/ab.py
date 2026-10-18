@@ -95,6 +95,9 @@ def main():
     ap.add_argument("--forms", default="str,bytes")
     ap.add_argument("--samples", type=int, default=6)
     ap.add_argument("--warmup", type=float, default=1.0)
+    ap.add_argument("--min-efficiency", type=float, default=None)
+    ap.add_argument("--retries", type=int, default=None)
+    ap.add_argument("--max-load", type=float, default=None)
     ap.add_argument("--baseline", default="")
     ap.add_argument("--candidate", default="")
     ap.add_argument("--aa", action="store_true",
@@ -105,6 +108,12 @@ def main():
 
     if args.aa:
         args.candidate = args.baseline
+    if args.min_efficiency is not None:
+        os.environ["RUREX_MIN_EFFICIENCY"] = str(args.min_efficiency)
+    if args.retries is not None:
+        os.environ["RUREX_RETRIES"] = str(args.retries)
+    if args.max_load is not None:
+        os.environ["RUREX_MAX_LOAD"] = str(args.max_load)
     rng = random.Random(args.seed)
     results = []
     for nthreads in parse_csv(args.threads, int):
@@ -163,6 +172,9 @@ def main():
         "aa": args.aa,
         "samples": args.samples,
         "warmup_s": args.warmup,
+        "min_efficiency": args.min_efficiency,
+        "retries": args.retries,
+        "max_load": args.max_load,
         "results": results,
     }
     if args.json:

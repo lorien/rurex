@@ -38,6 +38,8 @@ All benchmark runners hold `/tmp/core4.lock` for the whole matrix, so
 two runs cannot share the designated physical cores. The lease is
 host-local, mode 0666, and records user, PID, host, CPU list, start time
 and command; a waiter prints the owner and fails after the timeout.
+Each point also tracks CPU efficiency and retries contaminated points
+before failing.
 
 A standalone HTML twin of this page (images embedded) is written
 alongside it: `python benchmarks/make_charts.py` produces

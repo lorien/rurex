@@ -32,6 +32,7 @@ import rurex
 from suite import TESTS
 
 import corelock
+import measurement
 
 HERE = pathlib.Path(__file__).parent
 REPEATS = 3
@@ -62,23 +63,35 @@ def threaded_pile_point(pattern, text, nthreads, pile):
     barrier = threading.Barrier(nthreads)
 
     def run_engine(engine):
-        walls = [None] * nthreads
+        walls = [0.0] * nthreads
+        thread_cpu = [0.0] * nthreads
 
         def work(i):
             barrier.wait()
+            cpu0 = time.thread_time()
             t0 = time.perf_counter()
             for _ in range(iters):
                 engine.search(text)
             walls[i] = time.perf_counter() - t0
+            thread_cpu[i] = time.thread_time() - cpu0
 
         threads = [threading.Thread(target=work, args=(i,)) for i in range(nthreads)]
         for t in threads:
             t.start()
         for t in threads:
             t.join()
-        return max(walls)
+        wall = max(walls)
+        if measurement.gil_enabled():
+            # GIL workers may legitimately wait on the lock; per-worker
+            # efficiency would look like a stolen core. Use process CPU.
+            eff = sum(thread_cpu) / wall if wall > 0 else 0.0
+        else:
+            eff, _ = measurement.efficiency(thread_cpu, walls, gil=False)
+        return wall, eff
 
-    return run_engine(rre), run_engine(rx)
+    re_wall, re_eff = run_engine(rre)
+    ru_wall, ru_eff = run_engine(rx)
+    return re_wall, ru_wall, re_eff, ru_eff
 
 
 def guarded_once(op, timeout_s):
@@ -107,7 +120,25 @@ def measure_point(op_name, pattern, text, quick, value=None, pile=8000,
 
     if op_name == "threaded_search":
         nthreads = threads if threads is not None else value
-        return threaded_pile_point(pattern, text, nthreads, pile)
+        min_eff = measurement.min_efficiency()
+        rejected = []
+        for attempt in range(measurement.retries() + 1):
+            re_s, ru_s, re_eff, ru_eff = threaded_pile_point(
+                pattern, text, nthreads, pile
+            )
+            if min(re_eff, ru_eff) >= min_eff:
+                return re_s, ru_s
+            rejected.append((re_eff, ru_eff))
+            print(
+                f"    rejected threads={nthreads} "
+                f"efficiency={re_eff:.2f}/{ru_eff:.2f} "
+                f"< {min_eff:.2f}",
+                flush=True,
+            )
+        raise SystemExit(
+            f"threaded benchmark rejected after {measurement.retries() + 1} "
+            f"attempts: {rejected[-1]}"
+        )
     if op_name == "search":
         op_re = lambda: re_rx.search(text)
         op_ru = lambda: rurex_rx.search(text)
@@ -230,6 +261,14 @@ def main():
     only = None
     if "--test" in sys.argv:
         only = sys.argv[sys.argv.index("--test") + 1]
+
+    limit = measurement.max_load()
+    if limit is not None:
+        load = measurement.loadavg()
+        if load and load[0] > limit:
+            raise SystemExit(
+                f"system load {load[0]:.2f} exceeds max load {limit:.2f}"
+            )
 
     # Child mode: run ONLY the free-threaded tests (we ARE the
     # free-threaded interpreter) and write them to the given path.

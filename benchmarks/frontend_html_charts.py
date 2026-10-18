@@ -197,6 +197,12 @@ and capture groups are part of the result.
 - **Core lease**: the whole matrix holds `/tmp/core4.lock` (mode
   0666). A second run prints the owner metadata, waits up to 600 s, and
   then fails instead of running on the same cores.
+- **Contamination guard**: each point compares CPU time with wall time.
+  GIL points use process CPU / wall; free-threaded points require every
+  worker's CPU / wall to stay above `RUREX_MIN_EFFICIENCY` (default
+  0.90). A point above `RUREX_MAX_LOAD` or below the efficiency floor is
+  rejected and retried up to `RUREX_RETRIES` (default 2); repeated
+  failure aborts the run.
 - **Timing window**: from the instant the post-warm-up barrier releases
   to the instant the slice is finished; a point is the max across
   workers. Load and pattern compile are outside the window, identically

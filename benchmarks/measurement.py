@@ -224,3 +224,74 @@ def warmup_summary(seconds, distinct, cpus, pinned):
 
 def median_or_none(values):
     return statistics.median(values) if values else None
+
+
+def min_efficiency():
+    raw = os.environ.get("RUREX_MIN_EFFICIENCY")
+    if raw is None:
+        return 0.90
+    try:
+        return max(0.0, min(1.0, float(raw)))
+    except ValueError:
+        return 0.90
+
+
+def retries():
+    raw = os.environ.get("RUREX_RETRIES")
+    if raw is None:
+        return 2
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 2
+
+
+def max_load():
+    raw = os.environ.get("RUREX_MAX_LOAD")
+    if raw is None or raw == "":
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def efficiency(thread_cpu, walls, gil=None):
+    """CPU efficiency for one measured point.
+
+    GIL builds run one worker at a time, so use total thread CPU over
+    wall. Free-threaded builds pin one worker per core, so use the
+    minimum worker CPU over that worker's wall.
+    """
+    if not walls or max(walls) <= 0:
+        return 0.0, "none"
+    if gil is None:
+        gil = gil_enabled()
+    process = sum(thread_cpu) / max(walls)
+    per = [c / w if w > 0 else 0.0 for c, w in zip(thread_cpu, walls)]
+    per_worker = min(per) if per else 0.0
+    if not gil:
+        return per_worker, "per-worker"
+    # GIL builds normally run one worker at a time, but rurex releases the
+    # GIL for large haystacks. A process ratio well above 1 proves real
+    # parallelism, so use the per-worker floor there; otherwise a worker
+    # waiting on the GIL would look like a stolen core.
+    if process > 1.15:
+        return per_worker, "per-worker"
+    return process, "process"
+
+
+def quality_ok(info, min_eff, max_load_value):
+    """Return (ok, reason) for a measured point."""
+    if info.get("efficiency", 0.0) < min_eff:
+        return False, (
+            f"efficiency {info.get('efficiency', 0.0):.3f} < {min_eff:.3f}"
+        )
+    loads = []
+    for key in ("loadavg_before", "loadavg_after"):
+        load = info.get(key)
+        if load:
+            loads.append(load[0])
+    if max_load_value is not None and loads and max(loads) > max_load_value:
+        return False, f"load {max(loads):.2f} > {max_load_value:.2f}"
+    return True, ""

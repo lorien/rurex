@@ -14,6 +14,8 @@ import json
 import pathlib
 import statistics
 
+import measurement
+
 
 def key(point):
     return (
@@ -51,6 +53,15 @@ def main():
         walls = [m[k]["wall_s"] for m in maps]
         p["wall_s"] = statistics.median(walls)
         p["wall_runs"] = walls
+        info = p.get("measurement")
+        if info and "worker_cpu_s" in info and "worker_wall_s" in info:
+            eff, kind = measurement.efficiency(
+                info["worker_cpu_s"],
+                info["worker_wall_s"],
+                gil=p["interpreter"] == "gil",
+            )
+            info["efficiency"] = eff
+            info["efficiency_kind"] = kind
         points.append(p)
     base["points"] = points
     protocol = base.get("environment", {}).get("protocol", "")

@@ -74,6 +74,13 @@ second run prints the owner, waits up to `RUREX_CORE_LOCK_TIMEOUT`
 (default 600 s), and then hard-fails. Crash/exit releases the flock
 automatically; stale metadata is harmless.
 
+Each point also measures CPU efficiency: process CPU / wall for GIL
+points, and the minimum worker CPU / wall for free-threaded points.
+Points below `RUREX_MIN_EFFICIENCY` (default 0.90) or above
+`RUREX_MAX_LOAD` are rejected and retried up to `RUREX_RETRIES`
+(default 2). Repeated failure aborts instead of publishing a
+contaminated number.
+
 Non-Python runners use the same lease through the wrapper:
 
     python benchmarks/corelock.py -- cargo run --release --example bench
