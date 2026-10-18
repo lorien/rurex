@@ -14,3 +14,12 @@ and keep the docs in sync with the code.
   silently falls back to a weaker keyring token that cannot write
   (release creation fails with HTTP 403). Before any `gh` command:
   `set -a; . ./.env; set +a`. Never print or commit the value.
+
+## Remote hosts
+
+- Never write a remote benchmark server's IPv4 address into the
+  repository, documentation, benchmark provenance, reports, commit
+  messages, or generated pages. Refer to it by its host alias instead
+  (for example `regexus`). Keep addresses in the local SSH configuration
+  or `/etc/hosts`, not in tracked files.
+- Redact addresses from logs or results before committing them.
