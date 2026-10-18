@@ -213,7 +213,9 @@ required-first-byte prefilter still skips pages that cannot contain
 its SIMD prefilters then do the dominant work.
 
 Threads reinforce the difference. These documents are above the 4 KB
-GIL-release threshold, so rurex releases the GIL during the scan:
+GIL-release threshold, so rurex releases the GIL during the scan, and
+source buffers of at least 32 KB also release it around the cold
+transcode itself, so one worker's encode does not block the others:
 `str` drops from {w('gil', 1, 'rurex', 'str'):.2f} to
 {w('gil', 4, 'rurex', 'str'):.2f} s and bytes from
 {w('gil', 1, 'rurex', 'bytes'):.2f} to

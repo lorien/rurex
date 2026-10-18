@@ -36,18 +36,18 @@ and capture groups are part of the result.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 8.77 s | 4.31 s | 1.39 s | 1.10 s | ×0.16 | ×0.25 |
-| 2 | 7.63 s | 4.02 s | 0.83 s | 0.70 s | ×0.11 | ×0.17 |
-| 3 | 7.57 s | 4.08 s | 0.71 s | 0.57 s | ×0.09 | ×0.14 |
-| 4 | 7.88 s | 4.37 s | 0.81 s | 0.57 s | ×0.10 | ×0.13 |
+| 1 | 8.26 s | 4.41 s | 1.48 s | 1.14 s | ×0.18 | ×0.26 |
+| 2 | 8.05 s | 4.19 s | 0.87 s | 0.74 s | ×0.11 | ×0.18 |
+| 3 | 7.97 s | 4.21 s | 0.75 s | 0.61 s | ×0.09 | ×0.14 |
+| 4 | 8.01 s | 4.24 s | 0.74 s | 0.59 s | ×0.09 | ×0.14 |
 
 *(ratio < 1 = rurex faster)*
 
 Single-threaded, rurex answers the parsed-`str` form in
-1.39 s against `re`'s
-8.77 s (×0.16), and the
-bytes form in 1.10 s against
-4.31 s (×0.25).
+1.48 s against `re`'s
+8.26 s (×0.18), and the
+bytes form in 1.14 s against
+4.41 s (×0.26).
 
 The `str` result is the opposite of the short-post Telegram regime.
 Documents here have a median of 117 KB, so the cold
@@ -57,13 +57,15 @@ required-first-byte prefilter still skips pages that cannot contain
 its SIMD prefilters then do the dominant work.
 
 Threads reinforce the difference. These documents are above the 4 KB
-GIL-release threshold, so rurex releases the GIL during the scan:
-`str` drops from 1.39 to
-0.81 s and bytes from
-1.10 to
-0.57 s at four workers. `re` stays flat
-on `str` (8.77 to
-7.88 s) because it never releases the GIL
+GIL-release threshold, so rurex releases the GIL during the scan, and
+source buffers of at least 32 KB also release it around the cold
+transcode itself, so one worker's encode does not block the others:
+`str` drops from 1.48 to
+0.74 s and bytes from
+1.14 to
+0.59 s at four workers. `re` stays flat
+on `str` (8.26 to
+8.01 s) because it never releases the GIL
 during matching.
 
 ## Free-threaded Python
@@ -72,21 +74,21 @@ during matching.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 7.48 s | 4.66 s | 1.45 s | 1.13 s | ×0.19 | ×0.24 |
-| 2 | 5.07 s | 2.46 s | 0.81 s | 0.66 s | ×0.16 | ×0.27 |
-| 3 | 2.91 s | 1.75 s | 0.71 s | 0.58 s | ×0.24 | ×0.33 |
-| 4 | 2.22 s | 1.58 s | 0.94 s | 0.62 s | ×0.42 | ×0.39 |
+| 1 | 7.67 s | 4.81 s | 1.50 s | 1.31 s | ×0.20 | ×0.27 |
+| 2 | 4.75 s | 2.91 s | 1.00 s | 0.78 s | ×0.21 | ×0.27 |
+| 3 | 2.92 s | 1.73 s | 0.69 s | 0.59 s | ×0.24 | ×0.34 |
+| 4 | 2.12 s | 1.36 s | 0.66 s | 0.56 s | ×0.31 | ×0.41 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both engines scale. rurex goes from
-1.45 to
-0.94 s on `str` and from
-1.13 to
-0.62 s on bytes; `re` goes from
-7.48 to 2.22 s
-on `str` and from 4.66 to
-1.58 s on bytes. rurex keeps the lead at
+1.50 to
+0.66 s on `str` and from
+1.31 to
+0.56 s on bytes; `re` goes from
+7.67 to 2.12 s
+on `str` and from 4.81 to
+1.36 s on bytes. rurex keeps the lead at
 every thread count. The `str` and bytes rows are close for rurex
 because the transcode is a small part of a long-document pass.
 

@@ -76,8 +76,9 @@ is the only expected failure at the boundary and always maps to
 
 `unsafe` is confined to the `str` haystack fast path (`src/utf8.rs`,
 `src/utf8/simd.rs`, and the UCS scan in `src/prefilter.rs`), authorized
-by [adr/0012-simd-transcoder-and-detected-layout.md](adr/0012-simd-transcoder-and-detected-layout.md)
-and [adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md).
+by [adr/0012-simd-transcoder-and-detected-layout.md](adr/0012-simd-transcoder-and-detected-layout.md),
+[adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md),
+and [adr/0014-gil-released-transcode.md](adr/0014-gil-released-transcode.md).
 Everything else relies on PyO3 and `regex` handling their own
 internals. Wrapper types own their data; nothing borrowed from Python
 outlives a call except through PyO3's checked lifetimes.
@@ -104,7 +105,10 @@ UTF-8, so a `str` haystack must be viewed as UTF-8, in three ways
    required first byte (below); only if that byte occurs is it
    transcoded into an owned buffer, by the AVX2 kernel where available
    (x86_64 with AVX2+BMI2, 1.4–3.8 GB/s) and by a scalar loop
-   everywhere else (~0.48 GB/s).
+   everywhere else (~0.48 GB/s). For a source of at least 32 KB the
+   GIL is released around the transcode, so other Python threads can
+   run during the encode; shorter sources stay GIL-held because the
+   handoff would cost more than the encode (ADR-0014).
 
 The prefilter is derived once at compile time from `regex-syntax`'s
 prefix-literal extractor: when every possible match starts with one of
@@ -113,6 +117,12 @@ UCS storage (with unit-alignment checks for UCS-2/UCS-4). Its absence
 means no match can exist, so the query returns its no-match answer
 without transcoding. The prefilter is only consulted on the cold path;
 see [adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md).
+
+The detach is safe because `utf8_of_filtered` holds the
+`Bound<PyString>` for the whole call and `str` is immutable: the UCS
+buffer cannot move or be freed while another Python thread runs. The
+raw pointer crosses the detach as a `usize` because raw pointers are
+not `Ungil`; the scratch still comes from the calling thread's pool.
 
 The transcoded buffer lives for the duration of the call (`HayKeep`),
 so re-scans of a string only rurex touched re-transcode each time —

@@ -62,6 +62,9 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
 - [adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md) —
   compile-time required-first-byte prefilter over the UCS storage skips
   the cold transcode when no match is possible.
+- [adr/0014-gil-released-transcode.md](adr/0014-gil-released-transcode.md) —
+  releases the GIL around the cold transcode for source buffers of at
+  least 32 KB, so long-document encodes overlap across threads.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

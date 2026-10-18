@@ -99,11 +99,13 @@ detached scan region for this change.
   AVX2+BMI2 only; other architectures keep the scalar encoder
   (~0.48 GB/s). Same table design ports to NEON; AVX-512 would mainly
   help the general compaction path.
-- [open] For ≥ 4 KB haystacks the transcode still runs GIL-held before
+- [acted] For ≥ 4 KB haystacks the transcode still runs GIL-held before
   the detached scan. Folding it into the detached closure would let
   large-text pipelines encode in parallel; deferred deliberately
   (owner decision) because the SIMD kernel already shrank the
   GIL-held burst 3–8×.
+  [acted — implemented in report-1792353453-transcode-detach via a
+  measured 32 KB source threshold.]
 - [acted] `docs/telegram-benchmark.md` prose is hand-maintained
   inside `benchmarks/telegram_charts.py` while only the tables are
   computed, so a re-run silently leaves stale narrative — now every

@@ -110,9 +110,10 @@ CPython's UTF-8 cache when another C-API consumer already filled it.
   binding gives.
 - **Long documents**: the transcode amortizes, so rurex leads on both
   forms. On 1,127 real frontend HTML pages (256 MiB subset), GIL
-  single-threaded: 1.39 s vs `re`'s 8.77 s on `str`, 1.10 s vs
-  4.31 s on bytes. Those documents are above the 4 KB GIL-release
-  threshold, so rurex also scales with worker threads.
+  single-threaded: 1.48 s vs `re`'s 8.26 s on `str`, 1.14 s vs
+  4.41 s on bytes. Those documents are above the 4 KB GIL-release
+  threshold, so rurex also scales with worker threads, and large
+  transcodes release the GIL themselves.
 
 Details and thread-scaling numbers:
 [docs/telegram-benchmark.md](docs/telegram-benchmark.md) and

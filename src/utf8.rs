@@ -428,7 +428,12 @@ pub(crate) fn utf8_of_filtered<'py>(
                         return Ok(Utf8Buf::NoMatch);
                     }
                 }
-                return Ok(Utf8Buf::Owned(unsafe { transcode(kind, len, data)? }));
+                return Ok(Utf8Buf::Owned(transcode_maybe_detached(
+                    bound.py(),
+                    kind,
+                    len,
+                    data,
+                )?));
             }
             Stored::Unknown => {}
         }
@@ -448,6 +453,38 @@ fn surrogate_error() -> PyErr {
         0,
         "surrogates not allowed",
     ))
+}
+
+/// Source size at which the GIL is released around the transcode.
+/// Short strings (the Telegram corpus) stay GIL-held: the handoff costs
+/// more than the encode. Long documents (the homepage corpus) cross
+/// this and let other Python threads run during the encode.
+const TRANSCODE_DETACH_MIN_BYTES: usize = 32 * 1024;
+
+/// Transcode, releasing the GIL first when the source is large enough
+/// to pay for the handoff.
+///
+/// The caller passes the pointer from `inspect` under the validated
+/// layout; `utf8_of_filtered` holds the `Bound` string across the
+/// detach, and `str` is immutable, so the UCS buffer cannot move or be
+/// freed while another Python thread runs.
+fn transcode_maybe_detached(
+    py: Python<'_>,
+    kind: Kind,
+    len: usize,
+    data: *const u8,
+) -> PyResult<Utf8Scratch> {
+    let source_bytes = len
+        * match kind {
+            Kind::Ucs1 => 1,
+            Kind::Ucs2 => 2,
+            Kind::Ucs4 => 4,
+        };
+    if source_bytes < TRANSCODE_DETACH_MIN_BYTES {
+        return unsafe { transcode(kind, len, data) };
+    }
+    let addr = data as usize;
+    py.detach(move || unsafe { transcode(kind, len, addr as *const u8) })
 }
 
 /// Transcode UCS-1/2/4 to UTF-8 in Rust (cache was cold), into a

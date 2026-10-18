@@ -116,8 +116,11 @@ pay for it.
   comparable run to run.
 - [open] AVX-512 and aarch64 NEON kernels (other architectures keep
   the scalar encoder, unchanged).
-- [open] Fold the transcode into the detached-GIL region for ≥ 4 KB
+- [acted] Fold the transcode into the detached-GIL region for ≥ 4 KB
   haystacks (parallel encode for big-text pipelines).
+  [acted — shipped with a 32 KB source threshold in
+  report-1792353453-transcode-detach; homepage GIL 4-worker str
+  0.81 s → 0.74 s.]
 
 ### Tooling/process
 
