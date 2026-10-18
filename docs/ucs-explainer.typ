@@ -3,6 +3,7 @@
   title: "UCS and UTF-8: what Python and Rust each mean by a string",
   author: "rurex",
   keywords: ("Unicode", "UTF-8", "UCS-2", "PEP 393", "Rust", "regex", "rurex"),
+  date: datetime(year: 2026, month: 10, day: 18),
 )
 #let repo = "https://github.com/lorien/rurex"
 #set page(paper: "a4", margin: (x: 2.35cm, top: 2.1cm, bottom: 2.0cm),

@@ -75,6 +75,11 @@ https://github.com/typst/typst/releases — not a Python or Cargo
 dependency, and not needed for any other target. Regenerate the PDFs
 whenever a `.typ` changes and commit the pair together.
 
+Both sources pin `date` in `#set document`, so the output does not
+depend on when it was built: rebuilding an unchanged source reproduces
+the committed PDF byte for byte, and editing one `.typ` does not churn
+the other document's file.
+
 ## Repository and CI
 
 - Remote: `git@github.com:lorien/rurex.git` (already configured as

@@ -1,5 +1,6 @@
 // UCS to UTF-8 — rurex design note. 16:9, typst 0.15.
-#set document(title: "UCS to UTF-8 — why rurex re-encodes Python strings", author: "rurex")
+#set document(title: "UCS to UTF-8 — why rurex re-encodes Python strings", author: "rurex",
+  date: datetime(year: 2026, month: 10, day: 18))
 #set page(width: 13.333in, height: 7.5in, margin: 0pt, fill: white)
 #set text(font: "Lato", size: 15pt, fill: rgb("#16181A"), lang: "en")
 #set par(leading: 0.58em, justify: false)
