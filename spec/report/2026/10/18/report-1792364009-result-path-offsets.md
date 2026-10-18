@@ -80,6 +80,42 @@ ends a few bytes later. Measured on the same document:
 Whole-window scans still detach once around their single scan, so the
 long-document release from ADR-0014 is untouched.
 
+### Benchmark pages refreshed
+
+`make bench` re-ran the main suite on the same 8-CPU laptop class as
+the published page, rewriting `benchmarks/results.json`, the nine
+charts and `docs/benchmarks.md` (plus the gitignored
+`docs/benchmarks.html` twin). Findings while refreshing:
+
+- The previous edition's rurex numbers were measured on a build about
+  2.5× slower: scan ratios move from ×12–13 to ×31–35, the GIL-thread
+  pile from 0.80 s to 0.32 s at one worker, while every `re` number
+  stays within a few percent (76.7 → 76.6 µs at 64 KB, 10.10 → 9.98 s
+  for Test 6). That is the signature of a debug extension left
+  installed: the run predates `make bench` forcing the release rebuild
+  (commit 87f6f2e), and `results.json`'s `build` field is a constant
+  string, so it never caught it.
+- Extraction improved independently of the build: ×1.4 → ×2.3–2.5
+  (Test 3), ×6.6/×1.0 → ×7.4/×1.7 across the density sweep (Test 4),
+  from the flat `findall` path landing after the old run.
+- GIL threading now looks completely different from the old text, and
+  the page was rewritten accordingly: rurex' pile drops 3.9× from one
+  worker to eight (GIL-released scans on four physical cores), so the
+  lead is ×31 at one worker and ×231 at eight, where the old edition
+  reported a flat 0.5–0.8 s. Test 8 likewise: rurex gains 2.2–3.9×
+  from four workers and leads ×69–97.
+- The nine result tables had no GFM delimiter row, so the HTML twin
+  rendered them as raw pipe text (only the environment table was a
+  real table). Delimiters added; the page now has ten tables.
+- Free-threaded cost is now measured and stated: the same pile takes
+  0.88 s on 3.14t against 0.32 s on GIL Python, i.e. per-object locking
+  makes rurex's Python side ~2.7× dearer, while `re` moves only 10.0 →
+  11.4 s. That is the next free-threaded target, not the scan.
+
+The two corpus pages were left as published: they ran at `83b6507`
+and measure `findall`, which neither of today's commits touched.
+
+
 ### Spec/ADR amendments
 
 - [acted] `spec/docs/architecture.md` "Matching path" now records that
@@ -136,3 +172,15 @@ long-document release from ADR-0014 is untouched.
 - Throwaway probe scripts and perf data belong under `var/` (gitignored);
   the recorded recipes are the mode names in this report, not committed
   files.
+- [open] `benchmarks/run.py:226` hard-codes the `build` string in
+  `results.json`, so a run cannot prove which binary it measured. Record
+  something falsifiable instead (`rurex.__file__` plus its mtime or
+  sha256, or the cargo profile from the wheel metadata).
+- [open] `benchmarks/run.py` ignores unknown flags: `--help` starts a
+  full 45-second benchmark run and leaves `/tmp/core4.lock` metadata
+  behind (harmless, but confusing). Parse the known flags and reject the
+  rest.
+- [open] The generated HTML twins are gitignored, so the published page
+  is whatever the last local `make_charts.py` wrote; `docs/benchmarks.md`
+  and the charts are the tracked truth. Keep the two in sync in the same
+  commit.
