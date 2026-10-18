@@ -59,6 +59,38 @@ when `.venv-t` exists, because those benchmarks measure both the GIL
 and free-threaded interpreters. All benchmark targets depend on
 `build-release`.
 
+The real-world benchmarks pin the process to physical CPUs,
+pin free-threaded workers one per core (GIL workers share the process
+affinity), run a fixed CPU warm-up on a separate buffer before the
+timed barrier, and record governor, load average and per-CPU frequency. Set
+`RUREX_WARMUP=0` only for a smoke run; the published pages assume the
+default 1 s warm-up. The measured corpus is never touched by the
+warm-up.
+
+For A/B work use the paired runner rather than two separate benchmark
+runs:
+
+    python benchmarks/ab.py --bench homepage --threads 1,4 \
+        --forms str,bytes --samples 6 \
+        --baseline var/baseline-so --candidate var/candidate-so
+
+`--aa` runs the same extension on both sides to calibrate the noise
+floor. The runner alternates order, reports the median paired ratio and
+a bootstrap confidence interval, and uses the same affinity/warm-up
+protocol as the benchmark.
+
+Published benchmark rows are the median of three complete runs. Run the
+benchmark three times, copy each result file, then merge them:
+
+    python benchmarks/telegram.py && cp benchmarks/telegram_results.json run1.json
+    python benchmarks/telegram.py && cp benchmarks/telegram_results.json run2.json
+    python benchmarks/telegram.py && cp benchmarks/telegram_results.json run3.json
+    python benchmarks/merge_runs.py run1.json run2.json run3.json \
+        -o benchmarks/telegram_results.json
+
+Use `benchmarks/frontend_html.py` and `frontend_html_results.json` for
+the homepage benchmark.
+
 See `spec/docs/testing.md` for what each of these covers.
 
 ## Documents

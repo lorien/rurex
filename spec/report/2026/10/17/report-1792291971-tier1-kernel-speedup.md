@@ -109,11 +109,14 @@ pay for it.
   [acted — shipped in report-1792325206-findall-prefilter-speedup via
   regex-syntax's prefix extractor and a UCS-alignment memchr scan;
   GIL 1-thread str 0.75 s → 0.56 s.]
-- [open] The single cold run per benchmark point is noisy at the
+- [acted] The single cold run per benchmark point is noisy at the
   ~±10-20% level on these rows (`re` swung 0.44–0.67 s across runs).
   The A/B above uses min-of-4; consider making the benchmark itself
   take min-of-N (or record variance) so published numbers are
   comparable run to run.
+  [acted — CPU-pinned warm-up, physical-core affinity, load/frequency
+  recording, A/A calibration and median-of-3 publication landed in
+  report-1792358338-measurement-hardening.]
 - [open] AVX-512 and aarch64 NEON kernels (other architectures keep
   the scalar encoder, unchanged).
 - [acted] Fold the transcode into the detached-GIL region for ≥ 4 KB

@@ -8,9 +8,10 @@ crate: linear-time matching — catastrophic backtracking (ReDoS)
 is impossible by construction — and faster than `re` on scans (up
 to ×13), extraction, and pathological inputs (`re` hangs forever,
 rurex answers in ~250 ns); on bytes input it leads there too. The
-one regime where `re` keeps an edge is free-threaded one-shot scans
-of many short non-ASCII `str` objects — see *Performance: str vs
-bytes* below.
+one regime where `re` keeps an edge is one-shot scans of many short
+non-ASCII `str` objects, where per-call transcode and result building
+dominate; on bytes input rurex leads there as well. See *Performance:
+str vs bytes* below.
 The API — names, flags, keyword arguments, `Match` semantics, even
 error messages and positions — matches `re`, verified continuously
 against CPython's own test suite.
@@ -95,23 +96,22 @@ UTF-8: rurex transcodes it into a reused buffer, or borrows
 CPython's UTF-8 cache when another C-API consumer already filled it.
 `re` never converts. Three consequences:
 
-- **Scanning many short non-ASCII `str` inputs once**: GIL builds are
-  now near parity with `re` (1M Telegram posts: 0.56 vs 0.52 µs per
-  post single-threaded). A required-first-byte prefilter skips the
-  transcode when no match is possible (77% of that corpus), and the
-  AVX2 kernel handles the rest. On free-threaded Python `re` still
-  leads (0.61 vs 0.48 µs per post at one worker), though rurex scales
-  with additional workers.
+- **Scanning many short non-ASCII `str` inputs once**: `re` is faster
+  (1M Telegram posts: 0.25 vs 0.19 µs per post single-threaded on GIL,
+  0.28 vs 0.19 on free-threaded Python). A required-first-byte
+  prefilter skips the transcode for 77% of the corpus and the AVX2
+  kernel handles the rest, but the remaining per-call transcode and
+  result building still dominate short posts.
 - **If your data is already UTF-8 bytes** (files, network,
   JSONL/log streams), use bytes patterns: no conversion happens at
-  all and rurex **beats `re`'s bytes mode** (×1.8 on the same
-  corpus, 0.29 s vs 0.54 s). This is the recommended shape for
+  all and rurex **beats `re`'s bytes mode** (×1.5 on the same
+  corpus, 0.12 s vs 0.19 s). This is the recommended shape for
   high-throughput pipelines — the same advice the official RE2
   binding gives.
 - **Long documents**: the transcode amortizes, so rurex leads on both
   forms. On 1,127 real frontend HTML pages (256 MiB subset), GIL
-  single-threaded: 1.48 s vs `re`'s 8.26 s on `str`, 1.14 s vs
-  4.41 s on bytes. Those documents are above the 4 KB GIL-release
+  single-threaded: 0.62 s vs `re`'s 3.42 s on `str`, 0.49 s vs
+  1.70 s on bytes. Those documents are above the 4 KB GIL-release
   threshold, so rurex also scales with worker threads, and large
   transcodes release the GIL themselves.
 

@@ -35,6 +35,8 @@ import tempfile
 import threading
 import time
 
+import measurement
+
 HERE = pathlib.Path(__file__).parent
 RESULTS = HERE / "frontend_html_results.json"
 DATA_CACHE = HERE.parent / "var" / "bench-data" / "frontend-html-500mb-v1.tgz"
@@ -232,6 +234,7 @@ def result_hash(rx, docs):
 
 def corpus_stats():
     """One dedicated run over the (limited) corpus, with parity check."""
+    resolve_corpus()
     limit = limit_bytes()
     docs = load_docs("str", limit)
     import re as stdre
@@ -276,17 +279,34 @@ def corpus_stats():
 def single_point(nthreads, engine, form):
     """One real-world run in THIS (fresh) process. Returns
     (wall seconds, total matches)."""
+    resolve_corpus()
     limit = limit_bytes()
     docs = load_docs(form, limit)
     rx = make_rx(engine, form)
     iters = (len(docs) + nthreads - 1) // nthreads
-    barrier = threading.Barrier(nthreads)
+    cpus, distinct = measurement.pick_physical_cpus(nthreads)
+    pinned = measurement.pin_process(cpus)
+    env_before = measurement.environment(cpus)
+    warm_s = measurement.warmup_seconds()
+    warm_buf = measurement.make_warmup_buffer() if warm_s > 0 else b""
+    start = threading.Barrier(nthreads)
+    run = threading.Barrier(nthreads)
     walls = [0.0] * nthreads
     counts = [0] * nthreads
+    warm_freq = [None] * nthreads
+    worker_pinned = [False] * nthreads
+    pin_workers = not measurement.gil_enabled()
 
     def work(i):
+        worker_pinned[i] = (
+            measurement.pin_current(cpus[i]) if pin_workers else pinned
+        )
         part = docs[i * iters:(i + 1) * iters]  # slice taken untimed
-        barrier.wait()
+        start.wait()                              # all workers warm together
+        if warm_s > 0:
+            measurement.warm_up(warm_s, warm_buf)
+        warm_freq[i] = measurement.cpu_freq_khz([cpus[i]])
+        run.wait()                                # all workers released
         t0 = time.perf_counter()  # === START ===
         c = 0
         for doc in part:
@@ -299,7 +319,21 @@ def single_point(nthreads, engine, form):
         th.start()
     for th in threads:
         th.join()
-    return max(walls), sum(counts)
+    env_after = measurement.environment(cpus)
+    info = measurement.warmup_summary(warm_s, distinct, cpus, pinned)
+    info.update({
+        "worker_affinity_pinned": worker_pinned,
+        "worker_pinning": "per-core" if pin_workers else "process",
+        "frequency_before_khz": env_before["freq_khz"],
+        "frequency_after_warmup_khz": [
+            vals[0] if vals else None for vals in warm_freq
+        ],
+        "frequency_after_khz": env_after["freq_khz"],
+        "governor": env_before["governor"],
+        "loadavg_before": env_before["loadavg"],
+        "loadavg_after": env_after["loadavg"],
+    })
+    return max(walls), sum(counts), info
 
 
 def child_main():
@@ -315,17 +349,19 @@ def child_main():
             sys.argv[i + 3],
             sys.argv[i + 4],
         )
-        wall, matches = single_point(nthreads, engine, form)
+        wall, matches, info = single_point(nthreads, engine, form)
         result = {
             "engine": engine,
             "threads": nthreads,
             "input": form,
             "wall_s": wall,
             "matches": matches,
+            "measurement": info,
         }
         print(
             f"  {engine:5} {form:5} threads={nthreads} {wall:.2f}s "
-            f"({matches:,} matches)",
+            f"({matches:,} matches, cpus={info['affinity_cpus']}, "
+            f"warmup={info['warmup_s']:.2f}s)",
             flush=True,
         )
     pathlib.Path(sys.argv[i + 4]).write_text(json.dumps(result))
@@ -362,6 +398,8 @@ def main():
     elif full:
         env["RUREX_HTML_FULL"] = "1"
         env.pop("RUREX_HTML_QUICK", None)
+    if quick and measurement.WARMUP_ENV not in env:
+        env[measurement.WARMUP_ENV] = "0.25"
 
     meta = resolve_corpus()
     pretty = "full" if full else ("quick" if quick else "default")
@@ -392,7 +430,8 @@ def main():
                 "mode": pretty,
             },
             "protocol": "one cold real-world run per point "
-                        "(fresh process: load -> single pass)",
+                        "(fresh process: load -> CPU-pinned warm-up -> "
+                        "single pass; load and frequency recorded)",
         },
         "points": [],
     }

@@ -143,9 +143,10 @@ def render_md():
 Real-world task, measured exactly as performed: **one** pass of
 `.findall(text)` over every post — one search, once, on a corpus that
 has never been scanned before. Each measured point is a **fresh
-interpreter process** that loads the corpus and performs the single
-pass split across N barrier-started workers; there is no warm-up and
-no repeat scan. This is the extraction-bound regime (short texts,
+interpreter process** that loads the corpus, pins its workers to
+distinct physical cores, runs a fixed CPU warm-up on a separate buffer,
+and then performs the single pass split across N barrier-started
+workers; there is no repeat scan. This is the extraction-bound regime (short texts,
 ≈0.33 matches per post) — the opposite of the scan-bound workloads of
 [the main benchmark page](benchmarks.md), where rurex leads ×7–13
 single-threaded.
@@ -162,11 +163,20 @@ single-threaded.
   [`bench-data-telegram-v1` release](https://github.com/lorien/rurex/releases/tag/bench-data-telegram-v1)
   and sha256-verified; see
   [`benchmarks/telegram/PROVENANCE.md`](../benchmarks/telegram/PROVENANCE.md).
-- **Timing window**: from the instant a worker passes the barrier to
-  the instant its slice is finished; a point is the max across
+- **CPU placement and warm-up**: the process is pinned to distinct
+  physical cores; free-threaded workers are pinned one per core, while
+  GIL workers share the process affinity so the active thread does not
+  bounce across cores. All workers run a fixed CPU-bound warm-up on a
+  separate buffer before the timed barrier. The measured corpus is
+  never touched by the warm-up. Governor, load average and per-CPU
+  frequency are recorded in the raw results.
+- **Timing window**: from the instant the post-warm-up barrier releases
+  to the instant the slice is finished; a point is the max across
   workers. Load and pattern compile are outside the window,
   identically for both engines. Every run's mention count must equal
   {s['total_mentions']:,}.
+- **Repeats**: published rows are the median of three complete runs;
+  each raw result records the individual wall times.
 - **Interpreters**: GIL CPython 3.13 and free-threaded 3.14t, one
   fresh subprocess per point. CPU: {data['environment']['cpu']}.
 
@@ -178,23 +188,27 @@ single-threaded.
 
 Each point runs both input forms. The **str** variant is the real
 task on parsed text: `re` matches the UCS buffer directly, while
-rurex's engine matches UTF-8 and must materialize it. The remaining
-gap is now small (×{x('gil', 1, 'str'):.1f} single-threaded): the
-required-first-byte prefilter (ADR-0013) skips the transcode for the
-77% of posts that cannot contain a match, so only posts with a
-candidate `@` pay it, and a hand-written AVX2 kernel (ADR-0012)
-handles those at 1–4 GB/s. Strings whose CPython UTF-8 cache another
-C-API consumer already filled are borrowed zero-copy. The `findall`
-path itself was also slimmed: it uses `find_at` and one flat span
-buffer instead of a `Captures` object and a `Vec` per match.
+rurex's engine matches UTF-8 and must materialize it. On these short
+posts `re` still wins the str row (×{x('gil', 1, 'str'):.1f}
+single-threaded, ×{x('gil', 4, 'str'):.1f} at four workers), even
+though the required-first-byte prefilter (ADR-0013) skips the
+transcode for the 77% of posts that cannot contain a match and the
+AVX2 kernel (ADR-0012) handles the rest. What remains is the per-call
+transcode and result building, which dominate when every post is a
+separate call. The `findall` path itself was also slimmed: it uses
+`find_at` and one flat span buffer instead of a `Captures` object and
+a `Vec` per match.
 
 The **bytes** variant feeds the same posts pre-encoded to UTF-8 —
 the corpus is already UTF-8 on disk, so a pipeline that stays in
 bytes never pays the transcode: rurex answers in
 **{w('gil', 1, 'rurex', 'bytes'):.2f} s, beating `re`'s
 {w('gil', 1, 're', 'bytes'):.2f} s (×{x('gil', 1, 'bytes'):.1f})**
-single-threaded. That is the RE2-binding-recommended shape (feed
-UTF-8 bytes), and rurex makes it a first-class mode.
+single-threaded, and remains ahead at four workers
+({w('gil', 4, 'rurex', 'bytes'):.2f} s vs
+{w('gil', 4, 're', 'bytes'):.2f} s). That is the
+RE2-binding-recommended shape (feed UTF-8 bytes), and rurex makes it
+a first-class mode.
 
 With threads, both rurex variants get slower under the GIL
 (str {w('gil', 1, 'rurex', 'str'):.2f} → {w('gil', 4, 'rurex', 'str'):.2f} s,
@@ -214,40 +228,36 @@ releasing the GIL for every tiny scan was worse.
 
 Without the GIL both variants scale: rurex str
 {w('free', 1, 'rurex', 'str'):.2f} s → {w('free', 4, 'rurex', 'str'):.2f} s
-({w('free', 1, 'rurex', 'str') / w('free', 4, 'rurex', 'str'):.1f}×; the prefilter,
-the remaining transcode and the result building all run in parallel) and
-rurex bytes
+and bytes
 {w('free', 1, 'rurex', 'bytes'):.2f} s → {w('free', 4, 'rurex', 'bytes'):.2f} s;
 `re` {w('free', 1, 're', 'str'):.2f} s → {w('free', 4, 're', 'str'):.2f} s str,
 {w('free', 1, 're', 'bytes'):.2f} s → {w('free', 4, 're', 'bytes'):.2f} s bytes.
-With more than one worker free-threaded Python is the fastest way to
-run either engine on this task; at one worker the GIL build is
-slightly faster for rurex because per-call overhead, not the scan,
-dominates. rurex bytes at {w('free', 4, 'rurex', 'bytes'):.2f} s is within
-{x('free', 4, 'bytes'):.1f}× of the best `re` number while carrying
-no transcode tax at all.
+`re` scales further on these short texts: at four workers it wins both
+forms (str ×{x('free', 4, 'str'):.1f}, bytes
+×{x('free', 4, 'bytes'):.1f}), while rurex bytes still wins
+single-threaded (×{x('free', 1, 'bytes'):.1f}). The four-worker rurex
+cost is per-call result building and allocator work, not the scan.
 
 ## Reading the numbers
 
 Read the two variants as two different questions. **str**: what a
-user scanning parsed text once pays — `re` still has a small edge on
-free-threaded Python, while on the GIL build rurex is within
-×{x('gil', 1, 'str'):.1f} at one worker because the prefilter avoids most
-transcodes and `findall` no longer allocates per match. **bytes**:
-what a UTF-8-native pipeline pays — rurex **wins**
-(×{x('gil', 1, 'bytes'):.1f} single-threaded), because its engine
-scans UTF-8 directly with SIMD prefilters. The scan-bound leads on
-the main page (×7–13) do not transfer to short-text per-call
-extraction, but the bytes variant shows rurex ahead where the input
-is already UTF-8 — which for a JSONL/log corpus is the natural shape.
-Machine-specific;
-expect different absolute numbers elsewhere.
+user scanning parsed text once pays — `re` wins at every thread count,
+because the prefilter removes most transcodes but not the per-call
+transcode and result-building floor. **bytes**: what a UTF-8-native
+pipeline pays — rurex **wins single-threaded**
+(×{x('gil', 1, 'bytes'):.1f}), because its engine scans UTF-8 directly with
+SIMD prefilters; with four free-threaded workers `re` catches up. The
+scan-bound leads on the main page (×7–13) do not transfer to
+short-text per-call extraction. Machine-specific; expect different
+absolute numbers elsewhere.
 
 ## Reproducing
 
 ```sh
-python benchmarks/telegram.py          # downloads the corpus on first run,
-                                       # then 16 cold runs, ~5 min
+python benchmarks/telegram.py && cp benchmarks/telegram_results.json run1.json
+python benchmarks/telegram.py && cp benchmarks/telegram_results.json run2.json
+python benchmarks/telegram.py && cp benchmarks/telegram_results.json run3.json
+python benchmarks/merge_runs.py run1.json run2.json run3.json -o benchmarks/telegram_results.json
 python benchmarks/telegram_charts.py   # regenerates the charts, this page
                                        # and the standalone HTML twin
 ```

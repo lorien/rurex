@@ -120,9 +120,12 @@ a noisy run; the extraction improvement is recorded here.
 - [open] Reuse `CaptureLocations` for `findall` patterns with capture
   groups; the flat buffer removed the per-match `Vec`, but
   `captures_at` still allocates a `Captures` per matching call.
-- [open] The single cold run per benchmark point remains noisy
+- [acted] The single cold run per benchmark point remains noisy
   (carried over from the Tier 1 report); min-of-N or recorded variance
   would make published numbers comparable run to run.
+  [acted — implemented with CPU-pinned warm-up, affinity, load and
+  frequency recording, and median-of-3 publication in
+  report-1792358338-measurement-hardening.]
 - [open] AVX-512/aarch64 NEON transcoder kernels and folding the
   transcode into the detached region for large haystacks remain
   unchanged follow-ups from ADR-0012.

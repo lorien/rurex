@@ -165,8 +165,9 @@ def render_md():
 
 Real-world task: **one** pass of `.findall(document)` over real frontend
 HTML pages. Each measured point is a fresh interpreter process that
-loads the corpus and performs the single pass split across N
-barrier-started workers; there is no warm-up and no repeat scan.
+loads the corpus, pins its workers to distinct physical cores, runs a
+fixed CPU warm-up on a separate buffer, and then performs the single
+pass split across N barrier-started workers; there is no repeat scan.
 
 This is the long-haystack complement to the
 [Telegram benchmark](telegram-benchmark.md): documents are large
@@ -186,10 +187,20 @@ and capture groups are part of the result.
   [`benchmarks/html/PROVENANCE.md`](../benchmarks/html/PROVENANCE.md).
   The default run uses the first {total_mb:.0f} MiB of the corpus
   ({n:,} documents); `--full` loads all of it.
-- **Timing window**: from the instant a worker passes the barrier to
-  the instant its slice is finished; a point is the max across workers.
-  Load and pattern compile are outside the window, identically for both
-  engines. Every run's match count must equal {s['total_matches']:,}.
+- **CPU placement and warm-up**: the process is pinned to distinct
+  physical cores; free-threaded workers are pinned one per core, while
+  GIL workers share the process affinity so the active thread does not
+  bounce across cores. All workers run a fixed CPU-bound warm-up on a
+  separate buffer before the timed barrier. The measured corpus is
+  never touched by the warm-up. Governor, load average and per-CPU
+  frequency are recorded in the raw results.
+- **Timing window**: from the instant the post-warm-up barrier releases
+  to the instant the slice is finished; a point is the max across
+  workers. Load and pattern compile are outside the window, identically
+  for both engines. Every run's match count must equal
+  {s['total_matches']:,}.
+- **Repeats**: published rows are the median of three complete runs;
+  each raw result records the individual wall times.
 - **Interpreters**: GIL CPython 3.13 and free-threaded 3.14t, one fresh
   subprocess per point. CPU: {data['environment']['cpu']}.
 
@@ -257,9 +268,10 @@ Machine-specific; expect different absolute numbers elsewhere.
 ## Reproducing
 
 ```sh
-python benchmarks/frontend_html.py            # default 256 MiB subset
-python benchmarks/frontend_html.py --full     # all ~480 MiB
-python benchmarks/frontend_html.py --quick    # 32 MiB smoke run
+python benchmarks/frontend_html.py && cp benchmarks/frontend_html_results.json run1.json
+python benchmarks/frontend_html.py && cp benchmarks/frontend_html_results.json run2.json
+python benchmarks/frontend_html.py && cp benchmarks/frontend_html_results.json run3.json
+python benchmarks/merge_runs.py run1.json run2.json run3.json -o benchmarks/frontend_html_results.json
 python benchmarks/frontend_html_charts.py     # charts, this page, and the HTML twin
 ```
 

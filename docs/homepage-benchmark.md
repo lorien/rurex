@@ -2,8 +2,9 @@
 
 Real-world task: **one** pass of `.findall(document)` over real frontend
 HTML pages. Each measured point is a fresh interpreter process that
-loads the corpus and performs the single pass split across N
-barrier-started workers; there is no warm-up and no repeat scan.
+loads the corpus, pins its workers to distinct physical cores, runs a
+fixed CPU warm-up on a separate buffer, and then performs the single
+pass split across N barrier-started workers; there is no repeat scan.
 
 This is the long-haystack complement to the
 [Telegram benchmark](telegram-benchmark.md): documents are large
@@ -23,12 +24,22 @@ and capture groups are part of the result.
   [`benchmarks/html/PROVENANCE.md`](../benchmarks/html/PROVENANCE.md).
   The default run uses the first 269 MiB of the corpus
   (1,127 documents); `--full` loads all of it.
-- **Timing window**: from the instant a worker passes the barrier to
-  the instant its slice is finished; a point is the max across workers.
-  Load and pattern compile are outside the window, identically for both
-  engines. Every run's match count must equal 335,801.
+- **CPU placement and warm-up**: the process is pinned to distinct
+  physical cores; free-threaded workers are pinned one per core, while
+  GIL workers share the process affinity so the active thread does not
+  bounce across cores. All workers run a fixed CPU-bound warm-up on a
+  separate buffer before the timed barrier. The measured corpus is
+  never touched by the warm-up. Governor, load average and per-CPU
+  frequency are recorded in the raw results.
+- **Timing window**: from the instant the post-warm-up barrier releases
+  to the instant the slice is finished; a point is the max across
+  workers. Load and pattern compile are outside the window, identically
+  for both engines. Every run's match count must equal
+  335,801.
+- **Repeats**: published rows are the median of three complete runs;
+  each raw result records the individual wall times.
 - **Interpreters**: GIL CPython 3.13 and free-threaded 3.14t, one fresh
-  subprocess per point. CPU: Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz.
+  subprocess per point. CPU: 13th Gen Intel(R) Core(TM) i5-13500.
 
 ## GIL Python
 
@@ -36,18 +47,18 @@ and capture groups are part of the result.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 8.26 s | 4.41 s | 1.48 s | 1.14 s | ×0.18 | ×0.26 |
-| 2 | 8.05 s | 4.19 s | 0.87 s | 0.74 s | ×0.11 | ×0.18 |
-| 3 | 7.97 s | 4.21 s | 0.75 s | 0.61 s | ×0.09 | ×0.14 |
-| 4 | 8.01 s | 4.24 s | 0.74 s | 0.59 s | ×0.09 | ×0.14 |
+| 1 | 3.42 s | 1.70 s | 0.61 s | 0.49 s | ×0.18 | ×0.29 |
+| 2 | 3.45 s | 1.72 s | 0.35 s | 0.28 s | ×0.10 | ×0.16 |
+| 3 | 3.46 s | 1.73 s | 0.28 s | 0.24 s | ×0.08 | ×0.14 |
+| 4 | 3.46 s | 1.72 s | 0.26 s | 0.22 s | ×0.07 | ×0.13 |
 
 *(ratio < 1 = rurex faster)*
 
 Single-threaded, rurex answers the parsed-`str` form in
-1.48 s against `re`'s
-8.26 s (×0.18), and the
-bytes form in 1.14 s against
-4.41 s (×0.26).
+0.61 s against `re`'s
+3.42 s (×0.18), and the
+bytes form in 0.49 s against
+1.70 s (×0.29).
 
 The `str` result is the opposite of the short-post Telegram regime.
 Documents here have a median of 117 KB, so the cold
@@ -60,12 +71,12 @@ Threads reinforce the difference. These documents are above the 4 KB
 GIL-release threshold, so rurex releases the GIL during the scan, and
 source buffers of at least 32 KB also release it around the cold
 transcode itself, so one worker's encode does not block the others:
-`str` drops from 1.48 to
-0.74 s and bytes from
-1.14 to
-0.59 s at four workers. `re` stays flat
-on `str` (8.26 to
-8.01 s) because it never releases the GIL
+`str` drops from 0.61 to
+0.26 s and bytes from
+0.49 to
+0.22 s at four workers. `re` stays flat
+on `str` (3.42 to
+3.46 s) because it never releases the GIL
 during matching.
 
 ## Free-threaded Python
@@ -74,21 +85,21 @@ during matching.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 7.67 s | 4.81 s | 1.50 s | 1.31 s | ×0.20 | ×0.27 |
-| 2 | 4.75 s | 2.91 s | 1.00 s | 0.78 s | ×0.21 | ×0.27 |
-| 3 | 2.92 s | 1.73 s | 0.69 s | 0.59 s | ×0.24 | ×0.34 |
-| 4 | 2.12 s | 1.36 s | 0.66 s | 0.56 s | ×0.31 | ×0.41 |
+| 1 | 3.18 s | 1.91 s | 0.60 s | 0.48 s | ×0.19 | ×0.25 |
+| 2 | 1.62 s | 0.97 s | 0.34 s | 0.28 s | ×0.21 | ×0.29 |
+| 3 | 1.12 s | 0.67 s | 0.28 s | 0.23 s | ×0.25 | ×0.35 |
+| 4 | 0.85 s | 0.51 s | 0.25 s | 0.21 s | ×0.29 | ×0.42 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both engines scale. rurex goes from
-1.50 to
-0.66 s on `str` and from
-1.31 to
-0.56 s on bytes; `re` goes from
-7.67 to 2.12 s
-on `str` and from 4.81 to
-1.36 s on bytes. rurex keeps the lead at
+0.60 to
+0.25 s on `str` and from
+0.48 to
+0.21 s on bytes; `re` goes from
+3.18 to 0.85 s
+on `str` and from 1.91 to
+0.51 s on bytes. rurex keeps the lead at
 every thread count. The `str` and bytes rows are close for rurex
 because the transcode is a small part of a long-document pass.
 
@@ -108,9 +119,10 @@ Machine-specific; expect different absolute numbers elsewhere.
 ## Reproducing
 
 ```sh
-python benchmarks/frontend_html.py            # default 256 MiB subset
-python benchmarks/frontend_html.py --full     # all ~480 MiB
-python benchmarks/frontend_html.py --quick    # 32 MiB smoke run
+python benchmarks/frontend_html.py && cp benchmarks/frontend_html_results.json run1.json
+python benchmarks/frontend_html.py && cp benchmarks/frontend_html_results.json run2.json
+python benchmarks/frontend_html.py && cp benchmarks/frontend_html_results.json run3.json
+python benchmarks/merge_runs.py run1.json run2.json run3.json -o benchmarks/frontend_html_results.json
 python benchmarks/frontend_html_charts.py     # charts, this page, and the HTML twin
 ```
 

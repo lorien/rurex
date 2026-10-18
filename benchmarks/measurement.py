@@ -1,0 +1,226 @@
+"""Shared measurement hardening for the real-world benchmarks.
+
+Every measured point runs the same protocol:
+
+- the process is pinned to distinct physical CPUs; free-threaded
+  workers are pinned one per core, while GIL workers share the process
+  affinity so the active thread does not bounce across cores;
+- all workers run a fixed CPU-bound warm-up on a separate buffer, so the
+  cores are at a high frequency before the timed window;
+- the governor, load average and per-CPU frequency are recorded around
+  the warm-up and the measured pass.
+
+The warm-up buffer is never the measured corpus, so the measured pass is
+still a cold pass over the real data.
+"""
+
+import hashlib
+import os
+import pathlib
+import statistics
+import subprocess
+import sys
+import time
+
+WARMUP_ENV = "RUREX_WARMUP"
+DEFAULT_WARMUP_S = 1.0
+WARMUP_BUFFER_BYTES = 4 << 20
+
+
+def _lscpu_topology():
+    """Map (socket, core) to the list of logical CPUs, via lscpu."""
+    try:
+        out = subprocess.check_output(
+            ["lscpu", "-p=CPU,CORE,SOCKET"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    cores = {}
+    for line in out.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(",")
+        if len(parts) < 2:
+            continue
+        try:
+            cpu = int(parts[0])
+            core = int(parts[1])
+            socket = int(parts[2]) if len(parts) > 2 else 0
+        except ValueError:
+            continue
+        cores.setdefault((socket, core), []).append(cpu)
+    return cores
+
+
+def _sysfs_topology():
+    """Fallback: read thread_siblings_list for every online CPU."""
+    root = pathlib.Path("/sys/devices/system/cpu")
+    cores = {}
+    for cpu_dir in sorted(root.glob("cpu[0-9]*")):
+        try:
+            cpu = int(cpu_dir.name[3:])
+        except ValueError:
+            continue
+        siblings = cpu_dir / "topology" / "thread_siblings_list"
+        try:
+            text = siblings.read_text().strip()
+        except OSError:
+            text = str(cpu)
+        first = text.split(",")[0]
+        if "-" in first:
+            first = first.split("-")[0]
+        try:
+            core = int(first)
+        except ValueError:
+            core = cpu
+        cores.setdefault((0, core), []).append(cpu)
+    return cores
+
+
+def _available_cpus():
+    try:
+        return set(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        return set(range(os.cpu_count() or 1))
+
+
+def pick_physical_cpus(nthreads):
+    """Choose nthreads CPUs, preferring one distinct physical core each.
+
+    Returns (cpus, distinct) where cpus has exactly nthreads entries. When
+    the machine has fewer physical cores than workers, the remaining
+    workers reuse cores and `distinct` is False.
+    """
+    available = _available_cpus()
+    cores = _lscpu_topology() or _sysfs_topology()
+    chosen = []
+    if cores:
+        for cpus in sorted(cores.values(), key=lambda c: min(c)):
+            usable = sorted(cpu for cpu in cpus if cpu in available)
+            if usable:
+                chosen.append(usable[0])
+    if not chosen:
+        chosen = sorted(available)
+    if not chosen:
+        chosen = [0]
+    distinct = len(chosen) >= nthreads
+    used = [chosen[i % len(chosen)] for i in range(nthreads)]
+    return used, distinct
+
+
+def pin_process(cpus):
+    """Pin the current process to the given CPUs. Returns True on success."""
+    try:
+        os.sched_setaffinity(0, set(cpus))
+        return True
+    except (AttributeError, OSError):
+        return False
+
+
+def pin_current(cpu):
+    """Pin the calling thread to one CPU. Returns True on success."""
+    try:
+        os.sched_setaffinity(0, {cpu})
+        return True
+    except (AttributeError, OSError):
+        return False
+
+
+def _read_int(path):
+    try:
+        return int(path.read_text().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def cpu_freq_khz(cpus):
+    """Current scaling frequency for each requested CPU, where available."""
+    vals = []
+    for cpu in cpus:
+        path = pathlib.Path(
+            f"/sys/devices/system/cpu/cpu{cpu}/cpufreq/scaling_cur_freq"
+        )
+        val = _read_int(path)
+        if val is not None:
+            vals.append(val)
+    return vals
+
+
+def governor(cpus):
+    vals = set()
+    for cpu in cpus:
+        path = pathlib.Path(
+            f"/sys/devices/system/cpu/cpu{cpu}/cpufreq/scaling_governor"
+        )
+        try:
+            vals.add(path.read_text().strip())
+        except OSError:
+            pass
+    return sorted(vals)
+
+
+def loadavg():
+    try:
+        text = pathlib.Path("/proc/loadavg").read_text().split()
+        return [float(x) for x in text[:3]]
+    except (OSError, ValueError):
+        return None
+
+
+def environment(cpus):
+    return {
+        "affinity_cpus": list(cpus),
+        "governor": governor(cpus),
+        "loadavg": loadavg(),
+        "freq_khz": cpu_freq_khz(cpus),
+    }
+
+
+def warmup_seconds():
+    raw = os.environ.get(WARMUP_ENV)
+    if raw is None:
+        return DEFAULT_WARMUP_S
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return DEFAULT_WARMUP_S
+
+
+def make_warmup_buffer(size=WARMUP_BUFFER_BYTES):
+    # A deterministic buffer is enough; it is only used to keep the cores
+    # busy. It is never mixed with the measured corpus.
+    return bytes(size)
+
+
+def warm_up(seconds, buffer):
+    """Keep the calling core busy until the deadline.
+
+    hashlib releases the GIL for large buffers, so this warms every pinned
+    core even for the `re` engine, which would otherwise hold the GIL.
+    """
+    deadline = time.perf_counter() + seconds
+    while time.perf_counter() < deadline:
+        hashlib.sha256(buffer).digest()
+
+
+def gil_enabled():
+    try:
+        return bool(sys._is_gil_enabled())
+    except AttributeError:
+        return True
+
+
+def warmup_summary(seconds, distinct, cpus, pinned):
+    return {
+        "warmup_s": seconds,
+        "distinct_physical_cores": distinct,
+        "affinity_cpus": list(cpus),
+        "affinity_pinned": pinned,
+    }
+
+
+def median_or_none(values):
+    return statistics.median(values) if values else None

@@ -31,6 +31,8 @@ import tempfile
 import threading
 import time
 
+import measurement
+
 HERE = pathlib.Path(__file__).parent
 RESULTS = HERE / "telegram_results.json"
 
@@ -135,13 +137,29 @@ def single_point(nthreads, engine, form):
         texts = [t.encode("utf-8") for t in texts]
     rx = make_rx(engine, form)
     iters = (len(texts) + nthreads - 1) // nthreads
-    barrier = threading.Barrier(nthreads)
+    cpus, distinct = measurement.pick_physical_cpus(nthreads)
+    pinned = measurement.pin_process(cpus)
+    env_before = measurement.environment(cpus)
+    warm_s = measurement.warmup_seconds()
+    warm_buf = measurement.make_warmup_buffer() if warm_s > 0 else b""
+    start = threading.Barrier(nthreads)
+    run = threading.Barrier(nthreads)
     walls = [0.0] * nthreads
     counts = [0] * nthreads
+    warm_freq = [None] * nthreads
+    worker_pinned = [False] * nthreads
+    pin_workers = not measurement.gil_enabled()
 
     def work(i):
+        worker_pinned[i] = (
+            measurement.pin_current(cpus[i]) if pin_workers else pinned
+        )
         part = texts[i * iters:(i + 1) * iters]  # slice taken untimed
-        barrier.wait()                            # all workers released
+        start.wait()                              # all workers warm together
+        if warm_s > 0:
+            measurement.warm_up(warm_s, warm_buf)
+        warm_freq[i] = measurement.cpu_freq_khz([cpus[i]])
+        run.wait()                                # all workers released
         t0 = time.perf_counter()                  # === START ===
         c = 0
         for t in part:                            # one pass, each post
@@ -154,7 +172,21 @@ def single_point(nthreads, engine, form):
         th.start()
     for th in threads:
         th.join()
-    return max(walls), sum(counts)
+    env_after = measurement.environment(cpus)
+    info = measurement.warmup_summary(warm_s, distinct, cpus, pinned)
+    info.update({
+        "worker_affinity_pinned": worker_pinned,
+        "worker_pinning": "per-core" if pin_workers else "process",
+        "frequency_before_khz": env_before["freq_khz"],
+        "frequency_after_warmup_khz": [
+            vals[0] if vals else None for vals in warm_freq
+        ],
+        "frequency_after_khz": env_after["freq_khz"],
+        "governor": env_before["governor"],
+        "loadavg_before": env_before["loadavg"],
+        "loadavg_after": env_after["loadavg"],
+    })
+    return max(walls), sum(counts), info
 
 
 def corpus_stats():
@@ -186,11 +218,12 @@ def child_main():
     else:
         engine, nthreads, form, out = (sys.argv[i + 1], int(sys.argv[i + 2]),
                                        sys.argv[i + 3], sys.argv[i + 4])
-        wall, mentions = single_point(nthreads, engine, form)
+        wall, mentions, info = single_point(nthreads, engine, form)
         result = {"engine": engine, "threads": nthreads, "input": form,
-                  "wall_s": wall, "mentions": mentions}
+                  "wall_s": wall, "mentions": mentions, "measurement": info}
         print(f"  {engine:5} {form:5} threads={nthreads} {wall:.2f}s "
-              f"({mentions:,} mentions)", flush=True)
+              f"({mentions:,} mentions, cpus={info['affinity_cpus']}, "
+              f"warmup={info['warmup_s']:.2f}s)", flush=True)
     pathlib.Path(sys.argv[i + 4]).write_text(json.dumps(result))
 
 
@@ -220,6 +253,8 @@ def main():
     env = dict(os.environ)
     if quick:
         env["RUREX_TG_LIMIT"] = "100000"
+    if quick and measurement.WARMUP_ENV not in env:
+        env[measurement.WARMUP_ENV] = "0.25"
 
     interpreters = [("gil", sys.executable)]
     fp = free_python()
@@ -235,7 +270,8 @@ def main():
             "pattern": PATTERN,
             "threads": THREADS,
             "protocol": "one cold real-world run per point "
-                        "(fresh process: load -> single pass)",
+                        "(fresh process: load -> CPU-pinned warm-up -> "
+                        "single pass; load and frequency recorded)",
         },
         "points": [],
     }
