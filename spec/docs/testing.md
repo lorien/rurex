@@ -14,8 +14,10 @@ Run: `cargo test`
 
 ## Python test suite
 
-Run: `make test` (or `maturin develop && pytest`; the extension must be
-built into the running environment first).
+Run: `make test` (or `make build && pytest`; the extension must be
+built into the running environment first). `make build` installs the
+release build by default; `make build-debug` is available for a debug
+artifact.
 
 - Files: `tests/test_*.py`.
 - Cover every public name in `spec/docs/api.md`: compilation, flags,
@@ -28,13 +30,17 @@ built into the running environment first).
 
 ## Final checks (per session, before committing)
 
-1. `cargo fmt --check` and `cargo clippy -- -D warnings` — clean.
+1. `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` —
+   clean.
 2. `cargo test` — pass.
-3. `make test-all` — pass. It builds the extension, runs the pytest
-   suite, and runs each conformance suite in its own process (see
-   "Oracle guard" below).
+3. `make test-all` — pass. It builds the extension in release mode, runs
+   the pytest suite, and runs each conformance suite in its own process
+   (see "Oracle guard" below). The release build is intentional: it
+   leaves the installed extension benchmark-ready.
 4. `python -c "import rurex"` — imports cleanly in a fresh interpreter.
 5. No hard-coded credentials anywhere in the change.
+
+`make check` runs items 1–3 in order.
 
 CI runs the same checks on every push and PR to `main`
 (`.github/workflows/ci.yml`): the `rust` job covers 1–3, the `python`

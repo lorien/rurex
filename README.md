@@ -208,8 +208,9 @@ methodology (rurex vs `re`, parameter sweeps measured end to end).
 ```
 python -m venv .venv && source .venv/bin/activate
 pip install maturin pytest
-maturin develop
-pytest
+make build      # release build
+make test
+make check      # fmt, clippy, cargo test, full conformance suite
 ```
 
 Design documents live in
