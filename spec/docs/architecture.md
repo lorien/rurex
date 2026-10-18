@@ -48,7 +48,11 @@ stored program.
   4 KB threshold): the borrowed text reference is obtained before the
   release and no Python objects are touched inside the closure. Short
   scans stay GIL-held, matching `re`'s own behavior and avoiding a
-  lock convoy across threads.
+  lock convoy across threads. This gates single-window scans
+  (`search`, `match`, `fullmatch`, `findall`, `is_match`); the
+  per-match loops (`finditer`, the scanners, `split`, `sub`) hold the
+  GIL per step, because a step normally ends a few bytes past the
+  previous match and a handoff cannot be paid back (see `per_step`).
 - Results are converted back to Python objects (`Match`, tuples, lists)
   after the scan, under the GIL.
 - `findall` is a dedicated whole-scan path: every match's spans are
@@ -70,7 +74,10 @@ stored program.
   groups), with no hash map and no second vector. For a compact ASCII
   `str` the PEP 393 `state.ascii` bit already tells the result path
   that byte offsets equal character offsets, and conversion is
-  skipped outright (`utf8::is_ascii_obj`).
+  skipped outright (`utf8::is_ascii_obj`). Per-match loops pass the
+  previous match's (byte, char) position as the walk's starting
+  point, so each step counts only the characters it advanced over
+  instead of re-walking the haystack from its start.
 
 ## Error handling
 

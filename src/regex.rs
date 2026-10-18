@@ -71,7 +71,13 @@ pub struct Regex {
 /// cost of `search` on a short string. The distinct offsets fit a
 /// stack buffer for any pattern with up to 16 groups; only larger
 /// group counts take a heap buffer.
-fn to_py_spans(s: &str, ascii: bool, spans: &mut [Option<(usize, usize)>]) {
+///
+/// `start` is the (byte, char) position the walk begins at, so the
+/// per-match loops (`finditer`, the scanners, a callable `sub`) count
+/// only the characters between the previous match and this one instead
+/// of walking the whole haystack again on every step. Every span
+/// offset must be at or after `start.0`.
+fn to_py_spans(s: &str, ascii: bool, start: (usize, usize), spans: &mut [Option<(usize, usize)>]) {
     if ascii {
         return;
     }
@@ -105,8 +111,8 @@ fn to_py_spans(s: &str, ascii: bool, spans: &mut [Option<(usize, usize)>]) {
             unique += 1;
         }
     }
-    let mut count = 0;
-    let mut prev = 0;
+    let mut count = start.1;
+    let mut prev = start.0;
     for i in 0..unique {
         count += s[prev..bytes[i]].chars().count();
         prev = bytes[i];
@@ -118,16 +124,6 @@ fn to_py_spans(s: &str, ascii: bool, spans: &mut [Option<(usize, usize)>]) {
             let end = bytes[..unique].binary_search(&b).expect("span end");
             *span = Some((chars[start], chars[end]));
         }
-    }
-}
-
-/// Character offset of one byte position (the scanner's anchored
-/// cursor needs a position, not a span).
-fn char_at(s: &str, ascii: bool, byte: usize) -> usize {
-    if ascii {
-        byte
-    } else {
-        s[..byte].chars().count()
     }
 }
 
@@ -187,6 +183,23 @@ where
     } else {
         f()
     }
+}
+
+/// Run one step of a per-match loop with the GIL held, however large
+/// the haystack is.
+///
+/// `FindIter`, the scanners, `split` and `sub` ask the engine for one
+/// match at a time. A step's scan normally ends a few bytes past the
+/// previous match, so the handoff cannot be paid back: an uncontended
+/// detach/attach costs tens of nanoseconds per step on a 160 KB
+/// document (measured), and under GIL contention a handoff convoys the
+/// lock for microseconds, which is why ADR-0014 found per-scan
+/// detaching catastrophic there. Whole-window scans (`search`, `match`,
+/// `fullmatch`, `findall`) still pass through `maybe_detach` once,
+/// where the scan really does cover the window and the GIL can be
+/// released for its duration.
+fn per_step<T>(f: impl FnOnce() -> T) -> T {
+    f()
 }
 
 /// One step of CPython's (>=3.7) zero-width iteration, shared by
@@ -884,7 +897,7 @@ impl Regex {
                 let hay = &s[..eb];
                 let spans = maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, pb));
                 Ok(spans.map(|mut sp| {
-                    to_py_spans(s, crate::utf8::is_ascii_obj(string), &mut sp);
+                    to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
                     Match::new(
                         re,
                         string.clone().unbind(),
@@ -970,8 +983,8 @@ impl Regex {
             scan: it.scan,
             pending: it.pending,
             end_b: it.end_b,
-            chars_seen: 0,
-            bytes_seen: 0,
+            chars_seen: it.chars_seen,
+            bytes_seen: it.bytes_seen,
             names: it.names,
             bytes_mode: it.bytes_mode,
             done: it.done,
@@ -1007,7 +1020,7 @@ impl Regex {
                             for span in &mut sp {
                                 *span = span.map(|(a, b)| (a + pb, b + pb));
                             }
-                            to_py_spans(s, crate::utf8::is_ascii_obj(string), &mut sp);
+                            to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
                             Match::new(
                                 re,
                                 string.clone().unbind(),
@@ -1030,7 +1043,7 @@ impl Regex {
                             captures_spans_text(engine, whole, pb)
                         });
                         Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|mut sp| {
-                            to_py_spans(s, crate::utf8::is_ascii_obj(string), &mut sp);
+                            to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
                             Match::new(
                                 re,
                                 string.clone().unbind(),
@@ -1138,6 +1151,8 @@ impl Regex {
             scan,
             pending: None,
             end_b,
+            chars_seen: 0,
+            bytes_seen: 0,
             names,
             bytes_mode,
             done,
@@ -1217,7 +1232,7 @@ impl Regex {
                     if maxsplit != 0 && n == maxsplit {
                         break;
                     }
-                    let Some(spans) = maybe_detach(py, s.len(), || {
+                    let Some(spans) = per_step(|| {
                         cpython_step(
                             s.as_bytes(),
                             scan,
@@ -1253,7 +1268,7 @@ impl Regex {
                     if maxsplit != 0 && n == maxsplit {
                         break;
                     }
-                    let Some(spans) = maybe_detach(py, b.len(), || {
+                    let Some(spans) = per_step(|| {
                         cpython_step(
                             b,
                             scan,
@@ -1708,6 +1723,7 @@ fn substitute(
             let retry = reg.retry_engine().map(Arc::as_ref);
             let mut out = String::new();
             let mut prev = 0usize;
+            let mut chars_prev = 0usize;
             let mut scan = 0usize;
             let mut n = 0usize;
             let mut pending: Option<usize> = None;
@@ -1715,7 +1731,7 @@ fn substitute(
                 if count != 0 && n == count {
                     break;
                 }
-                let Some(spans) = maybe_detach(py, s.len(), || {
+                let Some(spans) = per_step(|| {
                     cpython_step(
                         s.as_bytes(),
                         scan,
@@ -1739,7 +1755,7 @@ fn substitute(
                     }
                     Repl::Callable(func) => {
                         let mut py_spans = spans.clone();
-                        to_py_spans(s, ascii, &mut py_spans);
+                        to_py_spans(s, ascii, (prev, chars_prev), &mut py_spans);
                         let m = Match::new(
                             this.clone_ref(py),
                             string.clone().unbind(),
@@ -1759,6 +1775,7 @@ fn substitute(
                         out.push_str(piece);
                     }
                 }
+                chars_prev += s[prev..se].chars().count();
                 prev = se;
                 pending = advance_after(&spans, &mut scan).or(pending);
                 n += 1;
@@ -1778,7 +1795,7 @@ fn substitute(
                 if count != 0 && n == count {
                     break;
                 }
-                let Some(spans) = maybe_detach(py, b.len(), || {
+                let Some(spans) = per_step(|| {
                     cpython_step(
                         b,
                         scan,
@@ -1872,6 +1889,11 @@ pub struct FindIter {
     pending: Option<usize>,
     /// Byte end bound.
     end_b: usize,
+    /// Characters before `bytes_seen` in the text view: the per-step
+    /// offset conversion counts from here instead of re-walking the
+    /// haystack from its start (text mode only).
+    chars_seen: usize,
+    bytes_seen: usize,
     names: Arc<Vec<Option<String>>>,
     bytes_mode: bool,
     done: bool,
@@ -1903,7 +1925,7 @@ impl FindIter {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = maybe_detach(py, self.end_b, || {
+                let spans = per_step(|| {
                     cpython_step(
                         hay.as_bytes(),
                         scan,
@@ -1918,13 +1940,13 @@ impl FindIter {
                     self.done = true;
                     return Ok(None);
                 };
+                let (_, se) = spans[0].expect("group 0 always matches");
                 let advance = advance_after(&spans, &mut self.scan);
+                let ascii = crate::utf8::is_ascii_obj(self.string.bind(py));
                 let mut spans = spans;
-                to_py_spans(
-                    hay,
-                    crate::utf8::is_ascii_obj(self.string.bind(py)),
-                    &mut spans,
-                );
+                to_py_spans(hay, ascii, (self.bytes_seen, self.chars_seen), &mut spans);
+                self.chars_seen += s[self.bytes_seen..se].chars().count();
+                self.bytes_seen = se;
                 self.pending = advance.or(pending);
                 Ok(Some(Match::new(
                     self.re.clone_ref(py),
@@ -1953,7 +1975,7 @@ impl FindIter {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = maybe_detach(py, self.end_b, || {
+                let spans = per_step(|| {
                     cpython_step(
                         hay,
                         scan,
@@ -2027,7 +2049,7 @@ impl SreScanner {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = maybe_detach(py, self.end_b, || {
+                let spans = per_step(|| {
                     cpython_step(
                         hay.as_bytes(),
                         scan,
@@ -2049,13 +2071,13 @@ impl SreScanner {
                 // failed anchored call still consumes the match it
                 // rejected — the state always advances.
                 let cursor = if anchored {
-                    Some(char_at(s, ascii, scan))
+                    Some(self.chars_seen + s[self.bytes_seen..scan].chars().count())
                 } else {
                     None
                 };
                 let advance = advance_after(&spans, &mut self.scan);
                 let mut spans = spans;
-                to_py_spans(hay, ascii, &mut spans);
+                to_py_spans(hay, ascii, (self.bytes_seen, self.chars_seen), &mut spans);
                 self.chars_seen += s[self.bytes_seen..se].chars().count();
                 self.bytes_seen = se;
                 self.pending = advance.or(pending);
@@ -2090,7 +2112,7 @@ impl SreScanner {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
-                let spans = maybe_detach(py, self.end_b, || {
+                let spans = per_step(|| {
                     cpython_step(
                         hay,
                         scan,

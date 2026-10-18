@@ -21,11 +21,11 @@ record is archived from `plan.md`.
   are character offsets, so conversion is skipped entirely. It is O(1)
   and answers `false` whenever the layout is unvalidated, which only
   means the slow (still correct) conversion runs.
-- Collapsed the duplicated per-span conversion loops in `FindIter::step`
-  and `SreScanner::next` onto the same helper (`char_at` covers the
-  scanner's single anchored cursor), and removed the now-unnecessary
-  `chars_seen`/`bytes_seen` counters from `FindIter`. The counters stay in
-  `SreScanner`, where `Scanner::scan` uses them to slice tokens.
+- Collapsed the duplicated per-span conversion loops in `FindIter::step`,
+  `SreScanner::next` and a callable `sub` onto the same helper.
+  `FindIter` keeps its
+  `chars_seen`/`bytes_seen` counters: the conversion reads them as its
+  starting point, so a step only counts the characters it advanced over.
 - `sub` with a callable still needs byte spans for `advance_after` and
   template expansion, so it converts a copy; that path drops from three
   allocations to one.
@@ -53,6 +53,33 @@ Final checks: `cargo fmt`, `cargo clippy --all-targets -D warnings`,
 (3,484 passed). No new `unsafe`, no new dependency, no public API
 change, so no ADR.
 
+### Iterator regression found and fixed in the same session
+
+The in-place conversion above initially walked from byte 0 on every
+call. `finditer`, the scanners and a callable `sub` convert spans once
+per match, so on a non-ASCII haystack that turned a 160 KB document
+with 5,000 matches quadratic: `finditer` took 29.5 ms against `re`'s
+1.3 ms, worse than the code it replaced, whose `chars_seen`/
+`bytes_seen` counters made each step walk only its own advance.
+
+Fixed by giving the conversion a starting `(byte, char)` position and
+feeding it the previous match's end; `FindIter` keeps those counters
+again, and `sub` tracks them for its callable path. While there, the
+per-match loops stopped releasing the GIL per step (`per_step`): the
+detach was gated on the whole-window size, so every step of an
+iteration over a ≥4 KB text paid a handoff for a scan that normally
+ends a few bytes later. Measured on the same document:
+
+| call | before this session's fixes | after | `re` |
+|---|---:|---:|---:|
+| `finditer` full | 29.5 ms | 1.92 ms | 1.25 ms |
+| `split` | 1.52 ms | 1.48 ms | 0.95 ms |
+| `sub` (template) | 1.71 ms | 1.54 ms | 1.02 ms |
+| `findall` | 0.82 ms | 0.80 ms | 1.00 ms |
+
+Whole-window scans still detach once around their single scan, so the
+long-document release from ADR-0014 is untouched.
+
 ### Spec/ADR amendments
 
 - [acted] `spec/docs/architecture.md` "Matching path" now records that
@@ -72,11 +99,13 @@ change, so no ADR.
   plus heap fallback) to remove the last result-path allocation; measure
   against the ~14% instruction gap to `re` before committing to it.
 - [open] `FindIter::step`, `SreScanner::next` and `Scanner::scan` obtain
-  the haystack with PyO3's `extract::<&str>`, i.e. CPython's 0.45 GB/s
-  encoder on a cold non-ASCII string, instead of the project's AVX2
-  transcoder. Correct but inconsistent with every other path; it also
-  populates CPython's UTF-8 cache, which may be a deliberate memory/CPU
-  trade-off that nobody has written down.
+  the haystack with PyO3's `extract::<&str>`, i.e. CPython's encoder on
+  a cold non-ASCII string, instead of the project's AVX2 transcoder.
+  Warm-cache steps measure fine (67 µs for the first match of a 160k
+  character document, encoder excluded), so the gain is limited to the
+  first step of a cold document; it also populates CPython's UTF-8
+  cache, which may be a deliberate memory/CPU trade-off nobody has
+  written down. Measure before changing it.
 - [open] Short non-ASCII strings pay ~570 instructions of fixed cost plus
   ~8 instructions per character to transcode (measured by length sweep).
   On the Telegram `str` row that fixed cost is most of the remaining
