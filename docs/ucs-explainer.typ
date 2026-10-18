@@ -1,9 +1,15 @@
 // UCS and UTF-8 — an explainer for the rurex problem. A4 document.
-#set document(title: "UCS and UTF-8: what Python and Rust each mean by a string", author: "rurex")
+#set document(
+  title: "UCS and UTF-8: what Python and Rust each mean by a string",
+  author: "rurex",
+  keywords: ("Unicode", "UTF-8", "UCS-2", "PEP 393", "Rust", "regex", "rurex"),
+)
+#let repo = "https://github.com/lorien/rurex"
 #set page(paper: "a4", margin: (x: 2.35cm, top: 2.1cm, bottom: 2.0cm),
   numbering: "1",
   footer: context grid(columns: (1fr, auto), align: horizon,
-    text(size: 8.5pt, fill: rgb("#6B7076"), "rurex  ·  UCS and UTF-8"),
+    text(size: 8.5pt, fill: rgb("#6B7076"),
+      [#link(repo)[rurex]  ·  UCS and UTF-8]),
     text(size: 8.5pt, fill: rgb("#6B7076"), counter(page).display())))
 
 #set text(font: "Lato", size: 10.5pt, lang: "en", hyphenate: true)
@@ -80,6 +86,8 @@
       Covers Unicode code points, UCS-2 and its failure, the UTF family, CPython's PEP 393
       `str`, Rust's `&str`, and why the engine insists on UTF-8.
     ]
+    #v(6pt)
+    #link(repo)[#text(size: 9pt, fill: accent, "github.com/lorien/rurex")]
   ]
 ]
 
@@ -447,7 +455,12 @@ Everything above compresses into one trace. Take `s = "aβ7c"` and `p = rurex.co
 
 #heading(level: 1)[Where this shows up in rurex]
 
-The conversion described here lives in `src/utf8.rs`, with the AVX2 kernel in `src/utf8/simd.rs`; the design decisions and their rejected alternatives are recorded in `spec/docs/adr/0012-simd-transcoder-and-detected-layout.md` and `spec/docs/adr/0013-cold-str-required-prefix-prefilter.md`. The offset mapping lives in `src/regex.rs`, and the error contract for unencodable strings in the same file's transcode path.
+Everything in this document lives in #link(repo)[the rurex repository]:
+
+- #link(repo + "/blob/main/src/utf8.rs")[`src/utf8.rs`] — the three ways to obtain a `&str`, and the transcoder behind the cold path.
+- #link(repo + "/blob/main/src/utf8/simd.rs")[`src/utf8/simd.rs`] — the AVX2 kernel and the scalar reference it is tested against.
+- #link(repo + "/blob/main/src/regex.rs")[`src/regex.rs`] — the span walk and the `pos` / `endpos` conversion.
+- #link(repo + "/blob/main/spec/docs/adr/0012-simd-transcoder-and-detected-layout.md")[ADR-0012] and #link(repo + "/blob/main/spec/docs/adr/0013-cold-str-required-prefix-prefilter.md")[ADR-0013] — the decisions, and the alternatives they rejected.
 
 #heading(level: 1)[Further reading]
 

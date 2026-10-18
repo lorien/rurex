@@ -22,6 +22,14 @@ Ad-hoc task, not taken from `spec/docs/plan.md`.
   needs nothing installed.
 - `spec/docs/dev.md` gains a "Documents" section: what the sources
   are, what the target does, where the tool comes from.
+- Follow-up, same session: both documents now link the repository.
+  The explainer carries it on the cover, in the running footer on
+  pages 2-14, and in section 10, where `src/utf8.rs`,
+  `src/utf8/simd.rs`, `src/regex.rs` and the two ADRs are individual
+  links to their `blob/main` paths. The deck's cover links it too.
+  Verified in the built PDFs, not just in the source: 20 external
+  link annotations across 6 distinct URLs in the explainer, 1 in the
+  deck.
 
 The technical claims were read out of the repository rather than
 recalled: throughput figures from ADR-0012, and the span, `pos` and

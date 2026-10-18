@@ -55,7 +55,8 @@
     #v(20pt)
     #dim[The engine matches UTF-8. CPython stores `str` as UCS-1/2/4. The conversion in between is the whole problem.]
   ]
-  #place(bottom + left, text(size: 10pt, fill: muted, "ADR-0012  ·  ADR-0013  ·  src/utf8.rs"))
+  #place(bottom + left, text(size: 10pt, fill: muted,
+    [#link("https://github.com/lorien/rurex")[github.com/lorien/rurex]  ·  ADR-0012  ·  ADR-0013]))
   #place(bottom + right, text(size: 10pt, fill: muted, "1"))
 ]
 
