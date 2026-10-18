@@ -8,8 +8,9 @@ crate: linear-time matching — catastrophic backtracking (ReDoS)
 is impossible by construction — and faster than `re` on scans (up
 to ×13), extraction, and pathological inputs (`re` hangs forever,
 rurex answers in ~250 ns); on bytes input it leads there too. The
-one regime where `re` keeps an edge is one-shot scans of many short
-non-ASCII `str` objects — see *Performance: str vs bytes* below.
+one regime where `re` keeps an edge is free-threaded one-shot scans
+of many short non-ASCII `str` objects — see *Performance: str vs
+bytes* below.
 The API — names, flags, keyword arguments, `Match` semantics, even
 error messages and positions — matches `re`, verified continuously
 against CPython's own test suite.
@@ -89,18 +90,22 @@ Beyond `re`:
 ## Performance: str vs bytes
 
 rurex's engine matches UTF-8 directly. CPython stores `str`
-internally as UCS-1/2/4, so the **first** match against a
-non-ASCII `str` pays a one-time UTF-8 encoding that CPython caches
-inside the string object; `re` never converts. Two consequences:
+internally as UCS-1/2/4, so a non-ASCII `str` must be viewed as
+UTF-8: rurex transcodes it into a reused buffer, or borrows
+CPython's UTF-8 cache when another C-API consumer already filled it.
+`re` never converts. Two consequences:
 
-- **Scanning many short non-ASCII `str` inputs once** — the worst
-  case — `re` is faster (measured on 1M Telegram posts: ~0.5 µs vs
-  ~1.5 µs per post). Repeated scans reuse the cached encoding and
-  are near parity.
+- **Scanning many short non-ASCII `str` inputs once**: GIL builds are
+  now near parity with `re` (1M Telegram posts: 0.56 vs 0.52 µs per
+  post single-threaded). A required-first-byte prefilter skips the
+  transcode when no match is possible (77% of that corpus), and the
+  AVX2 kernel handles the rest. On free-threaded Python `re` still
+  leads (0.61 vs 0.48 µs per post at one worker), though rurex scales
+  with additional workers.
 - **If your data is already UTF-8 bytes** (files, network,
   JSONL/log streams), use bytes patterns: no conversion happens at
-  all and rurex **beats `re`'s bytes mode** (×1.5 on the same
-  corpus, 0.35 s vs 0.51 s). This is the recommended shape for
+  all and rurex **beats `re`'s bytes mode** (×1.8 on the same
+  corpus, 0.29 s vs 0.54 s). This is the recommended shape for
   high-throughput pipelines — the same advice the official RE2
   binding gives.
 

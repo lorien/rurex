@@ -505,7 +505,7 @@ mod tests {
     /// units, through properly aligned buffers (CPython's UCS
     /// buffers are naturally aligned for their unit width).
     fn transcode_both(kind: Kind, cps: &[u32]) -> (PyResult<String>, PyResult<String>) {
-        unsafe {
+        {
             match kind {
                 Kind::Ucs1 => {
                     let b: Vec<u8> = cps.iter().map(|&c| c as u8).collect();

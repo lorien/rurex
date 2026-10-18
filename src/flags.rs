@@ -79,88 +79,6 @@ pub fn translate(flags: u32, bytes_mode: bool) -> Result<Config, String> {
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn str_defaults_to_unicode() {
-        let cfg = translate(0, false).unwrap();
-        assert!(cfg.unicode);
-        assert_eq!(cfg.stored_flags, UNICODE);
-        assert!(!cfg.case_insensitive && !cfg.multi_line);
-    }
-
-    #[test]
-    fn bytes_defaults_to_non_unicode() {
-        let cfg = translate(0, true).unwrap();
-        assert!(!cfg.unicode);
-        assert_eq!(cfg.stored_flags, 0);
-    }
-
-    #[test]
-    fn ascii_disables_unicode_for_str() {
-        let cfg = translate(ASCII, false).unwrap();
-        assert!(!cfg.unicode);
-        assert_eq!(cfg.stored_flags, ASCII);
-    }
-
-    #[test]
-    fn ascii_is_noop_for_bytes() {
-        let cfg = translate(ASCII, true).unwrap();
-        assert!(!cfg.unicode);
-    }
-
-    #[test]
-    fn mode_flags_map() {
-        let cfg = translate(IGNORECASE | MULTILINE | DOTALL | VERBOSE, false).unwrap();
-        assert!(cfg.case_insensitive && cfg.multi_line);
-        assert!(cfg.dot_matches_new_line && cfg.ignore_whitespace);
-    }
-
-    #[test]
-    fn unicode_flag_is_noop_for_str() {
-        let cfg = translate(UNICODE, false).unwrap();
-        assert!(cfg.unicode);
-    }
-
-    #[test]
-    fn cpython_compatible_rejections() {
-        assert_eq!(
-            translate(UNICODE, true).err().unwrap(),
-            "cannot use UNICODE flag with a bytes pattern"
-        );
-        assert_eq!(
-            translate(4, false).err().unwrap(),
-            "cannot use LOCALE flag with a str pattern"
-        );
-        assert_eq!(
-            translate(ASCII | UNICODE, false).err().unwrap(),
-            "ASCII and UNICODE flags are incompatible"
-        );
-    }
-
-    #[test]
-    fn engine_and_unknown_rejections() {
-        assert_eq!(
-            translate(4, true).err().unwrap(),
-            "LOCALE is not supported by the rurex engine"
-        );
-        assert_eq!(
-            translate(1, false).err().unwrap(),
-            "unsupported flag: TEMPLATE"
-        );
-        assert_eq!(
-            translate(128, false).err().unwrap(),
-            "unsupported flag: DEBUG"
-        );
-        assert_eq!(
-            translate(1 << 12, false).err().unwrap(),
-            "unknown flag bits: 0x1000"
-        );
-    }
-}
-
 /// Scan pattern text (skipping escapes and character classes) and:
 ///
 /// - fold leading global inline groups `(?imsxa)` into extra flag
@@ -431,4 +349,86 @@ pub fn group_name_check(pattern: &str) -> Option<(String, usize)> {
         i += 1;
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn str_defaults_to_unicode() {
+        let cfg = translate(0, false).unwrap();
+        assert!(cfg.unicode);
+        assert_eq!(cfg.stored_flags, UNICODE);
+        assert!(!cfg.case_insensitive && !cfg.multi_line);
+    }
+
+    #[test]
+    fn bytes_defaults_to_non_unicode() {
+        let cfg = translate(0, true).unwrap();
+        assert!(!cfg.unicode);
+        assert_eq!(cfg.stored_flags, 0);
+    }
+
+    #[test]
+    fn ascii_disables_unicode_for_str() {
+        let cfg = translate(ASCII, false).unwrap();
+        assert!(!cfg.unicode);
+        assert_eq!(cfg.stored_flags, ASCII);
+    }
+
+    #[test]
+    fn ascii_is_noop_for_bytes() {
+        let cfg = translate(ASCII, true).unwrap();
+        assert!(!cfg.unicode);
+    }
+
+    #[test]
+    fn mode_flags_map() {
+        let cfg = translate(IGNORECASE | MULTILINE | DOTALL | VERBOSE, false).unwrap();
+        assert!(cfg.case_insensitive && cfg.multi_line);
+        assert!(cfg.dot_matches_new_line && cfg.ignore_whitespace);
+    }
+
+    #[test]
+    fn unicode_flag_is_noop_for_str() {
+        let cfg = translate(UNICODE, false).unwrap();
+        assert!(cfg.unicode);
+    }
+
+    #[test]
+    fn cpython_compatible_rejections() {
+        assert_eq!(
+            translate(UNICODE, true).err().unwrap(),
+            "cannot use UNICODE flag with a bytes pattern"
+        );
+        assert_eq!(
+            translate(4, false).err().unwrap(),
+            "cannot use LOCALE flag with a str pattern"
+        );
+        assert_eq!(
+            translate(ASCII | UNICODE, false).err().unwrap(),
+            "ASCII and UNICODE flags are incompatible"
+        );
+    }
+
+    #[test]
+    fn engine_and_unknown_rejections() {
+        assert_eq!(
+            translate(4, true).err().unwrap(),
+            "LOCALE is not supported by the rurex engine"
+        );
+        assert_eq!(
+            translate(1, false).err().unwrap(),
+            "unsupported flag: TEMPLATE"
+        );
+        assert_eq!(
+            translate(128, false).err().unwrap(),
+            "unsupported flag: DEBUG"
+        );
+        assert_eq!(
+            translate(1 << 12, false).err().unwrap(),
+            "unknown flag bits: 0x1000"
+        );
+    }
 }

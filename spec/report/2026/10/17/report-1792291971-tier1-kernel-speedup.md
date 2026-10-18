@@ -101,11 +101,14 @@ pay for it.
 
 ### Future-task notes
 
-- [open] **Tier 2 — source-side first-unit prefilter** (the change
+- [acted] **Tier 2 — source-side first-unit prefilter** (the change
   that can actually reach `re` parity on the str row; see the numbers
   above). Skips the transcode for patterns whose required first unit
   is absent, transcodes from the first hit otherwise; strictly
   non-regressive by construction.
+  [acted — shipped in report-1792325206-findall-prefilter-speedup via
+  regex-syntax's prefix extractor and a UCS-alignment memchr scan;
+  GIL 1-thread str 0.75 s → 0.56 s.]
 - [open] The single cold run per benchmark point is noisy at the
   ~±10-20% level on these rows (`re` swung 0.44–0.67 s across runs).
   The A/B above uses min-of-4; consider making the benchmark itself

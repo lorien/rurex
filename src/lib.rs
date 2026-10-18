@@ -10,6 +10,7 @@ use pyo3::types::{PyAny, PyBytes, PyString};
 mod error;
 mod flags;
 mod match_;
+mod prefilter;
 mod regex;
 mod regexset;
 mod retry;

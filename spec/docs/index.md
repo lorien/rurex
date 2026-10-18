@@ -59,6 +59,9 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   hand-written AVX2 UCS→UTF-8 transcoder (no new dependency) plus
   runtime-detected, self-validated PEP 393 offsets instead of
   hard-coded ones.
+- [adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md) —
+  compile-time required-first-byte prefilter over the UCS storage skips
+  the cold transcode when no match is possible.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

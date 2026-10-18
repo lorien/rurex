@@ -11,6 +11,7 @@ module, `rurex`.
         |                     (regex::Regex for str, regex::bytes::Regex for bytes)
     src/regexset.rs  RegexSet  multi-pattern membership in one scan
     src/match_.rs  Match       span/group view over one match
+    src/prefilter.rs           compile-time first-byte prefilter for cold str
     src/flags.rs               flag bit constants -> RegexBuilder options
     src/error.rs               regex::Error -> rurex.error (Exception subclass)
         |
@@ -42,16 +43,22 @@ stored program.
 - Text inputs are accepted as `str` (Unicode, `regex::Regex`) or `bytes`
   (`regex::bytes::Regex`). Which engine is used is fixed at compile time by
   the pattern's/flag's character mode, not per call.
-- Matching calls release the GIL (`py.allow_threads`) around the scan: the
-  borrowed text reference is obtained before the release and no Python
-  objects are touched inside the closure. This keeps long scans from
-  blocking other Python threads.
+- Matching calls release the GIL around the scan when the window is
+  large enough to pay for the handoff (`py.detach` above the measured
+  4 KB threshold): the borrowed text reference is obtained before the
+  release and no Python objects are touched inside the closure. Short
+  scans stay GIL-held, matching `re`'s own behavior and avoiding a
+  lock convoy across threads.
 - Results are converted back to Python objects (`Match`, tuples, lists)
   after the scan, under the GIL.
 - `findall` is a dedicated whole-scan path: every match's spans are
-  collected in one GIL-released Rust pass, then only the returned
-  values (strings, or one string per group) are built — no `Match`
-  objects are constructed.
+  collected in one flat buffer in a single Rust pass (no `Captures`
+  object and no per-match `Vec`; patterns without groups use
+  `find_at`), then only the returned values (strings, or one string
+  per group) are built. No `Match` objects are constructed.
+- The zero-width must-advance retry engine is built lazily only for
+  patterns whose HIR can match empty; patterns with a positive minimum
+  length never pay for it.
 - Work proportional to the whole haystack must not run per call or
   per match: `Match.endpos` for `endpos=None` resolves lazily on
   first read (counting characters is O(n) in the text), capture
@@ -67,9 +74,10 @@ is the only expected failure at the boundary and always maps to
 
 ## Memory and safety
 
-`unsafe` is confined to the `str` haystack fast path (`src/utf8.rs`
-and `src/utf8/simd.rs`), authorized by
-[adr/0012-simd-transcoder-and-detected-layout.md](adr/0012-simd-transcoder-and-detected-layout.md).
+`unsafe` is confined to the `str` haystack fast path (`src/utf8.rs`,
+`src/utf8/simd.rs`, and the UCS scan in `src/prefilter.rs`), authorized
+by [adr/0012-simd-transcoder-and-detected-layout.md](adr/0012-simd-transcoder-and-detected-layout.md)
+and [adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md).
 Everything else relies on PyO3 and `regex` handling their own
 internals. Wrapper types own their data; nothing borrowed from Python
 outlives a call except through PyO3's checked lifetimes.
@@ -92,9 +100,19 @@ UTF-8, so a `str` haystack must be viewed as UTF-8, in three ways
    zero-copy;
 2. non-ASCII whose CPython UTF-8 cache is warm — borrowed zero-copy
    (rurex never writes that cache: it is `PyMem_Malloc`-owned);
-3. non-ASCII with a cold cache — transcoded into an owned buffer, by
-   the AVX2 kernel where available (x86_64 with AVX2+BMI2, 1.4–3.8
-   GB/s) and by a scalar loop everywhere else (~0.48 GB/s).
+3. non-ASCII with a cold cache — first checked against the pattern's
+   required first byte (below); only if that byte occurs is it
+   transcoded into an owned buffer, by the AVX2 kernel where available
+   (x86_64 with AVX2+BMI2, 1.4–3.8 GB/s) and by a scalar loop
+   everywhere else (~0.48 GB/s).
+
+The prefilter is derived once at compile time from `regex-syntax`'s
+prefix-literal extractor: when every possible match starts with one of
+at most three distinct ASCII bytes, that byte is searched in the raw
+UCS storage (with unit-alignment checks for UCS-2/UCS-4). Its absence
+means no match can exist, so the query returns its no-match answer
+without transcoding. The prefilter is only consulted on the cold path;
+see [adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md).
 
 The transcoded buffer lives for the duration of the call (`HayKeep`),
 so re-scans of a string only rurex touched re-transcode each time —

@@ -25,6 +25,7 @@ pyo3 = "0.30"
 regex = "1.13"
 regex-automata = { version = "0.4.18", features = ["syntax"] }
 regex-syntax = "0.8"
+memchr = "2.8"
 
 [features]
 # Builds the abi3-py310 fallback wheel (ADR-0005); default builds are

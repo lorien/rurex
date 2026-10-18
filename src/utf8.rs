@@ -67,6 +67,7 @@ use pyo3::exceptions::PyUnicodeEncodeError;
 use pyo3::prelude::*;
 use pyo3::types::PyString;
 
+use crate::prefilter::Prefilter;
 use std::slice;
 use std::sync::OnceLock;
 
@@ -331,6 +332,10 @@ pub(crate) enum Utf8Buf<'py> {
     /// Transcoded in Rust (cache was cold) or copied by CPython
     /// (layout undetected).
     Owned(Utf8Scratch),
+    /// A cold transcode was avoided because the pattern's required
+    /// first byte is absent from the UCS storage; no match is
+    /// possible in this haystack.
+    NoMatch,
 }
 
 impl Utf8Buf<'_> {
@@ -341,6 +346,7 @@ impl Utf8Buf<'_> {
         match self {
             Utf8Buf::Borrowed(s) => s,
             Utf8Buf::Owned(s) => s.as_str(),
+            Utf8Buf::NoMatch => unreachable!("tests only pass haystacks"),
         }
     }
 }
@@ -397,11 +403,31 @@ fn inspect<'py>(bound: &Bound<'py, PyString>, l: &Layout) -> Stored {
 /// in Rust. When the object layout could not be validated (or the
 /// string is a non-compact legacy object) this falls back to
 /// CPython's encoder via `to_cow`.
+#[cfg(test)]
 pub(crate) fn utf8_of<'py>(bound: &Bound<'py, PyString>) -> PyResult<Utf8Buf<'py>> {
+    utf8_of_filtered(bound, None)
+}
+
+/// Like `utf8_of`, but on the cold-transcode path consult `prefilter`
+/// first: when the pattern's required first byte is absent from the
+/// UCS storage, return `NoMatch` instead of transcoding. The prefilter
+/// is never applied to ASCII strings, warm CPython caches, or objects
+/// whose layout could not be validated.
+pub(crate) fn utf8_of_filtered<'py>(
+    bound: &Bound<'py, PyString>,
+    prefilter: Option<&Prefilter>,
+) -> PyResult<Utf8Buf<'py>> {
     if let Some(l) = layout(bound.py()) {
         match inspect(bound, l) {
             Stored::Utf8(s) => return Ok(Utf8Buf::Borrowed(s)),
             Stored::Transcode(kind, len, data) => {
+                if let Some(p) = prefilter {
+                    // SAFETY: `data`/`len`/`kind` come from `inspect`
+                    // under the validated layout.
+                    if !unsafe { p.may_match_ucs(kind, len, data) } {
+                        return Ok(Utf8Buf::NoMatch);
+                    }
+                }
                 return Ok(Utf8Buf::Owned(unsafe { transcode(kind, len, data)? }));
             }
             Stored::Unknown => {}
@@ -699,6 +725,7 @@ mod tests {
             match utf8_of(&obj).unwrap() {
                 Utf8Buf::Borrowed(got) => assert_eq!(got, s),
                 Utf8Buf::Owned(_) => panic!("warm non-ASCII must borrow"),
+                Utf8Buf::NoMatch => panic!("no prefilter was passed"),
             }
         });
     }
@@ -712,6 +739,7 @@ mod tests {
             match utf8_of(&obj).unwrap() {
                 Utf8Buf::Borrowed(s) => assert_eq!(s, "hello world 123"),
                 Utf8Buf::Owned(_) => panic!("ASCII must borrow, not own"),
+                Utf8Buf::NoMatch => panic!("no prefilter was passed"),
             }
         });
     }
@@ -724,6 +752,7 @@ mod tests {
             match utf8_of(&obj).unwrap() {
                 Utf8Buf::Owned(s) => assert_eq!(s.as_str(), "مرحبا"),
                 Utf8Buf::Borrowed(_) => panic!("cold non-ASCII must own"),
+                Utf8Buf::NoMatch => panic!("no prefilter was passed"),
             }
         });
     }

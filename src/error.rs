@@ -88,33 +88,6 @@ pub(crate) fn make_error(
     Ok(err)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn byte_to_char_offset() {
-        assert_eq!(byte_offset_to_char("abc", 2), 2);
-        assert_eq!(byte_offset_to_char("aé(", 3), 2);
-        assert_eq!(byte_offset_to_char("é(", 2), 1);
-        assert_eq!(byte_offset_to_char("ab", 9), 2); // clamped
-    }
-
-    #[test]
-    fn line_col_single_line() {
-        assert_eq!(line_col_text("(a", 2), (1, 3));
-        assert_eq!(line_col_text("ab", 0), (1, 1));
-    }
-
-    #[test]
-    fn line_col_multi_line() {
-        // CPython: colno = pos - rfind('\n', 0, pos)
-        assert_eq!(line_col_text("ab\ncd", 5), (2, 3));
-        assert_eq!(line_col_text("ab\ncd", 3), (2, 1));
-        assert_eq!(line_col_bytes(b"ab\ncd", 5), (2, 3));
-    }
-}
-
 /// Rewrite a `regex-syntax` parse error to the message and byte offset
 /// CPython's `re` reports, for the kinds where they differ. Returns
 /// `None` to keep the engine's own wording. `pattern` is the (already
@@ -423,4 +396,31 @@ fn open_group_named(pattern: &str, at: usize, name: &str) -> bool {
         i += 1;
     }
     depth.iter().any(|n| *n == name && !name.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn byte_to_char_offset() {
+        assert_eq!(byte_offset_to_char("abc", 2), 2);
+        assert_eq!(byte_offset_to_char("aé(", 3), 2);
+        assert_eq!(byte_offset_to_char("é(", 2), 1);
+        assert_eq!(byte_offset_to_char("ab", 9), 2); // clamped
+    }
+
+    #[test]
+    fn line_col_single_line() {
+        assert_eq!(line_col_text("(a", 2), (1, 3));
+        assert_eq!(line_col_text("ab", 0), (1, 1));
+    }
+
+    #[test]
+    fn line_col_multi_line() {
+        // CPython: colno = pos - rfind('\n', 0, pos)
+        assert_eq!(line_col_text("ab\ncd", 5), (2, 3));
+        assert_eq!(line_col_text("ab\ncd", 3), (2, 1));
+        assert_eq!(line_col_bytes(b"ab\ncd", 5), (2, 3));
+    }
 }

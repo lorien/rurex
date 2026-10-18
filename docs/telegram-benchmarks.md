@@ -36,45 +36,42 @@ single-threaded.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.47 s | 0.51 s | 0.75 s | 0.35 s | ×1.6 | ×0.7 |
-| 2 | 0.54 s | 0.64 s | 0.93 s | 0.42 s | ×1.7 | ×0.7 |
-| 3 | 0.56 s | 0.57 s | 0.88 s | 0.54 s | ×1.6 | ×0.9 |
-| 4 | 0.61 s | 0.60 s | 0.95 s | 0.62 s | ×1.5 | ×1.0 |
+| 1 | 0.52 s | 0.54 s | 0.56 s | 0.29 s | ×1.1 | ×0.5 |
+| 2 | 0.52 s | 0.63 s | 0.60 s | 0.39 s | ×1.1 | ×0.6 |
+| 3 | 0.61 s | 0.72 s | 0.77 s | 0.46 s | ×1.3 | ×0.6 |
+| 4 | 0.63 s | 0.60 s | 0.69 s | 0.45 s | ×1.1 | ×0.7 |
 
 *(ratio < 1 = rurex faster)*
 
 Each point runs both input forms. The **str** variant is the real
-task on parsed text: `re` wins it, because it never converts — the
-haystack is UCS in memory and `re` matches it directly. rurex's
-engine matches UTF-8, so a non-ASCII `str` must be transcoded first,
-and that per-call transcode is the entire gap (the engine itself is
-2.2× faster than `re` on the same bytes — see the bytes row). The
-transcoder is a hand-written AVX2 kernel (ADR-0012): it converts at
-roughly 1 GB/s effective on short scattered strings where CPython's
-encoder and the scalar fallback manage ~0.45 GB/s, and strings whose
-UTF-8 cache another C-API consumer already filled are borrowed
-zero-copy instead. What remains is partly memory traffic on the
-string's own bytes, which no faster encoder can remove — which is why
-the row is still behind `re` despite the kernel being ~1.5× faster
-than its first version.
+task on parsed text: `re` matches the UCS buffer directly, while
+rurex's engine matches UTF-8 and must materialize it. The remaining
+gap is now small (×1.1 single-threaded): the
+required-first-byte prefilter (ADR-0013) skips the transcode for the
+77% of posts that cannot contain a match, so only posts with a
+candidate `@` pay it, and a hand-written AVX2 kernel (ADR-0012)
+handles those at 1–4 GB/s. Strings whose CPython UTF-8 cache another
+C-API consumer already filled are borrowed zero-copy. The `findall`
+path itself was also slimmed: it uses `find_at` and one flat span
+buffer instead of a `Captures` object and a `Vec` per match.
 
 The **bytes** variant feeds the same posts pre-encoded to UTF-8 —
 the corpus is already UTF-8 on disk, so a pipeline that stays in
 bytes never pays the transcode: rurex answers in
-**0.35 s, beating `re`'s
-0.51 s (×0.7)**
+**0.29 s, beating `re`'s
+0.54 s (×0.5)**
 single-threaded. That is the RE2-binding-recommended shape (feed
 UTF-8 bytes), and rurex makes it a first-class mode.
 
-With threads, rurex str stays flat
-(0.75–0.95 s; an earlier build
-degraded to 5.38 s before the 4 KB GIL-release threshold landed —
-rurex releases the GIL only for ≥ 4 KB haystacks, matching `re`'s
-own never-release-during-matching behavior for short texts), and
-rurex bytes improves modestly (0.35 →
-0.62 s at four workers: the scans are
-sub-µs, so the GIL-held per-call result building dominates — the same
-ceiling `re` bytes hits).
+With threads, both rurex variants get slower under the GIL
+(str 0.56 → 0.69 s,
+bytes 0.29 → 0.45 s
+at four workers): the scans are sub-µs, so the GIL-held per-call result
+building dominates and the workers convoy on the lock. `re` bytes
+shows the same shape
+(0.54 → 0.60 s). An earlier
+build degraded to 5.38 s before the 4 KB GIL-release threshold landed;
+releasing the GIL for every tiny scan was worse.
 
 ## Free-threaded Python
 
@@ -82,35 +79,37 @@ ceiling `re` bytes hits).
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.43 s | 0.43 s | 0.89 s | 0.42 s | ×2.1 | ×1.0 |
-| 2 | 0.27 s | 0.24 s | 0.53 s | 0.32 s | ×1.9 | ×1.3 |
-| 3 | 0.21 s | 0.20 s | 0.41 s | 0.29 s | ×1.9 | ×1.5 |
-| 4 | 0.20 s | 0.19 s | 0.36 s | 0.30 s | ×1.8 | ×1.6 |
+| 1 | 0.48 s | 0.41 s | 0.61 s | 0.37 s | ×1.3 | ×0.9 |
+| 2 | 0.28 s | 0.26 s | 0.39 s | 0.30 s | ×1.4 | ×1.2 |
+| 3 | 0.22 s | 0.24 s | 0.33 s | 0.29 s | ×1.5 | ×1.2 |
+| 4 | 0.21 s | 0.21 s | 0.30 s | 0.29 s | ×1.5 | ×1.4 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both variants scale: rurex str
-0.89 s → 0.36 s
-(2.4×; the transcode
-parallelizes like any other work) and rurex bytes
-0.42 s → 0.30 s;
-`re` 0.43 s → 0.20 s str,
-0.43 s → 0.19 s bytes.
-On this task free-threaded Python is the fastest way to run either
-engine at every thread count, and rurex bytes at
-0.30 s is within
-1.6× of the best `re` number while carrying
+0.61 s → 0.30 s
+(2.0×; the prefilter,
+the remaining transcode and the result building all run in parallel) and
+rurex bytes
+0.37 s → 0.29 s;
+`re` 0.48 s → 0.21 s str,
+0.41 s → 0.21 s bytes.
+With more than one worker free-threaded Python is the fastest way to
+run either engine on this task; at one worker the GIL build is
+slightly faster for rurex because per-call overhead, not the scan,
+dominates. rurex bytes at 0.29 s is within
+1.4× of the best `re` number while carrying
 no transcode tax at all.
 
 ## Reading the numbers
 
 Read the two variants as two different questions. **str**: what a
-user scanning parsed text once pays — `re` wins (it never
-transcodes); rurex pays a per-scan UCS→UTF-8 transcode (AVX2 where
-available, scalar elsewhere; re-scans of strings warmed by another
-C-API consumer borrow the cache and reach near-parity). **bytes**:
+user scanning parsed text once pays — `re` still has a small edge on
+free-threaded Python, while on the GIL build rurex is within
+×1.1 at one worker because the prefilter avoids most
+transcodes and `findall` no longer allocates per match. **bytes**:
 what a UTF-8-native pipeline pays — rurex **wins**
-(×0.7 single-threaded), because its engine
+(×0.5 single-threaded), because its engine
 scans UTF-8 directly with SIMD prefilters. The scan-bound leads on
 the main page (×7–13) do not transfer to short-text per-call
 extraction, but the bytes variant shows rurex ahead where the input
@@ -130,5 +129,5 @@ python benchmarks/telegram_charts.py   # regenerates the charts, this page
 ---
 
 *Raw results: [`benchmarks/telegram_results.json`](../benchmarks/telegram_results.json).
-Numbers on this page were measured on 2026-10-17 with rurex 0.1.0;
+Numbers on this page were measured on 2026-10-18 with rurex 0.1.0;
 see the raw results file for the exact environment.*

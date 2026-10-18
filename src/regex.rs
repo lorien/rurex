@@ -13,6 +13,7 @@ use pyo3::types::{PyAny, PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
 use crate::error;
 use crate::flags;
 use crate::match_::{Endpos, Match};
+use crate::prefilter::{self, Prefilter};
 use crate::retry::RetryEngine;
 use crate::template;
 
@@ -53,6 +54,12 @@ pub struct Regex {
     /// match ever encountered. `None` = not yet built or failed to
     /// build (callers then fall back to advancing one unit).
     retry: OnceLock<Option<Arc<RetryEngine>>>,
+    /// First-byte prefilter consulted only on the cold-transcode path
+    /// (see `prefilter.rs`).
+    first: Option<Prefilter>,
+    /// Whether the pattern can match the empty string; `false` skips
+    /// building the zero-width retry engine entirely.
+    nullable: bool,
 }
 
 /// Convert engine byte spans to Python-unit spans (character offsets)
@@ -152,6 +159,34 @@ where
 /// retry position carried across steps, `search` the ordinary
 /// unanchored leftmost-first search, `advance` the one-unit step
 /// (char boundary in text mode, `+1` in bytes mode).
+enum StepSource {
+    Retry(Vec<Option<(usize, usize)>>),
+    Search(usize),
+}
+
+/// The zero-width state machine shared by every iteration site: either
+/// the pending must-advance retry produced spans, or the next search
+/// starts at a given byte offset.
+fn step_source<A>(
+    hay: &[u8],
+    scan: usize,
+    pending: &mut Option<usize>,
+    retry: Option<&RetryEngine>,
+    advance: A,
+) -> StepSource
+where
+    A: FnOnce(usize) -> usize,
+{
+    if let Some(p) = *pending {
+        *pending = None;
+        if let Some(spans) = retry.and_then(|r| r.retry(hay, p, hay.len())) {
+            return StepSource::Retry(spans);
+        }
+        return StepSource::Search(advance(p));
+    }
+    StepSource::Search(scan)
+}
+
 fn cpython_step<S, A>(
     hay: &[u8],
     scan: usize,
@@ -164,14 +199,36 @@ where
     S: FnOnce(usize) -> Option<Vec<Option<(usize, usize)>>>,
     A: FnOnce(usize) -> usize,
 {
-    if let Some(p) = *pending {
-        *pending = None;
-        if let Some(spans) = retry.and_then(|r| r.retry(hay, p, hay.len())) {
-            return Some(spans);
-        }
-        return search(advance(p));
+    match step_source(hay, scan, pending, retry, advance) {
+        StepSource::Retry(spans) => Some(spans),
+        StepSource::Search(at) => search(at),
     }
-    search(scan)
+}
+
+/// Like `cpython_step`, but appends the match's group spans to a flat
+/// buffer instead of returning a fresh `Vec` per match. This is the
+/// `findall` path: one allocation for the whole scan, not one per
+/// match.
+fn cpython_step_flat<S, A>(
+    hay: &[u8],
+    scan: usize,
+    pending: &mut Option<usize>,
+    out: &mut Vec<Option<(usize, usize)>>,
+    search: S,
+    retry: Option<&RetryEngine>,
+    advance: A,
+) -> bool
+where
+    S: FnOnce(usize, &mut Vec<Option<(usize, usize)>>) -> bool,
+    A: FnOnce(usize) -> usize,
+{
+    match step_source(hay, scan, pending, retry, advance) {
+        StepSource::Retry(spans) => {
+            out.extend(spans);
+            true
+        }
+        StepSource::Search(at) => search(at, out),
+    }
 }
 
 /// Apply the CPython (>=3.7) advance rule to a just-yielded match:
@@ -328,15 +385,32 @@ impl<'py> HayKeep<'py> {
     /// faster than CPython's encoder) into `owned`. CPython's cache
     /// is never populated by us.
     pub(crate) fn hay(&mut self) -> PyResult<Hay<'_>> {
+        Ok(self
+            .hay_impl(None)?
+            .expect("without a prefilter a haystack always exists"))
+    }
+
+    /// Like `hay`, but consult `prefilter` on the cold-transcode path.
+    /// `None` means the prefilter proved that no match can exist in
+    /// this haystack, so the caller returns its no-match answer without
+    /// transcoding or scanning.
+    pub(crate) fn hay_with(&mut self, prefilter: Option<&Prefilter>) -> PyResult<Option<Hay<'_>>> {
+        self.hay_impl(prefilter)
+    }
+
+    fn hay_impl(&mut self, prefilter: Option<&Prefilter>) -> PyResult<Option<Hay<'_>>> {
         match self {
-            HayKeep::Text(bound, owned) => match crate::utf8::utf8_of(bound)? {
-                crate::utf8::Utf8Buf::Borrowed(s) => Ok(Hay::Text(s)),
+            HayKeep::Text(bound, owned) => match crate::utf8::utf8_of_filtered(bound, prefilter)? {
+                crate::utf8::Utf8Buf::Borrowed(s) => Ok(Some(Hay::Text(s))),
                 crate::utf8::Utf8Buf::Owned(s) => {
                     *owned = Some(s);
-                    Ok(Hay::Text(owned.as_ref().expect("just stored").as_str()))
+                    Ok(Some(Hay::Text(
+                        owned.as_ref().expect("just stored").as_str(),
+                    )))
                 }
+                crate::utf8::Utf8Buf::NoMatch => Ok(None),
             },
-            HayKeep::Bytes { bound, .. } => Ok(Hay::Bytes(bound.as_bytes())),
+            HayKeep::Bytes { bound, .. } => Ok(Some(Hay::Bytes(bound.as_bytes()))),
         }
     }
 }
@@ -550,6 +624,7 @@ impl Regex {
             Inner::Text(re) => names_of(re),
             Inner::Bytes(re) => names_of_bytes(re),
         });
+        let analysis = prefilter::analyze(text, &cfg, bytes_mode);
         Ok(Regex {
             inner,
             pattern: pat,
@@ -559,12 +634,19 @@ impl Regex {
             names,
             anchored: OnceLock::new(),
             retry: OnceLock::new(),
+            first: analysis.first,
+            nullable: analysis.nullable,
         })
     }
 
     /// The lazily built must-advance engine (`retry.rs`), shared by
     /// every iteration site via `cpython_step`.
     fn retry_engine(&self) -> Option<&Arc<RetryEngine>> {
+        // A pattern with a positive minimum length can never produce an
+        // empty match, so the must-advance engine is dead weight.
+        if !self.nullable {
+            return None;
+        }
         self.retry
             .get_or_init(|| {
                 let bytes_mode = matches!(self.inner, Inner::Bytes(_));
@@ -628,7 +710,9 @@ impl Regex {
         // guarantees the match there is found first when it exists.
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut keep = extract_hay(bytes_mode, string)?;
-        let hay = keep.hay()?;
+        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+            return Ok(None);
+        };
         let start = match hay {
             // `pos == 0` skips the walk: counting every character of a
             // large text is O(n) and 0 is the answer anyway.
@@ -705,7 +789,9 @@ impl Regex {
     /// True if the pattern matches anywhere in `text`.
     fn is_match<'py>(&self, py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<bool> {
         let mut keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
-        let hay = keep.hay()?;
+        let Some(hay) = keep.hay_with(self.first.as_ref())? else {
+            return Ok(false);
+        };
         match hay {
             Hay::Text(s) => {
                 let re = match &self.inner {
@@ -738,7 +824,9 @@ impl Regex {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = py_handle(&slf, py);
         let mut keep = extract_hay(bytes_mode, string)?;
-        let hay = keep.hay()?;
+        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+            return Ok(None);
+        };
         match hay {
             Hay::Text(s) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
@@ -856,7 +944,9 @@ impl Regex {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = py_handle(&slf, py);
         let mut keep = extract_hay(bytes_mode, string)?;
-        let hay = keep.hay()?;
+        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+            return Ok(None);
+        };
         match hay {
             Hay::Text(s) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
@@ -975,10 +1065,12 @@ impl Regex {
             } => Some(bound.clone().unbind()),
             _ => None,
         };
-        let hay = keep.hay()?;
-        let window_ok = match &hay {
-            Hay::Text(s) => window_bytes(s, pos, endpos),
-            Hay::Bytes(b) => window(pos, endpos, b.len()),
+        // `None` from the prefilter means no match can exist, which is
+        // the same state as an invalid window: an exhausted iterator.
+        let window_ok = match keep.hay_with(slf.first.as_ref())? {
+            Some(Hay::Text(s)) => window_bytes(s, pos, endpos),
+            Some(Hay::Bytes(b)) => window(pos, endpos, b.len()),
+            None => None,
         };
         let names = slf.names.clone();
         // An invalid window (endpos < pos after clamping) yields an
@@ -1023,31 +1115,31 @@ impl Regex {
     ) -> PyResult<Bound<'py, PyList>> {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut keep = extract_hay(bytes_mode, string)?;
-        let hay = keep.hay()?;
+        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+            return Ok(PyList::empty(py));
+        };
         match (hay, &slf.inner) {
             (Hay::Text(s), Inner::Text(engine)) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(PyList::empty(py));
                 };
                 let retry = slf.retry_engine().map(Arc::as_ref);
-                let all_spans = maybe_detach(py, eb, || scan_all_text(engine, retry, s, pb, eb));
-                let mut items = Vec::with_capacity(all_spans.len());
-                for spans in &all_spans {
-                    items.push(findall_item_text(py, s, slf.groups, spans)?);
-                }
-                Ok(PyList::new(py, items)?)
+                let groups = slf.groups;
+                let spans = maybe_detach(py, eb - pb, || {
+                    scan_all_flat_text(engine, retry, s, pb, eb, groups)
+                });
+                findall_list_text(py, s, groups, &spans)
             }
             (Hay::Bytes(b), Inner::Bytes(engine)) => {
                 let Some((pb, eb)) = window(pos, endpos, b.len()) else {
                     return Ok(PyList::empty(py));
                 };
                 let retry = slf.retry_engine().map(Arc::as_ref);
-                let all_spans = maybe_detach(py, eb, || scan_all_bytes(engine, retry, b, pb, eb));
-                let mut items = Vec::with_capacity(all_spans.len());
-                for spans in &all_spans {
-                    items.push(findall_item_bytes(py, b, slf.groups, spans)?);
-                }
-                Ok(PyList::new(py, items)?)
+                let groups = slf.groups;
+                let spans = maybe_detach(py, eb - pb, || {
+                    scan_all_flat_bytes(engine, retry, b, pb, eb, groups)
+                });
+                findall_list_bytes(py, b, groups, &spans)
             }
             _ => unreachable!(),
         }
@@ -1284,63 +1376,146 @@ fn captures_spans_text(
     })
 }
 
-/// Every match in the `[pb, eb)` byte window, as byte-unit group
-/// spans — pure Rust, safe under a released GIL. Follows CPython's
-/// (>=3.7) zero-width iteration rule via `cpython_step`.
-fn scan_all_text(
+/// Every match in the `[pb, eb)` byte window, as byte-unit group spans
+/// in one flat buffer. With no capture groups the loop uses `find_at`
+/// (no `Captures` allocation at all); with groups it uses
+/// `captures_at` but still writes all matches into the same buffer.
+/// Pure Rust, safe under a released GIL. Follows CPython's (>=3.7)
+/// zero-width iteration rule via `cpython_step_flat`.
+fn scan_all_flat_text(
     re: &regex::Regex,
     retry: Option<&RetryEngine>,
     s: &str,
     pb: usize,
     eb: usize,
-) -> Vec<Vec<Option<(usize, usize)>>> {
+    groups: usize,
+) -> Vec<Option<(usize, usize)>> {
     let hay = &s[..eb];
     let mut out = Vec::new();
     let mut scan = pb;
     let mut pending: Option<usize> = None;
     while scan <= eb {
-        let Some(spans) = cpython_step(
+        let start = out.len();
+        let found = cpython_step_flat(
             hay.as_bytes(),
             scan,
             &mut pending,
-            |at| captures_spans_text(re, hay, at),
+            &mut out,
+            |at, out| {
+                if groups == 0 {
+                    match re.find_at(hay, at) {
+                        Some(m) => {
+                            out.push(Some((m.start(), m.end())));
+                            true
+                        }
+                        None => false,
+                    }
+                } else {
+                    match re.captures_at(hay, at) {
+                        Some(caps) => {
+                            for i in 0..=groups {
+                                out.push(caps.get(i).map(|m| (m.start(), m.end())));
+                            }
+                            true
+                        }
+                        None => false,
+                    }
+                }
+            },
             retry,
             |p| next_boundary(s, p),
-        ) else {
+        );
+        if !found {
             break;
-        };
-        pending = advance_after(&spans, &mut scan).or(pending);
-        out.push(spans);
+        }
+        pending = advance_after(&out[start..], &mut scan).or(pending);
     }
     out
 }
 
-fn scan_all_bytes(
+fn scan_all_flat_bytes(
     re: &regex::bytes::Regex,
     retry: Option<&RetryEngine>,
     b: &[u8],
     pb: usize,
     eb: usize,
-) -> Vec<Vec<Option<(usize, usize)>>> {
+    groups: usize,
+) -> Vec<Option<(usize, usize)>> {
     let hay = &b[..eb];
     let mut out = Vec::new();
     let mut scan = pb;
     let mut pending: Option<usize> = None;
     while scan <= eb {
-        let Some(spans) = cpython_step(
+        let start = out.len();
+        let found = cpython_step_flat(
             hay,
             scan,
             &mut pending,
-            |at| captures_spans_bytes(re, hay, at),
+            &mut out,
+            |at, out| {
+                if groups == 0 {
+                    match re.find_at(hay, at) {
+                        Some(m) => {
+                            out.push(Some((m.start(), m.end())));
+                            true
+                        }
+                        None => false,
+                    }
+                } else {
+                    match re.captures_at(hay, at) {
+                        Some(caps) => {
+                            for i in 0..=groups {
+                                out.push(caps.get(i).map(|m| (m.start(), m.end())));
+                            }
+                            true
+                        }
+                        None => false,
+                    }
+                }
+            },
             retry,
             |p| p + 1,
-        ) else {
+        );
+        if !found {
             break;
-        };
-        pending = advance_after(&spans, &mut scan).or(pending);
-        out.push(spans);
+        }
+        pending = advance_after(&out[start..], &mut scan).or(pending);
     }
     out
+}
+
+fn findall_list_text<'py>(
+    py: Python<'py>,
+    s: &str,
+    groups: usize,
+    spans: &[Option<(usize, usize)>],
+) -> PyResult<Bound<'py, PyList>> {
+    if spans.is_empty() {
+        return Ok(PyList::empty(py));
+    }
+    let stride = groups + 1;
+    let mut items = Vec::with_capacity(spans.len() / stride);
+    for chunk in spans.chunks_exact(stride) {
+        items.push(findall_item_text(py, s, groups, chunk)?);
+    }
+    PyList::new(py, items)
+}
+
+fn findall_list_bytes<'py>(
+    py: Python<'py>,
+    b: &[u8],
+    groups: usize,
+    spans: &[Option<(usize, usize)>],
+) -> PyResult<Bound<'py, PyList>> {
+    if spans.is_empty() {
+        return Ok(PyList::empty(py));
+    }
+    let stride = groups + 1;
+    let mut items = Vec::with_capacity(spans.len() / stride);
+    for chunk in spans.chunks_exact(stride) {
+        items.push(findall_item_bytes(py, b, groups, chunk)?);
+    }
+    PyList::new(py, items)
 }
 
 /// One `findall` result value from byte-unit spans: the whole-match

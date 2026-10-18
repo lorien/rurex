@@ -43,10 +43,13 @@
 - [open] Test 2 needle@0: `re` 170 ns vs rurex 436 ns. Both sub-µs;
   closing it would mean trimming per-call `Match` construction
   (~440 ns floor: pyclass alloc + `Py<Regex>` handle). Low value.
-- [open] Test 4 @160/KB is parity (×1.05). The remaining per-value
+- [acted] Test 4 @160/KB is parity (×1.05). The remaining per-value
   cost is `PyString` construction across the FFI boundary; `re`
   builds values in C without one. Hard to beat without batching
   tricks that would complicate the code for ~5%.
+  [acted — the flat findall path (find_at, one span buffer) removed
+  the per-match Captures/Vec allocations; the 2026-10-18 suite re-run
+  measures ×1.74 at 160/KB.]
 - [open] `FindIter::step` still releases the GIL per match and builds
   a `Match` per match — by design (API returns Match objects), but a
   detach-only-when-haystack-remaining-is-large heuristic could shave
