@@ -169,7 +169,7 @@ loads the corpus and performs the single pass split across N
 barrier-started workers; there is no warm-up and no repeat scan.
 
 This is the long-haystack complement to the
-[Telegram benchmark](telegram-benchmarks.md): documents are large
+[Telegram benchmark](telegram-benchmark.md): documents are large
 (median {median_kb:.0f} KB), matches are dense
 ({s['median_matches']:.0f} per document, up to {s['max_matches']:,}),
 and capture groups are part of the result.
@@ -241,7 +241,7 @@ because the transcode is a small part of a long-document pass.
 
 ## Reading the numbers
 
-This page and the [Telegram page](telegram-benchmarks.md) describe the
+This page and the [Telegram page](telegram-benchmark.md) describe the
 two ends of the real-world spectrum. Telegram is short non-ASCII posts
 scanned once, where per-call transcode and per-match result building
 dominate; rurex had to close that gap with a prefilter and a leaner
@@ -267,7 +267,7 @@ python benchmarks/frontend_html_charts.py     # charts, this page, and the HTML 
 Numbers on this page were measured on 2026-10-18 with rurex 0.1.0;
 see the raw results file for the exact environment.*
 """
-    out = DOCS / "html-benchmarks.md"
+    out = DOCS / "homepage-benchmark.md"
     out.write_text(md)
     return out
 
@@ -295,7 +295,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
 <div class="banner" style="background:#fff8c5;border:1px solid #d4a72c;
      border-radius:8px;padding:.6rem 1rem;margin-bottom:2rem;font-size:90%%;">
-Rendered from <code>docs/html-benchmarks.md</code> with embedded
+Rendered from <code>docs/homepage-benchmark.md</code> with embedded
 images — regenerate with <code>python benchmarks/frontend_html_charts.py</code>.</div>
 {body}
 </body>
@@ -305,7 +305,7 @@ images — regenerate with <code>python benchmarks/frontend_html_charts.py</code
 
 def render_html():
     if markdown is None:
-        stale = DOCS / "html-benchmarks.html"
+        stale = DOCS / "homepage-benchmark.html"
         print(
             "WARNING: the markdown package is missing, so "
             f"{stale} was NOT regenerated and will keep showing the "
@@ -313,7 +313,7 @@ def render_html():
             file=sys.stderr,
         )
         return None
-    md_text = (DOCS / "html-benchmarks.md").read_text()
+    md_text = (DOCS / "homepage-benchmark.md").read_text()
     body = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
 
     def embed(match):
@@ -322,7 +322,7 @@ def render_html():
         return f'src="data:image/png;base64,{b64}"'
 
     body = re.sub(r'src="(img/[^"]+)"', embed, body)
-    out = DOCS / "html-benchmarks.html"
+    out = DOCS / "homepage-benchmark.html"
     out.write_text(HTML_TEMPLATE.format(body=body))
     return out
 

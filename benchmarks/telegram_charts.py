@@ -258,7 +258,7 @@ python benchmarks/telegram_charts.py   # regenerates the charts, this page
 Numbers on this page were measured on 2026-10-18 with rurex 0.1.0;
 see the raw results file for the exact environment.*
 """
-    out = DOCS / "telegram-benchmarks.md"
+    out = DOCS / "telegram-benchmark.md"
     out.write_text(md)
     return out
 
@@ -286,7 +286,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
 <div class="banner" style="background:#fff8c5;border:1px solid #d4a72c;
      border-radius:8px;padding:.6rem 1rem;margin-bottom:2rem;font-size:90%%;">
-Rendered from <code>docs/telegram-benchmarks.md</code> with embedded
+Rendered from <code>docs/telegram-benchmark.md</code> with embedded
 images — regenerate with <code>python benchmarks/telegram_charts.py</code>.</div>
 {body}
 </body>
@@ -296,7 +296,7 @@ images — regenerate with <code>python benchmarks/telegram_charts.py</code>.</d
 
 def render_html():
     if markdown is None:
-        stale = DOCS / "telegram-benchmarks.html"
+        stale = DOCS / "telegram-benchmark.html"
         print(
             "WARNING: the markdown package is missing, so "
             f"{stale} was NOT regenerated and will keep showing the "
@@ -304,7 +304,7 @@ def render_html():
             file=sys.stderr,
         )
         return None
-    md_text = (DOCS / "telegram-benchmarks.md").read_text()
+    md_text = (DOCS / "telegram-benchmark.md").read_text()
     body = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
 
     def embed(match):
@@ -315,7 +315,7 @@ def render_html():
     import re
 
     body = re.sub(r'src="(img/[^"]+)"', embed, body)
-    out = DOCS / "telegram-benchmarks.html"
+    out = DOCS / "telegram-benchmark.html"
     out.write_text(HTML_TEMPLATE.format(body=body))
     return out
 

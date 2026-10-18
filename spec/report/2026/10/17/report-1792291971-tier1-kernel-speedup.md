@@ -88,7 +88,7 @@ pay for it.
 
 ### Spec/ADR amendments
 
-- [acted] `docs/telegram-benchmarks.md` prose now quotes the results
+- [acted] `docs/telegram-benchmark.md` prose now quotes the results
   table through interpolation (`w()`/`x()` in `telegram_charts.py`)
   instead of hand-copied numbers, so a re-run cannot leave the prose
   telling last run's story.

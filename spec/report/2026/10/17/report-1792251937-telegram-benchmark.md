@@ -1,7 +1,7 @@
 ## Report on task: Telegram @mention real-world benchmark
 
 Ad-hoc owner request: a new committed document
-`docs/telegram-benchmarks.html` benchmarking @username extraction
+`docs/telegram-benchmark.html` benchmarking @username extraction
 over 1M Telegram channel posts, thread series 1–4, GIL and
 free-threaded Pythons.
 
@@ -70,7 +70,7 @@ engines), mention checksum 334,136 per run.
 ### Spec/ADR amendments
 
 - [acted] docs/benchmarks.md cross-link; new committed
-  docs/telegram-benchmarks.html.
+  docs/telegram-benchmark.html.
 
 ### Future-task notes
 

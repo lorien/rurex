@@ -77,7 +77,7 @@ detached scan region for this change.
   (0.36 → 0.35 s), which is the control that the win is the transcode.
 - Docs: ADR-0012, a "Text transcoding" section plus a rewritten
   "Memory and safety" section in `architecture.md`, `index.md` entry,
-  regenerated `docs/telegram-benchmarks.md` (tables *and* the prose,
+  regenerated `docs/telegram-benchmark.md` (tables *and* the prose,
   which still told the ×3 story), refreshed charts, and
   `var/utf8_micro.md` with the kernel table and the four performance
   lessons.
@@ -104,7 +104,7 @@ detached scan region for this change.
   large-text pipelines encode in parallel; deferred deliberately
   (owner decision) because the SIMD kernel already shrank the
   GIL-held burst 3–8×.
-- [acted] `docs/telegram-benchmarks.md` prose is hand-maintained
+- [acted] `docs/telegram-benchmark.md` prose is hand-maintained
   inside `benchmarks/telegram_charts.py` while only the tables are
   computed, so a re-run silently leaves stale narrative — now every
   number in the prose is interpolated from the results file via
@@ -143,11 +143,11 @@ detached scan region for this change.
 ### Postscript: the stale HTML twin
 
 Owner report after the commit: "I see old picture." The committed
-artifacts were correct — both PNGs and `docs/telegram-benchmarks.md`
+artifacts were correct — both PNGs and `docs/telegram-benchmark.md`
 were regenerated from the final run (verified by reading the charts:
 rurex/str 0.77 → 0.91 s and 0.84 → 0.37 s, the new numbers). The stale
 artifact was the **gitignored HTML twin**
-(`docs/telegram-benchmarks.html`): it had been written by an earlier
+(`docs/telegram-benchmark.html`): it had been written by an earlier
 run, still carried the ×3 numbers, and — because it embeds the charts
 as base64 — can never pick up a new PNG by itself. It was generated
 only on an explicit `--html` flag, which the regeneration I ran did not
@@ -163,13 +163,13 @@ Fixed at the root rather than by re-running once:
   print a warning to stderr naming the stale file and the fix
   (`pip install markdown`).
 - The HTML banner and the reproduction blocks in
-  `docs/telegram-benchmarks.md` (generated) and `docs/benchmarks.md`
+  `docs/telegram-benchmark.md` (generated) and `docs/benchmarks.md`
   (hand-written) no longer tell you to pass `--html`. The Telegram
   page's footer also stopped enumerating which fix a run "includes" —
   that sentence goes stale on every run; it points at the raw results
   file for the environment instead.
 - Both twins regenerated and verified: the base64 payloads in
-  `docs/telegram-benchmarks.html` now hash-equal the current PNGs.
+  `docs/telegram-benchmark.html` now hash-equal the current PNGs.
 
 Markers:
 

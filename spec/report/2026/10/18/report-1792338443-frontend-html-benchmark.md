@@ -60,7 +60,7 @@ GIL-release threshold, so rurex scales under the GIL while `re`'s
 **Docs and tooling.**
 
 - Added `benchmarks/frontend_html.py`, `benchmarks/frontend_html_charts.py`,
-  `benchmarks/frontend_html_results.json`, `docs/html-benchmarks.md`,
+  `benchmarks/frontend_html_results.json`, `docs/homepage-benchmark.md`,
   and the two charts.
 - Added `make bench-html`; updated `spec/docs/dev.md`, `docs/benchmarks.md`,
   README, and `.gitignore` for the generated HTML twin.

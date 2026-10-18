@@ -7,5 +7,5 @@ __pycache__/
 /.env
 var/
 docs/benchmarks.html
-docs/telegram-benchmarks.html
-docs/html-benchmarks.html
+docs/telegram-benchmark.html
+docs/homepage-benchmark.html

@@ -42,9 +42,9 @@ regenerate it together with the charts (`--no-html` opts out).
 
 Two real-world complements, each one cold run per measured point:
 @mention extraction over 1M Telegram posts (short texts, extraction
-bound) in [`telegram-benchmarks.md`](telegram-benchmarks.md), and
+bound) in [`telegram-benchmark.md`](telegram-benchmark.md), and
 frontend HTML `href`/`src` extraction (long documents, dense grouped
-extraction) in [`html-benchmarks.md`](html-benchmarks.md).
+extraction) in [`homepage-benchmark.md`](homepage-benchmark.md).
 
 ## Methodology
 

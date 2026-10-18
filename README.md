@@ -115,8 +115,8 @@ CPython's UTF-8 cache when another C-API consumer already filled it.
   threshold, so rurex also scales with worker threads.
 
 Details and thread-scaling numbers:
-[docs/telegram-benchmarks.md](docs/telegram-benchmarks.md) and
-[docs/html-benchmarks.md](docs/html-benchmarks.md).
+[docs/telegram-benchmark.md](docs/telegram-benchmark.md) and
+[docs/homepage-benchmark.md](docs/homepage-benchmark.md).
 
 ## Installation
 

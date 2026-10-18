@@ -6,7 +6,7 @@ loads the corpus and performs the single pass split across N
 barrier-started workers; there is no warm-up and no repeat scan.
 
 This is the long-haystack complement to the
-[Telegram benchmark](telegram-benchmarks.md): documents are large
+[Telegram benchmark](telegram-benchmark.md): documents are large
 (median 117 KB), matches are dense
 (191 per document, up to 4,692),
 and capture groups are part of the result.
@@ -92,7 +92,7 @@ because the transcode is a small part of a long-document pass.
 
 ## Reading the numbers
 
-This page and the [Telegram page](telegram-benchmarks.md) describe the
+This page and the [Telegram page](telegram-benchmark.md) describe the
 two ends of the real-world spectrum. Telegram is short non-ASCII posts
 scanned once, where per-call transcode and per-match result building
 dominate; rurex had to close that gap with a prefilter and a leaner

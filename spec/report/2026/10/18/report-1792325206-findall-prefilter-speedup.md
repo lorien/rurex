@@ -109,7 +109,7 @@ a noisy run; the extraction improvement is recorded here.
   and names ADR-0013 in the unsafe/safety section.
 - [acted] `spec/docs/plan.md` has the new "Full lone-surrogate parity
   for str haystacks" task.
-- [acted] `docs/telegram-benchmarks.md`, its charts, and the README
+- [acted] `docs/telegram-benchmark.md`, its charts, and the README
   performance text now tell the current story (prefilter, near-parity
   on GIL str, bytes lead).
 

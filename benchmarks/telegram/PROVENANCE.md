@@ -29,4 +29,4 @@ curl -L -o var/bench-data/tg-1m.json.gz \
 The benchmark reads the gzip stream directly; no 527 MB file is ever
 materialized. Corpus statistics (post count, bytes, mention density)
 are computed by the harness at run time and reported in
-`docs/telegram-benchmarks.html`.
+`docs/telegram-benchmark.html`.
