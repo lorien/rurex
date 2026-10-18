@@ -15,7 +15,7 @@
       "engine": "re",
       "threads": 1,
       "input": "str",
-      "wall_s": 0.4804887743666768,
+      "wall_s": 0.46831440972164273,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -23,7 +23,7 @@
       "engine": "re",
       "threads": 1,
       "input": "bytes",
-      "wall_s": 0.5373539729043841,
+      "wall_s": 0.5102562010288239,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -31,7 +31,7 @@
       "engine": "rurex",
       "threads": 1,
       "input": "str",
-      "wall_s": 0.7707946873269975,
+      "wall_s": 0.7539877751842141,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -39,7 +39,7 @@
       "engine": "rurex",
       "threads": 1,
       "input": "bytes",
-      "wall_s": 0.35187549609690905,
+      "wall_s": 0.3518776963464916,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -47,7 +47,7 @@
       "engine": "re",
       "threads": 2,
       "input": "str",
-      "wall_s": 0.6661086459644139,
+      "wall_s": 0.5350315887480974,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -55,7 +55,7 @@
       "engine": "re",
       "threads": 2,
       "input": "bytes",
-      "wall_s": 0.636610094923526,
+      "wall_s": 0.643642342183739,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -63,7 +63,7 @@
       "engine": "rurex",
       "threads": 2,
       "input": "str",
-      "wall_s": 0.8120198589749634,
+      "wall_s": 0.9259336511604488,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -71,7 +71,7 @@
       "engine": "rurex",
       "threads": 2,
       "input": "bytes",
-      "wall_s": 0.4632341731339693,
+      "wall_s": 0.42104274313896894,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -79,7 +79,7 @@
       "engine": "re",
       "threads": 3,
       "input": "str",
-      "wall_s": 0.5908426893875003,
+      "wall_s": 0.5615339251235127,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -87,7 +87,7 @@
       "engine": "re",
       "threads": 3,
       "input": "bytes",
-      "wall_s": 0.7738596168346703,
+      "wall_s": 0.5683867428451777,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -95,7 +95,7 @@
       "engine": "rurex",
       "threads": 3,
       "input": "str",
-      "wall_s": 0.8786654719151556,
+      "wall_s": 0.8774497918784618,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -103,7 +103,7 @@
       "engine": "rurex",
       "threads": 3,
       "input": "bytes",
-      "wall_s": 0.4325812221504748,
+      "wall_s": 0.5371926599182189,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -111,7 +111,7 @@
       "engine": "re",
       "threads": 4,
       "input": "str",
-      "wall_s": 0.44148842990398407,
+      "wall_s": 0.6133533818647265,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -119,7 +119,7 @@
       "engine": "re",
       "threads": 4,
       "input": "bytes",
-      "wall_s": 0.6670040017925203,
+      "wall_s": 0.5968333380296826,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -127,7 +127,7 @@
       "engine": "rurex",
       "threads": 4,
       "input": "str",
-      "wall_s": 0.9099378930404782,
+      "wall_s": 0.9467128170654178,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -135,7 +135,7 @@
       "engine": "rurex",
       "threads": 4,
       "input": "bytes",
-      "wall_s": 0.5331089440733194,
+      "wall_s": 0.6207785420119762,
       "mentions": 334136,
       "interpreter": "gil"
     },
@@ -143,7 +143,7 @@
       "engine": "re",
       "threads": 1,
       "input": "str",
-      "wall_s": 0.4428740800358355,
+      "wall_s": 0.4316003881394863,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -151,7 +151,7 @@
       "engine": "re",
       "threads": 1,
       "input": "bytes",
-      "wall_s": 0.3945166622288525,
+      "wall_s": 0.42716126097366214,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -159,7 +159,7 @@
       "engine": "rurex",
       "threads": 1,
       "input": "str",
-      "wall_s": 0.8369312379509211,
+      "wall_s": 0.8869483941234648,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -167,7 +167,7 @@
       "engine": "rurex",
       "threads": 1,
       "input": "bytes",
-      "wall_s": 0.4175949711352587,
+      "wall_s": 0.41713290521875024,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -175,7 +175,7 @@
       "engine": "re",
       "threads": 2,
       "input": "str",
-      "wall_s": 0.27590652694925666,
+      "wall_s": 0.27290177904069424,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -183,7 +183,7 @@
       "engine": "re",
       "threads": 2,
       "input": "bytes",
-      "wall_s": 0.2455619010142982,
+      "wall_s": 0.24445141898468137,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -191,7 +191,7 @@
       "engine": "rurex",
       "threads": 2,
       "input": "str",
-      "wall_s": 0.5319179492071271,
+      "wall_s": 0.5268540801480412,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -199,7 +199,7 @@
       "engine": "rurex",
       "threads": 2,
       "input": "bytes",
-      "wall_s": 0.33747370168566704,
+      "wall_s": 0.32424339186400175,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -207,7 +207,7 @@
       "engine": "re",
       "threads": 3,
       "input": "str",
-      "wall_s": 0.22661770414561033,
+      "wall_s": 0.2130754659883678,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -215,7 +215,7 @@
       "engine": "re",
       "threads": 3,
       "input": "bytes",
-      "wall_s": 0.2035355269908905,
+      "wall_s": 0.20235975785180926,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -223,7 +223,7 @@
       "engine": "rurex",
       "threads": 3,
       "input": "str",
-      "wall_s": 0.4060231111943722,
+      "wall_s": 0.41481170896440744,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -231,7 +231,7 @@
       "engine": "rurex",
       "threads": 3,
       "input": "bytes",
-      "wall_s": 0.30110872723162174,
+      "wall_s": 0.2948441621847451,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -239,7 +239,7 @@
       "engine": "re",
       "threads": 4,
       "input": "str",
-      "wall_s": 0.20462826127186418,
+      "wall_s": 0.2000838667154312,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -247,7 +247,7 @@
       "engine": "re",
       "threads": 4,
       "input": "bytes",
-      "wall_s": 0.18566066306084394,
+      "wall_s": 0.19336762698367238,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -255,7 +255,7 @@
       "engine": "rurex",
       "threads": 4,
       "input": "str",
-      "wall_s": 0.37033802503719926,
+      "wall_s": 0.3649225989356637,
       "mentions": 334136,
       "interpreter": "free"
     },
@@ -263,7 +263,7 @@
       "engine": "rurex",
       "threads": 4,
       "input": "bytes",
-      "wall_s": 0.2991601312533021,
+      "wall_s": 0.30160399805754423,
       "mentions": 334136,
       "interpreter": "free"
     }

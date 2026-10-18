@@ -266,6 +266,62 @@ pub(crate) fn layout(py: Python<'_>) -> Option<&'static Layout> {
     LAYOUT.get_or_init(|| detect(py)).as_ref()
 }
 
+/// A reusable output buffer. The transcoder writes into it and the
+/// caller reads it back as UTF-8 for the duration of one call.
+///
+/// Buffers come from a per-thread free list instead of the allocator:
+/// a fresh `Vec` per call is not just a malloc, it is *cold cache* —
+/// the kernel's stores then pay write-allocate misses on every line
+/// (measured: most of the per-call overhead on short strings). Reusing
+/// the same buffer keeps it resident in L1/L2 across calls.
+pub(crate) struct Utf8Scratch {
+    buf: Vec<u8>,
+    len: usize,
+}
+
+/// Retained buffers per thread, and the largest capacity kept (a
+/// haystack-sized buffer is freed rather than pinned forever).
+const POOL_MAX: usize = 4;
+const POOL_CAP_MAX: usize = 1 << 20;
+
+fn pool() -> &'static std::thread::LocalKey<std::cell::RefCell<Vec<Vec<u8>>>> {
+    thread_local! {
+        static POOL: std::cell::RefCell<Vec<Vec<u8>>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+    &POOL
+}
+
+impl Utf8Scratch {
+    /// Take a buffer with room for at least `cap` bytes.
+    fn take(cap: usize) -> Utf8Scratch {
+        let mut buf = pool().with(|p| p.borrow_mut().pop()).unwrap_or_default();
+        buf.clear();
+        buf.reserve(cap);
+        Utf8Scratch { buf, len: 0 }
+    }
+
+    /// The UTF-8 written by the transcoder.
+    pub(crate) fn as_str(&self) -> &str {
+        // SAFETY: the transcoder writes valid UTF-8 (validated against
+        // CPython's encoder by the differential tests).
+        unsafe { std::str::from_utf8_unchecked(&self.buf[..self.len]) }
+    }
+}
+
+impl Drop for Utf8Scratch {
+    fn drop(&mut self) {
+        let buf = std::mem::take(&mut self.buf);
+        if buf.capacity() <= POOL_CAP_MAX {
+            pool().with(|p| {
+                let mut p = p.borrow_mut();
+                if p.len() < POOL_MAX {
+                    p.push(buf);
+                }
+            });
+        }
+    }
+}
+
 /// A borrowed-or-owned UTF-8 haystack for one call. The borrowed
 /// form is valid while the caller keeps the `Bound<PyString>` alive
 /// (the string object, and with it the internal/cache buffer, cannot
@@ -274,16 +330,17 @@ pub(crate) enum Utf8Buf<'py> {
     Borrowed(&'py str),
     /// Transcoded in Rust (cache was cold) or copied by CPython
     /// (layout undetected).
-    Owned(String),
+    Owned(Utf8Scratch),
 }
 
 impl Utf8Buf<'_> {
-    /// The UTF-8 view, whichever variant this is (tests only).
+    /// The UTF-8 view, whichever variant this is (tests only; the
+    /// call sites read the scratch directly).
     #[cfg(test)]
     fn as_str(&self) -> &str {
         match self {
             Utf8Buf::Borrowed(s) => s,
-            Utf8Buf::Owned(s) => s,
+            Utf8Buf::Owned(s) => s.as_str(),
         }
     }
 }
@@ -351,7 +408,10 @@ pub(crate) fn utf8_of<'py>(bound: &Bound<'py, PyString>) -> PyResult<Utf8Buf<'py
         }
     }
     let cow = bound.to_cow()?;
-    Ok(Utf8Buf::Owned(cow.into_owned()))
+    let mut scratch = Utf8Scratch::take(cow.len());
+    scratch.buf.extend_from_slice(cow.as_bytes());
+    scratch.len = cow.len();
+    Ok(Utf8Buf::Owned(scratch))
 }
 
 fn surrogate_error() -> PyErr {
@@ -364,24 +424,45 @@ fn surrogate_error() -> PyErr {
     ))
 }
 
-/// Transcode UCS-1/2/4 to UTF-8 in Rust (cache was cold).
+/// Transcode UCS-1/2/4 to UTF-8 in Rust (cache was cold), into a
+/// reused scratch buffer.
 ///
 /// On x86_64 CPUs with AVX2+BMI2 the SIMD kernel in `simd` handles
 /// the bulk; the scalar loop is the portable fallback, the error
 /// path, and the reference the kernel is differentially tested
 /// against.
-unsafe fn transcode(kind: Kind, len: usize, data: *const u8) -> PyResult<String> {
-    #[cfg(target_arch = "x86_64")]
-    if simd::supported() {
-        return unsafe { simd::transcode(kind, len, data) };
-    }
-    unsafe { transcode_scalar(kind, len, data) }
+unsafe fn transcode(kind: Kind, len: usize, data: *const u8) -> PyResult<Utf8Scratch> {
+    let cap = (match kind {
+        Kind::Ucs1 => len * 2,
+        Kind::Ucs2 => len * 3,
+        Kind::Ucs4 => len * 4,
+    }) + 32;
+    let mut scratch = Utf8Scratch::take(cap);
+    let n = unsafe {
+        #[cfg(target_arch = "x86_64")]
+        if simd::supported() {
+            simd::transcode(kind, len, data, &mut scratch.buf)?
+        } else {
+            transcode_scalar(kind, len, data, &mut scratch.buf)?
+        }
+        #[cfg(not(target_arch = "x86_64"))]
+        transcode_scalar(kind, len, data, &mut scratch.buf)?
+    };
+    scratch.len = n;
+    Ok(scratch)
 }
 
-/// Scalar UCS→UTF-8 encoder: one unit at a time. Surrogates
-/// (UCS-2/UCS-4) and values above U+10FFFF (UCS-4) raise
-/// `UnicodeEncodeError`, like `PyUnicode_AsUTF8AndSize`.
-unsafe fn transcode_scalar(kind: Kind, len: usize, data: *const u8) -> PyResult<String> {
+/// Scalar UCS→UTF-8 encoder: one unit at a time, appended to `out`.
+/// Returns the number of bytes written. Surrogates (UCS-2/UCS-4) and
+/// values above U+10FFFF (UCS-4) raise `UnicodeEncodeError`, like
+/// `PyUnicode_AsUTF8AndSize`.
+unsafe fn transcode_scalar(
+    kind: Kind,
+    len: usize,
+    data: *const u8,
+    out: &mut Vec<u8>,
+) -> PyResult<usize> {
+    let start = out.len();
     let s = unsafe {
         match kind {
             Kind::Ucs1 => {
@@ -415,7 +496,8 @@ unsafe fn transcode_scalar(kind: Kind, len: usize, data: *const u8) -> PyResult<
             }
         }
     };
-    Ok(s)
+    out.extend_from_slice(s.as_bytes());
+    Ok(out.len() - start)
 }
 
 #[cfg(test)]
@@ -424,10 +506,7 @@ mod tests {
 
     fn utf8_of_str(py: Python<'_>, s: &str) -> String {
         let obj = PyString::new(py, s);
-        match utf8_of(&obj).unwrap() {
-            Utf8Buf::Owned(s) => s,
-            Utf8Buf::Borrowed(s) => s.to_string(),
-        }
+        utf8_of(&obj).unwrap().as_str().to_string()
     }
 
     fn py_of(s: &str) -> String {
@@ -643,7 +722,7 @@ mod tests {
         Python::attach(|py| {
             let obj = PyString::new(py, "مرحبا");
             match utf8_of(&obj).unwrap() {
-                Utf8Buf::Owned(s) => assert_eq!(s, "مرحبا"),
+                Utf8Buf::Owned(s) => assert_eq!(s.as_str(), "مرحبا"),
                 Utf8Buf::Borrowed(_) => panic!("cold non-ASCII must own"),
             }
         });

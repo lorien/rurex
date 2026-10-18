@@ -6,21 +6,38 @@
 //!    surrogate-pair decoding, see below),
 //! 2. derives each lane's UTF-8 length as a 3-bit sum into a 4-bit
 //!    field, giving a `lens` vector whose nibbles are `len - 1`,
-//! 3. takes a fixed-shuffle fast path when all 8 lanes share a
-//!    length (the overwhelmingly common shape: ASCII runs, a run of
-//!    Arabic/Cyrillic, a run of CJK, a run of emoji), and otherwise
-//! 4. stages the four candidate UTF-8 bytes of every lane into one
+//! 3. stages the four candidate UTF-8 bytes of every lane into one
 //!    32-byte register (slot `i` = bytes `4i..4i+3`, valid prefix
-//!    only) and compacts each 4-lane half with a `pshufb` whose
-//!    control comes from a 256-row table indexed by the half's
-//!    eight length bits.
+//!    only) — with a *specialized* staging for the two length pairs
+//!    that real text is made of (1|2 and 3|4), and the full
+//!    four-candidate blend chain only for chunks that mix across
+//!    those pairs, and
+//! 4. emits a `pshufb` per 4-lane half whose control comes from a
+//!    256-row table indexed by that half's eight length bits. All-ASCII
+//!    chunks take a fixed shuffle instead (no staging at all). Uniform
+//!    2/3/4-byte chunks are *not* special-cased: the table holds their
+//!    rows too, and the extra branches cost more than the fixed shuffle
+//!    saves (measured).
+//!
+//! Staging by length pair is the win on real text: 70% of chunks in
+//! a mixed Arabic/Latin corpus contain only 1- and 2-byte output, and
+//! there the slot is just `lead | tail<<8` (two ops) instead of the
+//! full blend chain (which is only needed when lengths 1..4 can
+//! co-occur in one chunk).
 //!
 //! The table is the key to the mixed case: computing compaction
 //! controls arithmetically (BMI2 `pext`/`pdep`) costs two
 //! general-purpose-register round trips *per half* and measured
-//! 1.6-2x slower than one indexed load (see `var/kbench` and the
-//! session report). simdutf uses the same shape for its 1|2-byte
-//! Latin-1 kernel.
+//! 1.6-2x slower than one indexed load. simdutf uses the same shape
+//! for its 1|2-byte Latin-1 kernel.
+//!
+//! Three shapes were measured and rejected on this corpus (see the
+//! session report): a two-pass "prefix-sum the output offsets so
+//! chunks write in parallel" variant (the extra classify pass costs
+//! more than the decoupling saves), deriving the per-chunk byte
+//! count from a `popcount` of the keep-mask instead of the table row
+//! (pure extra arithmetic — the row load is not what gates the
+//! store), and per-half uniform fast paths (branch mispredicts).
 //!
 //! Why no surrogate-pair decoding: CPython picks the storage kind by
 //! the string's maximum code point (`PyUnicode_New`), so any string
@@ -45,11 +62,12 @@
 //! The `#[target_feature]` functions are only reached through that
 //! gate — calling them on a CPU without the feature would be UB.
 //!
-//! Allocation: output capacity is the per-kind worst case
-//! (2/3/4 bytes per unit) plus 32 bytes of slack; the fast paths use
-//! overlapping stores, so up to 12 bytes past the current write
-//! position may be scribbled and are never part of the result
-//! (`set_len` trims them, and the slack covers the last store).
+//! Output: the caller (`super::transcode`) passes a reused scratch
+//! buffer with room for the per-kind worst case (2/3/4 bytes per
+//! unit) plus 32 bytes of slack; the fast paths use overlapping
+//! stores, so up to 12 bytes past the current write position may be
+//! scribbled and are never part of the result (`set_len` trims them,
+//! and the slack covers the last store).
 
 use pyo3::prelude::*;
 use std::arch::x86_64::*;
@@ -69,15 +87,22 @@ pub(crate) fn supported() -> bool {
 const ONES: u32 = 0x1111_1111;
 
 /// Entry: transcode `len` units of `kind` at `data` (the compact
-/// UCS buffer of a non-ASCII string).
+/// UCS buffer of a non-ASCII string), appending the UTF-8 to `out`
+/// and returning the number of bytes appended. `out` must already
+/// have capacity for the worst case (the caller sizes it).
 ///
 /// # Safety
 ///
 /// `data` must point to `len` readable units of the given kind
 /// (UCS-1: `u8`, UCS-2: `u16`, UCS-4: `u32`), and the CPU must
 /// support AVX2 + BMI2 (caller checks `supported()`).
-pub(crate) unsafe fn transcode(kind: Kind, len: usize, data: *const u8) -> PyResult<String> {
-    unsafe { transcode_avx2(kind, len, data) }
+pub(crate) unsafe fn transcode(
+    kind: Kind,
+    len: usize,
+    data: *const u8,
+    out: &mut Vec<u8>,
+) -> PyResult<usize> {
+    unsafe { transcode_avx2(kind, len, data, out) }
 }
 
 /// The whole kernel lives in one `#[target_feature]` function so
@@ -91,94 +116,110 @@ pub(crate) unsafe fn transcode(kind: Kind, len: usize, data: *const u8) -> PyRes
 /// CPU must support AVX2 + BMI2.
 #[target_feature(enable = "avx2")]
 #[target_feature(enable = "bmi2")]
-unsafe fn transcode_avx2(kind: Kind, len: usize, data: *const u8) -> PyResult<String> {
-    let cap = (match kind {
-        Kind::Ucs1 => len * 2,
-        Kind::Ucs2 => len * 3,
-        Kind::Ucs4 => len * 4,
-    }) + 32;
-    let mut out: Vec<u8> = Vec::with_capacity(cap);
+unsafe fn transcode_avx2(
+    kind: Kind,
+    len: usize,
+    data: *const u8,
+    out: &mut Vec<u8>,
+) -> PyResult<usize> {
     let mut written = 0usize;
-    let outptr = out.as_mut_ptr();
+    let outptr = unsafe { out.as_mut_ptr().add(out.len()) };
     let mut i = 0usize;
-    while i + 8 <= len {
-        let v = unsafe { load_chunk(kind, data, i) };
-        if unsafe { has_bad_lanes(kind, v) } {
-            // Scalar chunk: raises at the first bad unit, encodes
-            // the rest exactly like the kernel would.
-            unsafe { scalar_range(kind, data, i, i + 8, &mut out, &mut written)? };
-            i += 8;
-            continue;
+
+    // One loop per storage kind: the load width and the bad-lane
+    // test are loop-invariant, and a `match kind` inside the chunk
+    // loop compiles to per-chunk branches (measured as ~8 branch
+    // mispredicts per chunk on varied text in the first version).
+    match kind {
+        Kind::Ucs1 => {
+            // Units are bytes: never surrogate, never > U+10FFFF.
+            while i + 8 <= len {
+                let v =
+                    unsafe { _mm256_cvtepu8_epi32(_mm_loadl_epi64(data.add(i) as *const __m128i)) };
+                unsafe { chunk(v, outptr, &mut written) };
+                i += 8;
+            }
         }
-        unsafe { chunk(v, outptr, &mut written) };
-        i += 8;
+        Kind::Ucs2 => {
+            // Units are 16-bit code points: only lone surrogates are
+            // bad (an astral character forces UCS-4 storage), so the
+            // check is one compare.
+            while i + 8 <= len {
+                let v = unsafe {
+                    _mm256_cvtepu16_epi32(_mm_loadu_si128(data.add(i * 2) as *const __m128i))
+                };
+                if unsafe { has_surrogates(v) } {
+                    unsafe { scalar_into(kind, data, i, i + 8, outptr, &mut written)? };
+                } else {
+                    unsafe { chunk(v, outptr, &mut written) };
+                }
+                i += 8;
+            }
+        }
+        Kind::Ucs4 => {
+            while i + 8 <= len {
+                let v = unsafe { _mm256_loadu_si256(data.add(i * 4) as *const __m256i) };
+                if unsafe { has_surrogates(v) || has_overlong(v) } {
+                    unsafe { scalar_into(kind, data, i, i + 8, outptr, &mut written)? };
+                } else {
+                    unsafe { chunk(v, outptr, &mut written) };
+                }
+                i += 8;
+            }
+        }
     }
+
     if i < len {
-        unsafe { scalar_range(kind, data, i, len, &mut out, &mut written)? };
+        unsafe { scalar_into(kind, data, i, len, outptr, &mut written)? };
     }
-    unsafe { out.set_len(written) };
+    unsafe { out.set_len(out.len() + written) };
     debug_assert!(
-        std::str::from_utf8(&out).is_ok(),
+        std::str::from_utf8(&out[out.len() - written..]).is_ok(),
         "kernel produced invalid UTF-8"
     );
     // Every emitted byte comes from the fixed UTF-8 encoding
     // formulas below; the differential tests in this module and in
     // `super` compare against CPython's encoder byte for byte.
-    Ok(unsafe { String::from_utf8_unchecked(out) })
+    Ok(written)
 }
 
-/// Widened view of 8 consecutive units.
-#[inline]
-#[target_feature(enable = "avx2")]
-unsafe fn load_chunk(kind: Kind, data: *const u8, i: usize) -> __m256i {
-    unsafe {
-        match kind {
-            Kind::Ucs1 => _mm256_cvtepu8_epi32(_mm_loadl_epi64(data.add(i) as *const __m128i)),
-            Kind::Ucs2 => _mm256_cvtepu16_epi32(_mm_loadu_si128(data.add(i * 2) as *const __m128i)),
-            Kind::Ucs4 => _mm256_loadu_si256(data.add(i * 4) as *const __m256i),
-        }
-    }
-}
-
-/// `v < c` per lane, signed. Valid because every lane is a code
+/// `v < t` per lane, signed. Valid because every lane is a code
 /// point <= U+10FFFF by the time this runs (bad lanes are diverted
 /// to the scalar path first).
 #[inline]
 #[target_feature(enable = "avx2")]
-unsafe fn ult(v: __m256i, c: u32) -> __m256i {
-    _mm256_cmpgt_epi32(_mm256_set1_epi32(c as i32), v)
+unsafe fn ult(v: __m256i, t: __m256i) -> __m256i {
+    _mm256_cmpgt_epi32(t, v)
 }
 
-/// Any surrogate (UCS-2/UCS-4) or code point above U+10FFFF
-/// (UCS-4)? UCS-1 units are always < 0x100 — never bad.
+/// Any lane in the surrogate range (U+D800..U+DFFF)? Used for UCS-2
+/// (where every surrogate unit is a lone surrogate and an encoding
+/// error) and UCS-4.
 #[inline]
 #[target_feature(enable = "avx2")]
-unsafe fn has_bad_lanes(kind: Kind, v: __m256i) -> bool {
-    if matches!(kind, Kind::Ucs1) {
-        return false;
-    }
-    let f800 = _mm256_set1_epi32(0xFFFF_F800u32 as i32);
-    let sur = _mm256_cmpeq_epi32(_mm256_and_si256(v, f800), _mm256_set1_epi32(0xD800));
-    let bad = match kind {
-        Kind::Ucs2 => sur,
-        // v > 0x10FFFF: signed compare is exact for the same reason
-        // as `ult` — every lane here is a non-surrogate u32 and the
-        // threshold is far below 0x80000000.
-        Kind::Ucs4 => _mm256_or_si256(sur, _mm256_cmpgt_epi32(v, _mm256_set1_epi32(0x10_FFFF))),
-        Kind::Ucs1 => unreachable!("handled above"),
-    };
-    _mm256_movemask_epi8(bad) != 0
+unsafe fn has_surrogates(v: __m256i) -> bool {
+    let sur = _mm256_cmpeq_epi32(_mm256_and_si256(v, V_F800), V_D800);
+    _mm256_movemask_epi8(sur) != 0
 }
 
-/// Encode units `from..to` one at a time (error lanes and tails).
-/// Raises `UnicodeEncodeError` at the first surrogate / out-of-range
-/// unit, like `PyUnicode_AsUTF8AndSize`.
-unsafe fn scalar_range(
+/// Any UCS-4 lane above U+10FFFF? Signed compare is exact: bad
+/// lanes are diverted before staging, and the threshold is far below
+/// 0x80000000.
+#[inline]
+#[target_feature(enable = "avx2")]
+unsafe fn has_overlong(v: __m256i) -> bool {
+    _mm256_movemask_epi8(_mm256_cmpgt_epi32(v, T_10FFFF)) != 0
+}
+
+/// Encode units `from..to` one at a time (error lanes and tails),
+/// appending at `out + *written`. Raises `UnicodeEncodeError` at the
+/// first surrogate / out-of-range unit, like `PyUnicode_AsUTF8AndSize`.
+unsafe fn scalar_into(
     kind: Kind,
     data: *const u8,
     from: usize,
     to: usize,
-    out: &mut Vec<u8>,
+    out: *mut u8,
     written: &mut usize,
 ) -> PyResult<()> {
     let mut buf = [0u8; 4];
@@ -193,7 +234,7 @@ unsafe fn scalar_range(
         let c = char::from_u32(cp).ok_or_else(super::surrogate_error)?;
         let s = c.encode_utf8(&mut buf);
         unsafe {
-            std::ptr::copy_nonoverlapping(s.as_ptr(), out.as_mut_ptr().add(*written), s.len());
+            std::ptr::copy_nonoverlapping(s.as_ptr(), out.add(*written), s.len());
         }
         *written += s.len();
     }
@@ -211,19 +252,17 @@ unsafe fn scalar_range(
 /// slot bytes 1 and 2 are blends selected by the length class.
 #[inline]
 #[target_feature(enable = "avx2")]
-unsafe fn stage(v: __m256i, lt80: __m256i, lt800: __m256i, lt10000: __m256i) -> __m256i {
-    let c2 = _mm256_or_si256(_mm256_srli_epi32(v, 6), _mm256_set1_epi32(0xC0));
-    let c3 = _mm256_or_si256(_mm256_srli_epi32(v, 12), _mm256_set1_epi32(0xE0));
-    let c4 = _mm256_or_si256(_mm256_srli_epi32(v, 18), _mm256_set1_epi32(0xF0));
+unsafe fn stage_general(v: __m256i, lt80: __m256i, lt800: __m256i, lt10000: __m256i) -> __m256i {
+    let c2 = _mm256_or_si256(_mm256_srli_epi32(v, 6), V_C0);
+    let c3 = _mm256_or_si256(_mm256_srli_epi32(v, 12), V_E0);
+    let c4 = _mm256_or_si256(_mm256_srli_epi32(v, 18), V_F0);
     let mut lead = _mm256_blendv_epi8(c4, c3, lt10000);
     lead = _mm256_blendv_epi8(lead, c2, lt800);
     lead = _mm256_blendv_epi8(lead, v, lt80);
 
-    let c3f = _mm256_set1_epi32(0x3F);
-    let c80 = _mm256_set1_epi32(0x80);
-    let tail = _mm256_or_si256(_mm256_and_si256(v, c3f), c80);
-    let cont_a = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi32(v, 6), c3f), c80);
-    let cont_b = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi32(v, 12), c3f), c80);
+    let tail = _mm256_or_si256(_mm256_and_si256(v, V_3F), V_80);
+    let cont_a = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi32(v, 6), V_3F), V_80);
+    let cont_b = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi32(v, 12), V_3F), V_80);
     let is_len2 = _mm256_andnot_si256(lt80, lt800);
     let is_len3 = _mm256_andnot_si256(lt800, lt10000);
     let mut b1 = _mm256_blendv_epi8(cont_b, cont_a, is_len3);
@@ -237,15 +276,57 @@ unsafe fn stage(v: __m256i, lt80: __m256i, lt800: __m256i, lt10000: __m256i) -> 
     s
 }
 
-/// Encode one 8-lane chunk. `v` must hold only valid code points.
+/// Staging for a chunk whose lanes are all 1- or 2-byte output
+/// (`lens & 0x2222_2222 == 0`): the slot is only `lead | tail<<8`,
+/// so this is two ops per lane instead of the full blend chain.
+/// Slot bytes 2..3 are garbage and masked away at compaction.
+#[inline]
+#[target_feature(enable = "avx2")]
+unsafe fn stage12(v: __m256i, lt80: __m256i) -> __m256i {
+    let lead2 = _mm256_or_si256(_mm256_srli_epi32(v, 6), V_C0);
+    let lead = _mm256_blendv_epi8(lead2, v, lt80);
+    let tail = _mm256_or_si256(_mm256_and_si256(v, V_3F), V_80);
+    _mm256_or_si256(lead, _mm256_slli_epi32(tail, 8))
+}
+
+/// Staging for a chunk whose lanes are all 3- or 4-byte output
+/// (`lens & 0x2222_2222 == 0x2222_2222`): two continuation
+/// candidates per slot position, no length-1/2 blending.
+#[inline]
+#[target_feature(enable = "avx2")]
+unsafe fn stage34(v: __m256i, lt10000: __m256i) -> __m256i {
+    let lead3 = _mm256_or_si256(_mm256_srli_epi32(v, 12), V_E0);
+    let lead4 = _mm256_or_si256(_mm256_srli_epi32(v, 18), V_F0);
+    let lead = _mm256_blendv_epi8(lead4, lead3, lt10000);
+    // a = 0x80|(cp>>6)&0x3F: 3-byte b1 / 4-byte b2
+    let a = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi32(v, 6), V_3F), V_80);
+    // b = 0x80|(cp>>12)&0x3F: 4-byte b1
+    let b = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi32(v, 12), V_3F), V_80);
+    // c = 0x80|cp&0x3F: 3-byte b2 / 4-byte b3
+    let c = _mm256_or_si256(_mm256_and_si256(v, V_3F), V_80);
+    let b1 = _mm256_blendv_epi8(b, a, lt10000);
+    let b2 = _mm256_blendv_epi8(a, c, lt10000);
+    let mut s = lead;
+    s = _mm256_or_si256(s, _mm256_slli_epi32(b1, 8));
+    s = _mm256_or_si256(s, _mm256_slli_epi32(b2, 16));
+    s = _mm256_or_si256(s, _mm256_slli_epi32(c, 24));
+    s
+}
+
+/// Encode one 8-lane chunk at `outptr + *written`. `v` must hold
+/// only valid code points. The length class is computed once and
+/// feeds the staging choice and the emit. Uniform chunks (all lanes
+/// one length) are *not* special-cased: the compaction table has
+/// their rows, and a table load is cheaper than the extra
+/// mispredicted branches (measured).
 #[inline]
 #[target_feature(enable = "avx2")]
 #[target_feature(enable = "bmi2")]
 unsafe fn chunk(v: __m256i, outptr: *mut u8, written: &mut usize) {
     unsafe {
-        let lt80 = ult(v, 0x80);
-        let lt800 = ult(v, 0x800);
-        let lt10000 = ult(v, 0x1_0000);
+        let lt80 = ult(v, T_80);
+        let lt800 = ult(v, T_800);
+        let lt10000 = ult(v, T_10000);
         let ge80 = !(_mm256_movemask_epi8(lt80) as u32) & ONES;
         let ge800 = !(_mm256_movemask_epi8(lt800) as u32) & ONES;
         let ge10000 = !(_mm256_movemask_epi8(lt10000) as u32) & ONES;
@@ -255,7 +336,7 @@ unsafe fn chunk(v: __m256i, outptr: *mut u8, written: &mut usize) {
         let dst = outptr.add(*written);
 
         if lens == 0 {
-            // All 8 lanes are ASCII: one byte each.
+            // All 8 lanes are ASCII: one byte each, no staging.
             let g = _mm256_shuffle_epi8(v, UNI1_SHUF);
             _mm_storeu_si128(dst as *mut __m128i, _mm256_castsi256_si128(g));
             _mm_storeu_si128(dst.add(4) as *mut __m128i, _mm256_extracti128_si256(g, 1));
@@ -263,32 +344,17 @@ unsafe fn chunk(v: __m256i, outptr: *mut u8, written: &mut usize) {
             return;
         }
 
-        let st = stage(v, lt80, lt800, lt10000);
-        if lens == 0x1111_1111 {
-            // All 8 lanes are 2-byte: (lead, tail) pairs, 16 bytes.
-            let g = _mm256_shuffle_epi8(st, UNI2_SHUF);
-            let both =
-                _mm_unpacklo_epi64(_mm256_castsi256_si128(g), _mm256_extracti128_si256(g, 1));
-            _mm_storeu_si128(dst as *mut __m128i, both);
-            *written += 16;
-            return;
-        }
-        if lens == 0x2222_2222 {
-            // All 8 lanes are 3-byte: 12 bytes per half, 24 total.
-            let g = _mm256_shuffle_epi8(st, UNI3_SHUF);
-            _mm_storeu_si128(dst as *mut __m128i, _mm256_castsi256_si128(g));
-            _mm_storeu_si128(dst.add(12) as *mut __m128i, _mm256_extracti128_si256(g, 1));
-            *written += 24;
-            return;
-        }
-        if lens == 0x3333_3333 {
-            // All 8 lanes are 4-byte: the staged slots are the output.
-            _mm256_storeu_si256(dst as *mut __m256i, st);
-            *written += 32;
-            return;
-        }
+        // Bit 1 of every nibble is set exactly for lengths 3 and 4,
+        // so this splits the staging cases without another compare.
+        let pair = lens & 0x2222_2222;
+        let st = if pair == 0 {
+            stage12(v, lt80)
+        } else if pair == 0x2222_2222 {
+            stage34(v, lt10000)
+        } else {
+            stage_general(v, lt80, lt800, lt10000)
+        };
 
-        // Mixed: two 4-lane halves, each compacted by its own table row.
         let idx0 = _pext_u32(lens & 0x3333, 0x3333) as usize;
         let idx1 = _pext_u32((lens >> 16) & 0x3333, 0x3333) as usize;
         let row0 = PACK_TABLE.as_ptr().add(idx0 * PACK_STRIDE);
@@ -308,6 +374,30 @@ unsafe fn chunk(v: __m256i, outptr: *mut u8, written: &mut usize) {
     }
 }
 
+/// Broadcast constants, materialized once in `.rodata` so the hot
+/// loop loads them instead of re-broadcasting per chunk.
+macro_rules! ymm_consts {
+    ($($name:ident => $val:expr),* $(,)?) => {
+        $(static $name: __m256i = unsafe {
+            std::mem::transmute::<[i32; 8], __m256i>([$val; 8])
+        };)*
+    };
+}
+
+ymm_consts! {
+    V_80 => 0x80,
+    V_3F => 0x3F,
+    V_C0 => 0xC0,
+    V_E0 => 0xE0,
+    V_F0 => 0xF0,
+    T_80 => 0x80,
+    T_800 => 0x800,
+    T_10000 => 0x1_0000,
+    T_10FFFF => 0x10_FFFF,
+    V_F800 => 0xFFFF_F800u32 as i32,
+    V_D800 => 0xD800,
+}
+
 /// Lane-gather controls for the uniform shapes: per 128-bit half,
 /// take the listed staging bytes into the low end and zero the rest.
 #[allow(clippy::declare_interior_mutable_const)]
@@ -315,18 +405,6 @@ static UNI1_SHUF: __m256i = unsafe {
     std::mem::transmute::<[i8; 32], __m256i>([
         0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, //
         0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    ])
-};
-static UNI2_SHUF: __m256i = unsafe {
-    std::mem::transmute::<[i8; 32], __m256i>([
-        0, 1, 4, 5, 8, 9, 12, 13, -1, -1, -1, -1, -1, -1, -1, -1, //
-        0, 1, 4, 5, 8, 9, 12, 13, -1, -1, -1, -1, -1, -1, -1, -1,
-    ])
-};
-static UNI3_SHUF: __m256i = unsafe {
-    std::mem::transmute::<[i8; 32], __m256i>([
-        0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, -1, -1, -1, -1, //
-        0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, -1, -1, -1, -1,
     ])
 };
 
@@ -410,6 +488,19 @@ mod tests {
         }
     }
 
+    /// Call a transcoder variant with a fresh output buffer and
+    /// return the UTF-8 as a String.
+    fn call(
+        kind: Kind,
+        n: usize,
+        p: *const u8,
+        f: unsafe fn(Kind, usize, *const u8, &mut Vec<u8>) -> PyResult<usize>,
+    ) -> PyResult<String> {
+        let mut out: Vec<u8> = Vec::with_capacity(n * 4 + 32);
+        let written = unsafe { f(kind, n, p, &mut out)? };
+        Ok(String::from_utf8(out[..written].to_vec()).expect("kernel emits UTF-8"))
+    }
+
     /// Run the SIMD kernel and the scalar reference on the same
     /// units, through properly aligned buffers (CPython's UCS
     /// buffers are naturally aligned for their unit width).
@@ -420,24 +511,24 @@ mod tests {
                     let b: Vec<u8> = cps.iter().map(|&c| c as u8).collect();
                     let p = b.as_ptr();
                     (
-                        transcode(kind, cps.len(), p),
-                        transcode_scalar(kind, cps.len(), p),
+                        call(kind, cps.len(), p, transcode),
+                        call(kind, cps.len(), p, transcode_scalar),
                     )
                 }
                 Kind::Ucs2 => {
                     let b: Vec<u16> = cps.iter().map(|&c| c as u16).collect();
                     let p = b.as_ptr() as *const u8;
                     (
-                        transcode(kind, cps.len(), p),
-                        transcode_scalar(kind, cps.len(), p),
+                        call(kind, cps.len(), p, transcode),
+                        call(kind, cps.len(), p, transcode_scalar),
                     )
                 }
                 Kind::Ucs4 => {
                     let b: Vec<u32> = cps.to_vec();
                     let p = b.as_ptr() as *const u8;
                     (
-                        transcode(kind, cps.len(), p),
-                        transcode_scalar(kind, cps.len(), p),
+                        call(kind, cps.len(), p, transcode),
+                        call(kind, cps.len(), p, transcode_scalar),
                     )
                 }
             }

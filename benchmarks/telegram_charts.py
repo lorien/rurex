@@ -126,6 +126,18 @@ def render_md():
     chart(data, "gil", "telegram_threads_gil.png")
     chart(data, "free", "telegram_threads_free.png")
 
+    def w(interp, threads, engine, inp):
+        """wall_s of one point — the prose quotes the table, never a
+        hand-copied number (which goes stale on every re-run)."""
+        for p in data["points"]:
+            if (p["interpreter"] == interp and p["threads"] == threads
+                    and p["engine"] == engine and p["input"] == inp):
+                return p["wall_s"]
+        raise KeyError((interp, threads, engine, inp))
+
+    def x(interp, threads, inp="str"):
+        return w(interp, threads, "rurex", inp) / w(interp, threads, "re", inp)
+
     md = f"""# Telegram @mention extraction: rurex vs `re`
 
 Real-world task, measured exactly as performed: **one** pass of
@@ -165,29 +177,37 @@ single-threaded.
 {table(data, "gil", n)}
 
 Each point runs both input forms. The **str** variant is the real
-task on parsed text: `re` 0.48 s single-threaded vs rurex 0.77 s
-(×1.6). The remaining gap is rurex's **per-scan UCS→UTF-8 transcode**
-— CPython stores `str` as UCS-1/2/4 and only materializes UTF-8 on
-demand, while `re` never converts at all. rurex transcodes in Rust:
-the AVX2 kernel measures 1.4–3.8 GB/s where the scalar loop (and
-CPython's own encoder) manage ~0.45 GB/s, which took this row from
-×3.0 to ×1.6. Strings whose UTF-8 cache another C-API consumer
-already filled are borrowed zero-copy instead.
+task on parsed text: `re` wins it, because it never converts — the
+haystack is UCS in memory and `re` matches it directly. rurex's
+engine matches UTF-8, so a non-ASCII `str` must be transcoded first,
+and that per-call transcode is the entire gap (the engine itself is
+2.2× faster than `re` on the same bytes — see the bytes row). The
+transcoder is a hand-written AVX2 kernel (ADR-0012): it converts at
+roughly 1 GB/s effective on short scattered strings where CPython's
+encoder and the scalar fallback manage ~0.45 GB/s, and strings whose
+UTF-8 cache another C-API consumer already filled are borrowed
+zero-copy instead. What remains is partly memory traffic on the
+string's own bytes, which no faster encoder can remove — which is why
+the row is still behind `re` despite the kernel being ~1.5× faster
+than its first version.
 
 The **bytes** variant feeds the same posts pre-encoded to UTF-8 —
 the corpus is already UTF-8 on disk, so a pipeline that stays in
-bytes never pays the transcode: rurex answers in **0.35 s, beating
-`re`'s 0.54 s (×0.7)** single-threaded. That is the
-RE2-binding-recommended shape (feed UTF-8 bytes), and rurex makes it
-a first-class mode.
+bytes never pays the transcode: rurex answers in
+**{w('gil', 1, 'rurex', 'bytes'):.2f} s, beating `re`'s
+{w('gil', 1, 're', 'bytes'):.2f} s (×{x('gil', 1, 'bytes'):.1f})**
+single-threaded. That is the RE2-binding-recommended shape (feed
+UTF-8 bytes), and rurex makes it a first-class mode.
 
-With threads, rurex str stays flat (0.77–0.91 s; an earlier build
+With threads, rurex str stays flat
+({w('gil', 1, 'rurex', 'str'):.2f}–{w('gil', 4, 'rurex', 'str'):.2f} s; an earlier build
 degraded to 5.38 s before the 4 KB GIL-release threshold landed —
 rurex releases the GIL only for ≥ 4 KB haystacks, matching `re`'s
 own never-release-during-matching behavior for short texts), and
-rurex bytes improves modestly (0.35 → 0.53 s at four workers: the
-scans are sub-µs, so the GIL-held per-call result building
-dominates — the same ceiling `re` bytes hits).
+rurex bytes improves modestly ({w('gil', 1, 'rurex', 'bytes'):.2f} →
+{w('gil', 4, 'rurex', 'bytes'):.2f} s at four workers: the scans are
+sub-µs, so the GIL-held per-call result building dominates — the same
+ceiling `re` bytes hits).
 
 ## Free-threaded Python
 
@@ -195,26 +215,33 @@ dominates — the same ceiling `re` bytes hits).
 
 {table(data, "free", n)}
 
-Without the GIL both variants scale: rurex str 0.84 s → 0.37 s
-(2.3×; the transcode parallelizes like any other work) and rurex
-bytes 0.42 s → 0.30 s; `re` 0.44 s → 0.20 s str, 0.39 s → 0.19 s
-bytes. On this task free-threaded Python is the fastest way to run
-either engine at every thread count, and rurex bytes at 0.30 s is
-within 1.6× of the best `re` number while carrying no transcode tax
-at all.
+Without the GIL both variants scale: rurex str
+{w('free', 1, 'rurex', 'str'):.2f} s → {w('free', 4, 'rurex', 'str'):.2f} s
+({w('free', 1, 'rurex', 'str') / w('free', 4, 'rurex', 'str'):.1f}×; the transcode
+parallelizes like any other work) and rurex bytes
+{w('free', 1, 'rurex', 'bytes'):.2f} s → {w('free', 4, 'rurex', 'bytes'):.2f} s;
+`re` {w('free', 1, 're', 'str'):.2f} s → {w('free', 4, 're', 'str'):.2f} s str,
+{w('free', 1, 're', 'bytes'):.2f} s → {w('free', 4, 're', 'bytes'):.2f} s bytes.
+On this task free-threaded Python is the fastest way to run either
+engine at every thread count, and rurex bytes at
+{w('free', 4, 'rurex', 'bytes'):.2f} s is within
+{x('free', 4, 'bytes'):.1f}× of the best `re` number while carrying
+no transcode tax at all.
 
 ## Reading the numbers
 
 Read the two variants as two different questions. **str**: what a
-user scanning parsed text once pays — `re` still wins (it never
-transcodes), rurex pays a per-scan UCS→UTF-8 transcode in Rust (AVX2
-where available; re-scans of strings warmed by another C-API
-consumer borrow the cache and reach near-parity). **bytes**: what a UTF-8-native pipeline pays — rurex
-**wins** (×1.5 single-threaded), because its engine scans UTF-8
-directly with SIMD prefilters. The scan-bound leads on the main page
-(×7–13) do not transfer to short-text per-call extraction, but the
-bytes variant shows rurex ahead where the input is already UTF-8 —
-which for a JSONL/log corpus is the natural shape. Machine-specific;
+user scanning parsed text once pays — `re` wins (it never
+transcodes); rurex pays a per-scan UCS→UTF-8 transcode (AVX2 where
+available, scalar elsewhere; re-scans of strings warmed by another
+C-API consumer borrow the cache and reach near-parity). **bytes**:
+what a UTF-8-native pipeline pays — rurex **wins**
+(×{x('gil', 1, 'bytes'):.1f} single-threaded), because its engine
+scans UTF-8 directly with SIMD prefilters. The scan-bound leads on
+the main page (×7–13) do not transfer to short-text per-call
+extraction, but the bytes variant shows rurex ahead where the input
+is already UTF-8 — which for a JSONL/log corpus is the natural shape.
+Machine-specific;
 expect different absolute numbers elsewhere.
 
 ## Reproducing

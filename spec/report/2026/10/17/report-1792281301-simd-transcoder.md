@@ -104,10 +104,11 @@ detached scan region for this change.
   large-text pipelines encode in parallel; deferred deliberately
   (owner decision) because the SIMD kernel already shrank the
   GIL-held burst 3–8×.
-- [open] `docs/telegram-benchmarks.md` prose is hand-maintained inside
-  `benchmarks/telegram_charts.py` while only the tables are computed,
-  so a re-run silently leaves stale narrative. Either generate the
-  numbers-in-prose too, or keep the prose purely qualitative.
+- [acted] `docs/telegram-benchmarks.md` prose is hand-maintained
+  inside `benchmarks/telegram_charts.py` while only the tables are
+  computed, so a re-run silently leaves stale narrative — now every
+  number in the prose is interpolated from the results file via
+  `w()`/`x()`; see `report-1792291971-tier1-kernel-speedup.md`.
 
 ### Tooling/process
 

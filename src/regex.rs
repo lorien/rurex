@@ -311,7 +311,7 @@ pub(crate) fn bytes_like<'py>(
 /// of a bytes-like input (bytearray, memoryview, array, ...). `hay()`
 /// derives the borrowed view, so call sites bind the `HayKeep` first.
 pub(crate) enum HayKeep<'py> {
-    Text(Bound<'py, PyString>, Option<String>),
+    Text(Bound<'py, PyString>, Option<crate::utf8::Utf8Scratch>),
     /// `copied` is true when `bound` is a snapshot of a bytes-like
     /// object rather than the input itself (iterators keep it).
     Bytes {
@@ -333,7 +333,7 @@ impl<'py> HayKeep<'py> {
                 crate::utf8::Utf8Buf::Borrowed(s) => Ok(Hay::Text(s)),
                 crate::utf8::Utf8Buf::Owned(s) => {
                     *owned = Some(s);
-                    Ok(Hay::Text(owned.as_deref().expect("just stored")))
+                    Ok(Hay::Text(owned.as_ref().expect("just stored").as_str()))
                 }
             },
             HayKeep::Bytes { bound, .. } => Ok(Hay::Bytes(bound.as_bytes())),
