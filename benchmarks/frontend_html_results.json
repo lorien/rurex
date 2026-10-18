@@ -1,0 +1,291 @@
+{
+  "environment": {
+    "cpu": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+    "pattern": "(?i)\\b(?:href|src)\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))",
+    "threads": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "corpus": {
+      "url": "https://github.com/lorien/rurex/releases/download/bench-data-html-v1/frontend-html-500mb-v1.tgz",
+      "sha256": "a38962acb0b21bb603e8c0c7f4dfa357146e7c798d4041477b52773c1f53a330",
+      "documents": 2086,
+      "bytes": 503179497,
+      "mode": "default"
+    },
+    "protocol": "one cold real-world run per point (fresh process: load -> single pass)"
+  },
+  "points": [
+    {
+      "engine": "re",
+      "threads": 1,
+      "input": "str",
+      "wall_s": 8.773137770127505,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 4.308391857892275,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "str",
+      "wall_s": 1.3886205130256712,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 1.097215224057436,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 2,
+      "input": "str",
+      "wall_s": 7.6323144640773535,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 2,
+      "input": "bytes",
+      "wall_s": 4.022511257790029,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "input": "str",
+      "wall_s": 0.8287300039082766,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "input": "bytes",
+      "wall_s": 0.7016041153110564,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "input": "str",
+      "wall_s": 7.570150133688003,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 4.0784790446050465,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "str",
+      "wall_s": 0.711021482013166,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 0.5657844408415258,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "str",
+      "wall_s": 7.882545436732471,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "bytes",
+      "wall_s": 4.36836467590183,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "input": "str",
+      "wall_s": 0.805354495998472,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "input": "bytes",
+      "wall_s": 0.5741877979598939,
+      "matches": 335801,
+      "interpreter": "gil"
+    },
+    {
+      "engine": "re",
+      "threads": 1,
+      "input": "str",
+      "wall_s": 7.481558586936444,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 4.656028908677399,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "str",
+      "wall_s": 1.4461761713027954,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 1.1320862681604922,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 2,
+      "input": "str",
+      "wall_s": 5.07074090000242,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 2,
+      "input": "bytes",
+      "wall_s": 2.464688455220312,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "input": "str",
+      "wall_s": 0.8116176999174058,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "input": "bytes",
+      "wall_s": 0.6633678553625941,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "input": "str",
+      "wall_s": 2.909097011666745,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 1.7507325210608542,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "str",
+      "wall_s": 0.7060799300670624,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 0.5781488362699747,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "str",
+      "wall_s": 2.219957821071148,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "bytes",
+      "wall_s": 1.5838872869499028,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "input": "str",
+      "wall_s": 0.9415331548079848,
+      "matches": 335801,
+      "interpreter": "free"
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "input": "bytes",
+      "wall_s": 0.6166834393516183,
+      "matches": 335801,
+      "interpreter": "free"
+    }
+  ],
+  "stats": {
+    "documents": 1127,
+    "total_bytes": 268539738,
+    "total_matches": 335801,
+    "documents_with_matches": 1125,
+    "median_matches": 191,
+    "max_matches": 4692,
+    "median_document_bytes": 120315,
+    "mean_document_bytes": 238278.3833185448,
+    "result_sha256": "b917a9cf7d50b2656df9629c3a15a64e4652d2d131f09a6c9c1b1ea28c227078",
+    "full": false,
+    "limit_bytes": 268435456
+  }
+}

@@ -52,10 +52,12 @@ suites — each in its own process, because the CPython harness replaces
 
     make bench            # main suite + charts
     make bench-telegram   # 1M-post Telegram suite + charts
+    make bench-html       # frontend HTML href/src suite + charts
 
-`make bench-telegram` also runs `make build-free` when `.venv-t`
-exists, because that benchmark measures both the GIL and free-threaded
-interpreters. Both targets depend on `build-release`.
+`make bench-telegram` and `make bench-html` also run `make build-free`
+when `.venv-t` exists, because those benchmarks measure both the GIL
+and free-threaded interpreters. All benchmark targets depend on
+`build-release`.
 
 See `spec/docs/testing.md` for what each of these covers.
 

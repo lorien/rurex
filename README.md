@@ -93,7 +93,7 @@ rurex's engine matches UTF-8 directly. CPython stores `str`
 internally as UCS-1/2/4, so a non-ASCII `str` must be viewed as
 UTF-8: rurex transcodes it into a reused buffer, or borrows
 CPython's UTF-8 cache when another C-API consumer already filled it.
-`re` never converts. Two consequences:
+`re` never converts. Three consequences:
 
 - **Scanning many short non-ASCII `str` inputs once**: GIL builds are
   now near parity with `re` (1M Telegram posts: 0.56 vs 0.52 µs per
@@ -108,9 +108,15 @@ CPython's UTF-8 cache when another C-API consumer already filled it.
   corpus, 0.29 s vs 0.54 s). This is the recommended shape for
   high-throughput pipelines — the same advice the official RE2
   binding gives.
+- **Long documents**: the transcode amortizes, so rurex leads on both
+  forms. On 1,127 real frontend HTML pages (256 MiB subset), GIL
+  single-threaded: 1.39 s vs `re`'s 8.77 s on `str`, 1.10 s vs
+  4.31 s on bytes. Those documents are above the 4 KB GIL-release
+  threshold, so rurex also scales with worker threads.
 
 Details and thread-scaling numbers:
-[docs/telegram-benchmarks.md](docs/telegram-benchmarks.md).
+[docs/telegram-benchmarks.md](docs/telegram-benchmarks.md) and
+[docs/html-benchmarks.md](docs/html-benchmarks.md).
 
 ## Installation
 

@@ -40,9 +40,11 @@ alongside it: `python benchmarks/make_charts.py` produces
 self-contained snapshot and is only as fresh as its last run — always
 regenerate it together with the charts (`--no-html` opts out).
 
-A real-world complement — @mention extraction over 1M Telegram posts
-(the extraction-bound regime, one cold run per measured point) lives
-in [`telegram-benchmarks.md`](telegram-benchmarks.md).
+Two real-world complements, each one cold run per measured point:
+@mention extraction over 1M Telegram posts (short texts, extraction
+bound) in [`telegram-benchmarks.md`](telegram-benchmarks.md), and
+frontend HTML `href`/`src` extraction (long documents, dense grouped
+extraction) in [`html-benchmarks.md`](html-benchmarks.md).
 
 ## Methodology
 
