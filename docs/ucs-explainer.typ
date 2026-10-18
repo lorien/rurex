@@ -464,11 +464,11 @@ Everything in this document lives in #link(repo)[the rurex repository]:
 
 #heading(level: 1)[Further reading]
 
-- The Unicode Standard, chapter 2, *General Structure* — code points, units, and the encodings.
-- RFC 3629 — UTF-8, its four shapes, and the exact list of forbidden forms.
-- PEP 393 — *Flexible String Representation*, the rationale for CPython's three kinds.
-- The `regex` crate's documentation on Unicode support and on `regex::bytes`.
-- *UTF-8 Everywhere* — the argument for UTF-8 as the in-memory format, with the opposite trade-offs spelled out.
+- #link("https://www.unicode.org/versions/latest/")[#text(fill: accent)[The Unicode Standard]], chapter 2, *General Structure* — code points, units, and the encodings.
+- #link("https://www.rfc-editor.org/rfc/rfc3629")[#text(fill: accent)[RFC 3629]] — UTF-8, its four shapes, and the exact list of forbidden forms.
+- #link("https://peps.python.org/pep-0393/")[#text(fill: accent)[PEP 393]] — *Flexible String Representation*, the rationale for CPython's three kinds.
+- The `regex` crate's documentation on #link("https://docs.rs/regex/latest/regex/#unicode")[#text(fill: accent)[Unicode support]] and on #link("https://docs.rs/regex/latest/regex/bytes/")[#text(fill: accent)[`regex::bytes`]].
+- #link("https://utf8everywhere.org/")[#text(fill: accent)[*UTF-8 Everywhere*]] — the argument for UTF-8 as the in-memory format, with the opposite trade-offs spelled out.
 
 #heading(level: 1)[Glossary]
 

@@ -29,7 +29,11 @@ Ad-hoc task, not taken from `spec/docs/plan.md`.
   links to their `blob/main` paths. The deck's cover links it too.
   Verified in the built PDFs, not just in the source: 20 external
   link annotations across 6 distinct URLs in the explainer, 1 in the
-  deck.
+  deck. The "Further reading" entries are links too, not bare titles:
+  Unicode, RFC 3629, PEP 393, the crate's Unicode and `bytes` docs and
+  *UTF-8 Everywhere*, each resolved with a real HTTP check rather than
+  assembled from memory. The explainer now carries 26 external
+  annotations over 12 distinct URLs.
 
 The technical claims were read out of the repository rather than
 recalled: throughput figures from ADR-0012, and the span, `pos` and
