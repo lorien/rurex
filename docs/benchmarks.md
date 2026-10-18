@@ -34,9 +34,11 @@ per operation** on Y.
   the same pile on 3.14t — both engines scale 3.1–3.8× and rurex
   stays ×9.9–13.6 ahead at every position.
 
-A standalone HTML twin of this page (images embedded) can be rendered
-locally for browser viewing: `python benchmarks/make_charts.py --html`
-writes `docs/benchmarks.html`.
+A standalone HTML twin of this page (images embedded) is written
+alongside it: `python benchmarks/make_charts.py` produces
+`docs/benchmarks.html`. It embeds the charts as base64, so it is a
+self-contained snapshot and is only as fresh as its last run — always
+regenerate it together with the charts (`--no-html` opts out).
 
 A real-world complement — @mention extraction over 1M Telegram posts
 (the extraction-bound regime, one cold run per measured point) lives
@@ -447,7 +449,7 @@ VIRTUAL_ENV=.venv-t uv pip install maturin pytest
 .venv-t/bin/maturin develop --release
 
 python benchmarks/run.py           # runs all 7 tests (spawns .venv-t for Test 7)
-python benchmarks/make_charts.py --html   # charts + docs/benchmarks.html
+python benchmarks/make_charts.py   # charts + docs/benchmarks.html twin
 ```
 
 `benchmarks/suite.py` defines the nine tests (patterns, data

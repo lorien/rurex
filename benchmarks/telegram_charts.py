@@ -1,8 +1,14 @@
 """Generate the Telegram benchmark charts (PNG), the Markdown results
-page, and (with --html) the standalone HTML twin.
+page, and the standalone HTML twin.
 
-    python benchmarks/telegram_charts.py          # docs/img/*.png + docs/telegram-benchmarks.md
-    python benchmarks/telegram_charts.py --html   # + docs/telegram-benchmarks.html (gitignored twin)
+    python benchmarks/telegram_charts.py            # charts + .md + .html
+    python benchmarks/telegram_charts.py --no-html  # skip the HTML twin
+
+The HTML twin is written by default because it embeds the images as
+base64: it is a self-contained snapshot, so if it is *not* regenerated
+it keeps showing the previous run's charts and numbers forever. Making
+that opt-in caused exactly that confusion once — do not make it opt-in
+again.
 
 Numbers come from telegram_results.json (written by telegram.py);
 this file only renders them.
@@ -214,17 +220,17 @@ expect different absolute numbers elsewhere.
 ## Reproducing
 
 ```sh
-python benchmarks/telegram.py            # downloads the corpus on first run,
-                                         # then 16 cold runs, ~5 min
-python benchmarks/telegram_charts.py     # regenerates this page
-python benchmarks/telegram_charts.py --html   # + standalone HTML twin
+python benchmarks/telegram.py          # downloads the corpus on first run,
+                                       # then 16 cold runs, ~5 min
+python benchmarks/telegram_charts.py   # regenerates the charts, this page
+                                       # and the standalone HTML twin
 ```
 
 ---
 
 *Raw results: [`benchmarks/telegram_results.json`](../benchmarks/telegram_results.json).
-Numbers on this page were measured on 2026-10-17 with rurex 0.1.0
-(GIL-release threshold fix included).*
+Numbers on this page were measured on 2026-10-17 with rurex 0.1.0;
+see the raw results file for the exact environment.*
 """
     out = DOCS / "telegram-benchmarks.md"
     out.write_text(md)
@@ -255,7 +261,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div class="banner" style="background:#fff8c5;border:1px solid #d4a72c;
      border-radius:8px;padding:.6rem 1rem;margin-bottom:2rem;font-size:90%%;">
 Rendered from <code>docs/telegram-benchmarks.md</code> with embedded
-images — regenerate with <code>python benchmarks/telegram_charts.py --html</code>.</div>
+images — regenerate with <code>python benchmarks/telegram_charts.py</code>.</div>
 {body}
 </body>
 </html>
@@ -264,7 +270,13 @@ images — regenerate with <code>python benchmarks/telegram_charts.py --html</co
 
 def render_html():
     if markdown is None:
-        print("markdown package missing; skipping HTML twin")
+        stale = DOCS / "telegram-benchmarks.html"
+        print(
+            "WARNING: the markdown package is missing, so "
+            f"{stale} was NOT regenerated and will keep showing the "
+            "previous run's numbers. Fix with: pip install markdown",
+            file=sys.stderr,
+        )
         return None
     md_text = (DOCS / "telegram-benchmarks.md").read_text()
     body = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
@@ -285,7 +297,7 @@ def render_html():
 def main():
     IMG.mkdir(parents=True, exist_ok=True)
     print("wrote", render_md())
-    if "--html" in sys.argv:
+    if "--no-html" not in sys.argv:
         print("wrote", render_html())
 
 

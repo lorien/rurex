@@ -138,3 +138,40 @@ detached scan region for this change.
   numbers in this report came from `var/utf8_micro.md`, which is
   scratch and therefore not committed — the kernel table is reproduced
   in the report itself.
+
+### Postscript: the stale HTML twin
+
+Owner report after the commit: "I see old picture." The committed
+artifacts were correct — both PNGs and `docs/telegram-benchmarks.md`
+were regenerated from the final run (verified by reading the charts:
+rurex/str 0.77 → 0.91 s and 0.84 → 0.37 s, the new numbers). The stale
+artifact was the **gitignored HTML twin**
+(`docs/telegram-benchmarks.html`): it had been written by an earlier
+run, still carried the ×3 numbers, and — because it embeds the charts
+as base64 — can never pick up a new PNG by itself. It was generated
+only on an explicit `--html` flag, which the regeneration I ran did not
+pass.
+
+Fixed at the root rather than by re-running once:
+
+- `benchmarks/telegram_charts.py` and `benchmarks/make_charts.py` now
+  write the HTML twin **by default**; `--no-html` opts out. Both
+  docstrings say why the default flipped (a self-contained snapshot
+  that is opt-in silently goes stale).
+- Missing `markdown` no longer skips the twin quietly: both scripts
+  print a warning to stderr naming the stale file and the fix
+  (`pip install markdown`).
+- The HTML banner and the reproduction blocks in
+  `docs/telegram-benchmarks.md` (generated) and `docs/benchmarks.md`
+  (hand-written) no longer tell you to pass `--html`. The Telegram
+  page's footer also stopped enumerating which fix a run "includes" —
+  that sentence goes stale on every run; it points at the raw results
+  file for the environment instead.
+- Both twins regenerated and verified: the base64 payloads in
+  `docs/telegram-benchmarks.html` now hash-equal the current PNGs.
+
+Markers:
+
+- [acted] HTML twin regeneration is no longer opt-in, in both chart
+  scripts — a re-run cannot leave a browser-visible page on an old
+  run's numbers.

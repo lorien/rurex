@@ -106,14 +106,14 @@ expect different absolute numbers elsewhere.
 ## Reproducing
 
 ```sh
-python benchmarks/telegram.py            # downloads the corpus on first run,
-                                         # then 16 cold runs, ~5 min
-python benchmarks/telegram_charts.py     # regenerates this page
-python benchmarks/telegram_charts.py --html   # + standalone HTML twin
+python benchmarks/telegram.py          # downloads the corpus on first run,
+                                       # then 16 cold runs, ~5 min
+python benchmarks/telegram_charts.py   # regenerates the charts, this page
+                                       # and the standalone HTML twin
 ```
 
 ---
 
 *Raw results: [`benchmarks/telegram_results.json`](../benchmarks/telegram_results.json).
-Numbers on this page were measured on 2026-10-17 with rurex 0.1.0
-(GIL-release threshold fix included).*
+Numbers on this page were measured on 2026-10-17 with rurex 0.1.0;
+see the raw results file for the exact environment.*

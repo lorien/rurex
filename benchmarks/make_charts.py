@@ -2,8 +2,12 @@
 the rendered HTML twin of the results page.
 
 Usage:
-    python benchmarks/make_charts.py            # charts only
-    python benchmarks/make_charts.py --html     # charts + docs/benchmarks.html
+    python benchmarks/make_charts.py              # charts + .md + .html
+    python benchmarks/make_charts.py --no-html    # skip the HTML twin
+
+The HTML twin is written by default because it embeds the images as
+base64: it is a self-contained snapshot, so if it is *not* regenerated
+it keeps showing the previous run's charts and numbers forever.
 
 Charts go to docs/img/, named bench_<test>_<param>.png. The HTML
 render embeds images as base64 data URIs so the file opens standalone
@@ -170,7 +174,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 <div class="banner">Rendered from <code>docs/benchmarks.md</code> with embedded
-images — regenerate with <code>python benchmarks/make_charts.py --html</code>.</div>
+images — regenerate with <code>python benchmarks/make_charts.py</code>.</div>
 {body}
 </body>
 </html>
@@ -178,6 +182,16 @@ images — regenerate with <code>python benchmarks/make_charts.py --html</code>.
 
 
 def render_html():
+    stale = DOCS / "benchmarks.html"
+    if markdown is None:
+        print(
+            "WARNING: the markdown package is missing, so "
+            f"{stale} was NOT regenerated and will keep showing the "
+            "previous run's charts and numbers. Fix with: "
+            "pip install markdown",
+            file=sys.stderr,
+        )
+        return None
     md_text = (DOCS / "benchmarks.md").read_text()
     body = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
     # Embed local images as data URIs.
@@ -199,7 +213,7 @@ def main():
     data = json.loads(RESULTS.read_text())
     for p in generate_charts(data):
         print("wrote", p)
-    if "--html" in sys.argv:
+    if "--no-html" not in sys.argv:
         print("wrote", render_html())
 
 
