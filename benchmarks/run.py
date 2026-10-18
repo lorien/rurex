@@ -9,6 +9,8 @@ engines end to end (auto-calibrated iterations like timeit, median of
 guard on `re`.
 
 Must be run against a release build: `maturin develop --release`.
+The whole matrix holds `/tmp/core4.lock` so another benchmark cannot use
+the same cores.
 """
 
 import json
@@ -28,6 +30,8 @@ import re as stdre
 
 import rurex
 from suite import TESTS
+
+import corelock
 
 HERE = pathlib.Path(__file__).parent
 REPEATS = 3
@@ -304,5 +308,14 @@ def main():
     print(f"wrote {out}")
 
 
+def _main_with_lock():
+    if os.environ.get(corelock.HELD_ENV):
+        main()
+        return
+    with corelock.CoreLock(command=sys.argv):
+        os.environ[corelock.HELD_ENV] = "1"
+        main()
+
+
 if __name__ == "__main__":
-    main()
+    _main_with_lock()

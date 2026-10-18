@@ -34,6 +34,11 @@ per operation** on Y.
   the same pile on 3.14t — both engines scale 3.1–3.8× and rurex
   stays ×9.9–13.6 ahead at every position.
 
+All benchmark runners hold `/tmp/core4.lock` for the whole matrix, so
+two runs cannot share the designated physical cores. The lease is
+host-local, mode 0666, and records user, PID, host, CPU list, start time
+and command; a waiter prints the owner and fails after the timeout.
+
 A standalone HTML twin of this page (images embedded) is written
 alongside it: `python benchmarks/make_charts.py` produces
 `docs/benchmarks.html`. It embeds the charts as base64, so it is a

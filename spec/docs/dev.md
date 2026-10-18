@@ -67,6 +67,17 @@ timed barrier, and record governor, load average and per-CPU frequency. Set
 default 1 s warm-up. The measured corpus is never touched by the
 warm-up.
 
+Every benchmark runner holds `/tmp/core4.lock` for the whole matrix.
+The lease is a host-local `flock`; the lock file is mode 0666 and carries
+JSON owner metadata (user, PID, host, CPU list, start time, command). A
+second run prints the owner, waits up to `RUREX_CORE_LOCK_TIMEOUT`
+(default 600 s), and then hard-fails. Crash/exit releases the flock
+automatically; stale metadata is harmless.
+
+Non-Python runners use the same lease through the wrapper:
+
+    python benchmarks/corelock.py -- cargo run --release --example bench
+
 For A/B work use the paired runner rather than two separate benchmark
 runs:
 

@@ -14,7 +14,7 @@ passes the barrier, stops the instant its slice is finished; the
 reported wall is the max across workers. Load and pattern compile are
 outside the window, identically for both engines.
 
-    python benchmarks/telegram.py                  # 16 cold runs, writes telegram_results.json
+    python benchmarks/telegram.py                  # 32 cold runs, writes telegram_results.json
     python benchmarks/telegram.py --quick          # first 100k posts per run
     python benchmarks/telegram.py --point RE NTHREADS OUT.json   # internal child
 """
@@ -31,6 +31,7 @@ import tempfile
 import threading
 import time
 
+import corelock
 import measurement
 
 HERE = pathlib.Path(__file__).parent
@@ -209,7 +210,7 @@ def corpus_stats():
             "total_mentions": total, "posts_with_mentions": posts_with}
 
 
-def child_main():
+def _child_main():
     """`--point ENGINE NTHREADS OUT.json`: run one point, exit."""
     i = sys.argv.index("--point")
     if "--stats" in sys.argv:
@@ -225,6 +226,15 @@ def child_main():
               f"({mentions:,} mentions, cpus={info['affinity_cpus']}, "
               f"warmup={info['warmup_s']:.2f}s)", flush=True)
     pathlib.Path(sys.argv[i + 4]).write_text(json.dumps(result))
+
+
+def child_main():
+    if os.environ.get(corelock.HELD_ENV):
+        _child_main()
+        return
+    with corelock.CoreLock(command=sys.argv):
+        os.environ[corelock.HELD_ENV] = "1"
+        _child_main()
 
 
 def interpreter_env():
@@ -315,4 +325,6 @@ if __name__ == "__main__":
     if "--point" in sys.argv:
         child_main()
     else:
-        main()
+        with corelock.CoreLock(command=sys.argv):
+            os.environ[corelock.HELD_ENV] = "1"
+            main()

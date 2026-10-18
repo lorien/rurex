@@ -194,6 +194,9 @@ and capture groups are part of the result.
   separate buffer before the timed barrier. The measured corpus is
   never touched by the warm-up. Governor, load average and per-CPU
   frequency are recorded in the raw results.
+- **Core lease**: the whole matrix holds `/tmp/core4.lock` (mode
+  0666). A second run prints the owner metadata, waits up to 600 s, and
+  then fails instead of running on the same cores.
 - **Timing window**: from the instant the post-warm-up barrier releases
   to the instant the slice is finished; a point is the max across
   workers. Load and pattern compile are outside the window, identically

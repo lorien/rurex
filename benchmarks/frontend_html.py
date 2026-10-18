@@ -15,10 +15,11 @@ copy so every fresh point can load it quickly.
     python benchmarks/frontend_html.py --quick          # 32 MiB subset
     python benchmarks/frontend_html.py --point ENGINE NTHREADS FORM OUT.json
 
-Timing window (see `single_point`): starts the instant a worker passes
-the barrier, stops the instant its slice is finished; the reported wall
-is the max across workers. Load and pattern compile are outside the
-window, identically for both engines.
+Timing window (see `single_point`): starts the instant the post-warm-up
+barrier releases, stops the instant the slice is finished; the reported
+wall is the max across workers. Load and pattern compile are outside the
+window, identically for both engines. The whole matrix holds
+`/tmp/core4.lock` so another benchmark cannot use the same cores.
 """
 
 import hashlib
@@ -35,6 +36,7 @@ import tempfile
 import threading
 import time
 
+import corelock
 import measurement
 
 HERE = pathlib.Path(__file__).parent
@@ -336,7 +338,7 @@ def single_point(nthreads, engine, form):
     return max(walls), sum(counts), info
 
 
-def child_main():
+def _child_main():
     """`--point ...` or `--stats --point ...`: run one point, exit."""
     i = sys.argv.index("--point")
     if "--stats" in sys.argv:
@@ -365,6 +367,15 @@ def child_main():
             flush=True,
         )
     pathlib.Path(sys.argv[i + 4]).write_text(json.dumps(result))
+
+
+def child_main():
+    if os.environ.get(corelock.HELD_ENV):
+        _child_main()
+        return
+    with corelock.CoreLock(command=sys.argv):
+        os.environ[corelock.HELD_ENV] = "1"
+        _child_main()
 
 
 def interpreter_env():
@@ -485,4 +496,6 @@ if __name__ == "__main__":
     if "--point" in sys.argv:
         child_main()
     else:
-        main()
+        with corelock.CoreLock(command=sys.argv):
+            os.environ[corelock.HELD_ENV] = "1"
+            main()

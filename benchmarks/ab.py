@@ -13,7 +13,8 @@ measurement noise floor with the same protocol.
 
 Each side directory must contain an importable rurex extension (for
 example `rurex.cpython-313-x86_64-linux-gnu.so`). With no directory the
-currently installed rurex is used.
+currently installed rurex is used. The whole paired matrix holds
+`/tmp/core4.lock`; child processes inherit the lease marker.
 """
 
 import argparse
@@ -25,6 +26,8 @@ import statistics
 import subprocess
 import sys
 import tempfile
+
+import corelock
 
 HERE = pathlib.Path(__file__).parent
 SCRIPTS = {
@@ -168,4 +171,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with corelock.CoreLock(command=sys.argv):
+        os.environ[corelock.HELD_ENV] = "1"
+        main()
