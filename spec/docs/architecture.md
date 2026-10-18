@@ -64,6 +64,13 @@ stored program.
   first read (counting characters is O(n) in the text), capture
   names are shared `Arc` data, and `pos`/`endpos` window conversion
   walks the text at most once, only as far as the indices given.
+- Byte-to-character span conversion runs per returned `Match`, so it
+  is in place: the group spans the engine filled are rewritten with a
+  single sorted-offset walk into a stack buffer (heap only above 16
+  groups), with no hash map and no second vector. For a compact ASCII
+  `str` the PEP 393 `state.ascii` bit already tells the result path
+  that byte offsets equal character offsets, and conversion is
+  skipped outright (`utf8::is_ascii_obj`).
 
 ## Error handling
 

@@ -65,7 +65,7 @@
 
 use pyo3::exceptions::PyUnicodeEncodeError;
 use pyo3::prelude::*;
-use pyo3::types::PyString;
+use pyo3::types::{PyAny, PyString};
 
 use crate::prefilter::Prefilter;
 use std::slice;
@@ -397,6 +397,26 @@ fn inspect<'py>(bound: &Bound<'py, PyString>, l: &Layout) -> Stored {
         _ => return Stored::Unknown,
     };
     Stored::Transcode(kind, len, unsafe { p.add(l.data_nonascii) })
+}
+
+/// True when `obj` is a `str` whose compact PEP 393 storage is ASCII.
+///
+/// That means its UTF-8 view has exactly one byte per character, so
+/// engine byte offsets already are Python character offsets and the
+/// result path can skip offset conversion entirely. O(1): two field
+/// reads and no scanning. Anything else (a non-ASCII `str`, a
+/// non-`str`, or an object whose layout was not validated) answers
+/// `false`; callers then convert offsets the slow way, which is
+/// always correct.
+pub(crate) fn is_ascii_obj(obj: &Bound<'_, PyAny>) -> bool {
+    let Ok(s) = obj.cast::<PyString>() else {
+        return false;
+    };
+    let Some(l) = layout(obj.py()) else {
+        return false;
+    };
+    let state = read_u32(s.as_ptr() as *const u8, l.state);
+    l.compact(state) && l.ascii(state)
 }
 
 /// Three-way borrow: ASCII/cache zero-copy, cold non-ASCII transcoded

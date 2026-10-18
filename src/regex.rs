@@ -62,28 +62,73 @@ pub struct Regex {
     nullable: bool,
 }
 
-/// Convert engine byte spans to Python-unit spans (character offsets)
-/// with a single walk over the unique offsets.
-fn spans_to_py(s: &str, spans: &[Option<(usize, usize)>]) -> Vec<Option<(usize, usize)>> {
-    let mut offsets = Vec::with_capacity(spans.len() * 2);
+/// Rewrite engine byte spans to Python character offsets in place.
+///
+/// `ascii` means the haystack's UTF-8 is all-ASCII, so byte offsets
+/// already are character offsets; then this returns untouched. This
+/// predates every returned `Match`, and the sorted-offset walk it
+/// replaces (which also built a hash map per call) was a third of the
+/// cost of `search` on a short string. The distinct offsets fit a
+/// stack buffer for any pattern with up to 16 groups; only larger
+/// group counts take a heap buffer.
+fn to_py_spans(s: &str, ascii: bool, spans: &mut [Option<(usize, usize)>]) {
+    if ascii {
+        return;
+    }
+    const INLINE: usize = 32;
+    let n = spans.iter().flatten().count() * 2;
+    if n == 0 {
+        return;
+    }
+    let mut stack_bytes = [0usize; INLINE];
+    let mut stack_chars = [0usize; INLINE];
+    let mut heap_bytes;
+    let mut heap_chars;
+    let (bytes, chars): (&mut [usize], &mut [usize]) = if n <= INLINE {
+        (&mut stack_bytes[..n], &mut stack_chars[..n])
+    } else {
+        heap_bytes = vec![0usize; n];
+        heap_chars = vec![0usize; n];
+        (heap_bytes.as_mut_slice(), heap_chars.as_mut_slice())
+    };
+    let mut k = 0;
     for span in spans.iter().flatten() {
-        offsets.push(span.0);
-        offsets.push(span.1);
+        bytes[k] = span.0;
+        bytes[k + 1] = span.1;
+        k += 2;
     }
-    offsets.sort_unstable();
-    offsets.dedup();
-    let mut map = HashMap::with_capacity(offsets.len());
-    let mut chars = 0usize;
-    let mut prev = 0usize;
-    for &off in &offsets {
-        chars += s[prev..off].chars().count();
-        prev = off;
-        map.insert(off, chars);
+    bytes.sort_unstable();
+    let mut unique = 0;
+    for i in 0..n {
+        if unique == 0 || bytes[i] != bytes[unique - 1] {
+            bytes[unique] = bytes[i];
+            unique += 1;
+        }
     }
-    spans
-        .iter()
-        .map(|sp| sp.map(|(a, b)| (map[&a], map[&b])))
-        .collect()
+    let mut count = 0;
+    let mut prev = 0;
+    for i in 0..unique {
+        count += s[prev..bytes[i]].chars().count();
+        prev = bytes[i];
+        chars[i] = count;
+    }
+    for span in spans.iter_mut() {
+        if let Some((a, b)) = *span {
+            let start = bytes[..unique].binary_search(&a).expect("span start");
+            let end = bytes[..unique].binary_search(&b).expect("span end");
+            *span = Some((chars[start], chars[end]));
+        }
+    }
+}
+
+/// Character offset of one byte position (the scanner's anchored
+/// cursor needs a position, not a span).
+fn char_at(s: &str, ascii: bool, byte: usize) -> usize {
+    if ascii {
+        byte
+    } else {
+        s[..byte].chars().count()
+    }
 }
 
 /// Byte bounds of the `[pos, endpos)` window in `s` (Python char
@@ -838,13 +883,14 @@ impl Regex {
                 };
                 let hay = &s[..eb];
                 let spans = maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, pb));
-                Ok(spans.map(|sp| {
+                Ok(spans.map(|mut sp| {
+                    to_py_spans(s, crate::utf8::is_ascii_obj(string), &mut sp);
                     Match::new(
                         re,
                         string.clone().unbind(),
                         pos,
                         Endpos::from_opt(endpos),
-                        spans_to_py(s, &sp),
+                        sp,
                         slf.names.clone(),
                         false,
                     )
@@ -924,8 +970,8 @@ impl Regex {
             scan: it.scan,
             pending: it.pending,
             end_b: it.end_b,
-            chars_seen: it.chars_seen,
-            bytes_seen: it.bytes_seen,
+            chars_seen: 0,
+            bytes_seen: 0,
             names: it.names,
             bytes_mode: it.bytes_mode,
             done: it.done,
@@ -957,14 +1003,17 @@ impl Regex {
                     Some(Inner::Text(engine)) => {
                         let spans =
                             maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, 0));
-                        Ok(spans.map(|sp| {
-                            let sp = offset_spans(sp, pb);
+                        Ok(spans.map(|mut sp| {
+                            for span in &mut sp {
+                                *span = span.map(|(a, b)| (a + pb, b + pb));
+                            }
+                            to_py_spans(s, crate::utf8::is_ascii_obj(string), &mut sp);
                             Match::new(
                                 re,
                                 string.clone().unbind(),
                                 pos,
                                 Endpos::from_opt(endpos),
-                                spans_to_py(s, &sp),
+                                sp,
                                 slf.names.clone(),
                                 false,
                             )
@@ -980,13 +1029,14 @@ impl Regex {
                         let spans = maybe_detach(py, whole.len(), || {
                             captures_spans_text(engine, whole, pb)
                         });
-                        Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|sp| {
+                        Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|mut sp| {
+                            to_py_spans(s, crate::utf8::is_ascii_obj(string), &mut sp);
                             Match::new(
                                 re,
                                 string.clone().unbind(),
                                 pos,
                                 Endpos::from_opt(endpos),
-                                spans_to_py(s, &sp),
+                                sp,
                                 slf.names.clone(),
                                 false,
                             )
@@ -1088,8 +1138,6 @@ impl Regex {
             scan,
             pending: None,
             end_b,
-            chars_seen: 0,
-            bytes_seen: 0,
             names,
             bytes_mode,
             done,
@@ -1652,6 +1700,7 @@ fn substitute(
     };
 
     let mut keep = extract_hay(bytes_mode, string)?;
+    let ascii = crate::utf8::is_ascii_obj(string);
     let hay = keep.hay()?;
     match (hay, &reg.inner) {
         (Hay::Text(s), Inner::Text(engine)) => {
@@ -1689,12 +1738,14 @@ fn substitute(
                         out.push_str(&String::from_utf8_lossy(&buf));
                     }
                     Repl::Callable(func) => {
+                        let mut py_spans = spans.clone();
+                        to_py_spans(s, ascii, &mut py_spans);
                         let m = Match::new(
                             this.clone_ref(py),
                             string.clone().unbind(),
                             0,
                             Endpos::Eof(OnceLock::new()),
-                            spans_to_py(s, &spans),
+                            py_spans,
                             names.clone(),
                             false,
                         );
@@ -1821,9 +1872,6 @@ pub struct FindIter {
     pending: Option<usize>,
     /// Byte end bound.
     end_b: usize,
-    /// Chars before `bytes_seen` (text mode only).
-    chars_seen: usize,
-    bytes_seen: usize,
     names: Arc<Vec<Option<String>>>,
     bytes_mode: bool,
     done: bool,
@@ -1870,23 +1918,20 @@ impl FindIter {
                     self.done = true;
                     return Ok(None);
                 };
-                let (_sb, se) = spans[0].expect("group 0 always matches");
-                let mut py_spans = Vec::with_capacity(spans.len());
-                for span in &spans {
-                    py_spans.push(span.map(|(a, b)| {
-                        let base = self.chars_seen + s[self.bytes_seen..a].chars().count();
-                        (base, base + s[a..b].chars().count())
-                    }));
-                }
-                self.chars_seen += s[self.bytes_seen..se].chars().count();
-                self.bytes_seen = se;
-                self.pending = advance_after(&spans, &mut self.scan).or(pending);
+                let advance = advance_after(&spans, &mut self.scan);
+                let mut spans = spans;
+                to_py_spans(
+                    hay,
+                    crate::utf8::is_ascii_obj(self.string.bind(py)),
+                    &mut spans,
+                );
+                self.pending = advance.or(pending);
                 Ok(Some(Match::new(
                     self.re.clone_ref(py),
                     self.string.clone_ref(py),
                     self.pos,
                     self.endpos.replicate(),
-                    py_spans,
+                    spans,
                     self.names.clone(),
                     false,
                 )))
@@ -1998,31 +2043,28 @@ impl SreScanner {
                     return Ok(None);
                 };
                 let (_sb, se) = spans[0].expect("group 0 always matches");
+                let ascii = crate::utf8::is_ascii_obj(self.string.bind(py));
                 // Character offset of the cursor before this step (for
                 // the anchored filter). Like CPython's SRE_Scanner, a
                 // failed anchored call still consumes the match it
                 // rejected — the state always advances.
                 let cursor = if anchored {
-                    Some(self.chars_seen + s[self.bytes_seen..scan].chars().count())
+                    Some(char_at(s, ascii, scan))
                 } else {
                     None
                 };
-                let mut py_spans = Vec::with_capacity(spans.len());
-                for span in &spans {
-                    py_spans.push(span.map(|(a, b)| {
-                        let base = self.chars_seen + s[self.bytes_seen..a].chars().count();
-                        (base, base + s[a..b].chars().count())
-                    }));
-                }
+                let advance = advance_after(&spans, &mut self.scan);
+                let mut spans = spans;
+                to_py_spans(hay, ascii, &mut spans);
                 self.chars_seen += s[self.bytes_seen..se].chars().count();
                 self.bytes_seen = se;
-                self.pending = advance_after(&spans, &mut self.scan).or(pending);
+                self.pending = advance.or(pending);
                 let m = Match::new(
                     self.re.clone_ref(py),
                     self.string.clone_ref(py),
                     self.pos,
                     self.endpos.replicate(),
-                    py_spans,
+                    spans,
                     self.names.clone(),
                     false,
                 );
