@@ -69,6 +69,19 @@ bench-html: build-release build-free
 	$(PYTHON) benchmarks/frontend_html.py
 	$(PYTHON) benchmarks/frontend_html_charts.py
 
+# The two documents in docs/ about the UCS to UTF-8 problem. Typst is a
+# standalone binary, not a build dependency of the extension; the built
+# PDFs are committed, so this target is only needed after editing a .typ.
+TYPST := typst
+
+docs-pdf:
+	@command -v $(TYPST) >/dev/null 2>&1 || { \
+		echo "typst not found; install the static binary from"; \
+		echo "https://github.com/typst/typst/releases (no Python/Cargo dependency)"; \
+		exit 1; }
+	$(TYPST) compile docs/ucs-explainer.typ docs/ucs-explainer.pdf
+	$(TYPST) compile docs/ucs-slides.typ docs/ucs-slides.pdf
+
 .PHONY: venv build build-debug build-release build-free test \
 	test-conformance test-all fmt clippy rust-test check bench \
-	bench-telegram bench-html
+	bench-telegram bench-html docs-pdf

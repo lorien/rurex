@@ -61,6 +61,20 @@ and free-threaded interpreters. All benchmark targets depend on
 
 See `spec/docs/testing.md` for what each of these covers.
 
+## Documents
+
+`docs/` holds two Typst documents about the UCS to UTF-8 problem that
+`src/utf8.rs` works around: a 14-page explainer (`ucs-explainer.typ`)
+and a 9-slide deck (`ucs-slides.typ`). The compiled PDFs are committed
+next to the sources, so reading them needs nothing installed.
+
+    make docs-pdf
+
+rebuilds both. It requires `typst`, a single static binary from
+https://github.com/typst/typst/releases — not a Python or Cargo
+dependency, and not needed for any other target. Regenerate the PDFs
+whenever a `.typ` changes and commit the pair together.
+
 ## Repository and CI
 
 - Remote: `git@github.com:lorien/rurex.git` (already configured as
