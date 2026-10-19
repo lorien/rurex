@@ -28,11 +28,13 @@ Ship both wheel flavors from one source:
 
 The release profile is speed-tuned: `lto = "fat"`,
 `codegen-units = 1`, `opt-level = 3`, `strip = true`; panics keep
-unwinding because PyO3's panic catching depends on it. The first real
-release version is 0.1.0, superseding the 0.0.1 placeholder that holds
-the PyPI name (ADR-0003). Free-threaded CPython wheels remain a
-publish-task question; they would also be version-specific, never
-abi3.
+unwinding because PyO3's panic catching depends on it. Release
+versions are 0.1.0 (first real release, superseding the 0.0.1
+placeholder that holds the PyPI name, ADR-0003) and 0.2.0 (the
+performance release: SIMD transcoder, three-way UTF-8 borrow,
+cold-str prefilter, GIL-release work, result-path and module-call
+optimizations). Free-threaded CPython wheels ship as version-specific
+builds, never abi3.
 
 ## Alternatives rejected
 

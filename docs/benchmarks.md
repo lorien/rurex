@@ -492,5 +492,5 @@ hardware before making decisions that depend on them.
 
 *Raw results: [`benchmarks/results.json`](../benchmarks/results.json).
 Numbers on this page were measured on 2026-10-19 on the benchmark
-host (`regexus`, i5-13500) with rurex 0.1.0; `results.json` records
+host (`regexus`, i5-13500) with rurex 0.2.0; `results.json` records
 each interpreter's extension sha256.*

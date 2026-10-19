@@ -164,6 +164,38 @@ the other document's file.
 - Watching runs: `gh run watch` or
   https://github.com/lorien/rurex/actions
 
+## Releasing
+
+1. Pre-flight on a clean `main` whose CI is green: `make check`, the
+   free-threaded venv's `pytest`, and (because the wheel matrix covers
+   them) the oldest supported interpreters. uv makes throwaway venvs
+   cheap: `uv venv var/venv-310 --python 3.10 --seed`, then
+   `VIRTUAL_ENV=$PWD/var/venv-310 var/venv-310/bin/python -m maturin
+   develop --release`.
+2. Bump the version in **both** `Cargo.toml` and `pyproject.toml`
+   (maturin reads the latter, cargo the former; a mismatch is caught by
+   building a local wheel and importing it), plus `Cargo.lock` via a
+   build. Update the version sentence in ADR-0005 and any page that
+   names the measured version.
+3. If the release is about performance, re-run the benchmarks **after**
+   the bump so `results.json` records the released version and the
+   extension hashes match the wheel.
+4. Commit, push, confirm CI is green on that commit, then
+   `git tag -a vX.Y.Z -m "rurex X.Y.Z"` and `git push origin vX.Y.Z`.
+5. The Release workflow builds 19 artifacts (9 x86_64 including the
+   abi3 fallback, 9 aarch64, 1 sdist), publishes to PyPI through OIDC
+   trusted publishing (environment `pypi`) and attaches the files to the
+   GitHub release. Watch it with
+   `gh run list --workflow release.yml`; the job asserts the artifact
+   count before uploading.
+6. Verify from the index, not the tree: fresh venv,
+   `pip install rurex==X.Y.Z`, check `rurex.__version__` and run a smoke
+   script. Build the sdist once (`pip install --no-binary :all:`) to
+   prove the source path.
+
+A published version cannot be replaced: a bad release is yanked on PyPI
+and followed by a patch release; the tag is not moved.
+
 ## Project configuration notes
 
 - `pyproject.toml` uses the `maturin` build backend; the Python

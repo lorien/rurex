@@ -99,9 +99,9 @@ CPython's UTF-8 cache when another C-API consumer already filled it.
 - **Scanning many short non-ASCII `str` inputs once**: `re` is faster
   (1M Telegram posts: 0.25 vs 0.19 µs per post single-threaded on GIL,
   0.28 vs 0.19 on free-threaded Python). A required-first-byte
-  prefilter skips the transcode for 77% of the corpus and the AVX2
-  kernel handles the rest, but the remaining per-call transcode and
-  result building still dominate short posts.
+  prefilter skips the transcode for the 81% of posts with no `@` at
+  all; the 19% that carry a mention pay one UCS→UTF-8 encode per call,
+  and that encode is the entire gap on this row.
 - **If your data is already UTF-8 bytes** (files, network,
   JSONL/log streams), use bytes patterns: no conversion happens at
   all and rurex **beats `re`'s bytes mode** (×1.5 on the same

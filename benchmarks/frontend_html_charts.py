@@ -296,7 +296,7 @@ python benchmarks/frontend_html_charts.py     # charts, this page, and the HTML 
 ---
 
 *Raw results: [`benchmarks/frontend_html_results.json`](../benchmarks/frontend_html_results.json).
-Numbers on this page were measured on 2026-10-18 with rurex 0.1.0;
+Numbers on this page were measured on 2026-10-18 with rurex 0.2.0;
 see the raw results file for the exact environment.*
 """
     out = DOCS / "homepage-benchmark.md"
