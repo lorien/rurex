@@ -104,9 +104,21 @@ def chart(data, interp, out_name):
         )
     ax.set_xticks(xs)
     ax.set_xlabel("worker threads")
+    ax.set_ylim(bottom=0)
     ax.set_ylabel("wall time for the whole pile (s)")
     ax.set_title(TITLES[interp], loc="left", fontsize=13, fontweight="bold", pad=12)
-    ax.legend(loc="upper right", handlelength=4.2, handletextpad=0.8)
+    # Below the axes, left-aligned: on these panels the lower-left
+    # corner is where the rurex lines live, so an in-plot legend would
+    # cover them.
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(0.0, -0.13),
+        ncol=4,
+        handlelength=3.4,
+        handletextpad=0.7,
+        columnspacing=1.8,
+        frameon=False,
+    )
     fig.tight_layout()
     path = IMG / out_name
     fig.savefig(path, bbox_inches="tight")
