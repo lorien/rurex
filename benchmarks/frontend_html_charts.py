@@ -112,7 +112,7 @@ def chart(data, interp, out_name):
     # panels.
     ax.legend(
         loc="upper right",
-        bbox_to_anchor=(0.87, 1.0),
+        bbox_to_anchor=(0.935, 1.0),
         handlelength=4.2,
         handletextpad=0.8,
     )
