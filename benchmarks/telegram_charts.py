@@ -91,7 +91,7 @@ def chart(data, interp, out_name):
     ax.set_ylabel("wall time for the whole pile (s)")
     ax.set_title(TITLES[interp], loc="left", fontsize=13,
                  fontweight="bold", pad=12)
-    ax.legend(loc="upper left", handlelength=4.2, handletextpad=0.8)
+    ax.legend(loc="lower left", handlelength=4.2, handletextpad=0.8)
     fig.tight_layout()
     path = IMG / out_name
     fig.savefig(path, bbox_inches="tight")
