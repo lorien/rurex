@@ -39,6 +39,10 @@ artifact.
    leaves the installed extension benchmark-ready.
 4. `python -c "import rurex"` — imports cleanly in a fresh interpreter.
 5. No hard-coded credentials anywhere in the change.
+6. If the work publishes benchmark numbers: they were measured on the
+   benchmark host (`web@regexus`), not on a development machine, and
+   `benchmarks/results.json` names that host and the extension hashes.
+   See "Benchmarks" in `dev.md`.
 
 `make check` runs items 1–3 in order.
 

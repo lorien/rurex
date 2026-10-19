@@ -59,6 +59,28 @@ when `.venv-t` exists, because those benchmarks measure both the GIL
 and free-threaded interpreters. All benchmark targets depend on
 `build-release`.
 
+**Run published benchmarks on the benchmark host, not on the laptop.**
+The machine is part of the measurement: published numbers come from
+`web@regexus:/web/benchmark/rurex` (13th Gen Intel Core i5-13500,
+10 physical / 20 logical CPUs, idle, governor `performance`), and
+laptop numbers are not comparable with them. Sync the working tree
+(no commit for transport), build both venvs there, run the target, and
+copy the result file and charts back:
+
+    rsync -a --exclude .env --exclude .venv --exclude .venv-t \
+        --exclude target --exclude var ./ web@regexus:/web/benchmark/rurex/
+    ssh web@regexus 'cd /web/benchmark/rurex \
+        && make build-release build-free && make bench'
+    rsync -a web@regexus:/web/benchmark/rurex/benchmarks/results.json \
+        benchmarks/results.json
+    rsync -a web@regexus:/web/benchmark/rurex/docs/img/ docs/img/
+
+`make bench` rebuilds both interpreters, so the free-threaded tests
+cannot silently run against a stale `.venv-t`. `results.json` records
+the CPU and each interpreter's extension sha256, so every row is
+traceable to a machine and a binary; if the environment line says a
+laptop CPU, the run must not be published.
+
 The real-world benchmarks pin the process to physical CPUs,
 pin free-threaded workers one per core (GIL workers share the process
 affinity), run a fixed CPU warm-up on a separate buffer before the

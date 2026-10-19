@@ -13,6 +13,8 @@ The whole matrix holds `/tmp/core4.lock` so another benchmark cannot use
 the same cores.
 """
 
+import hashlib
+import importlib.machinery
 import json
 import os
 import pathlib
@@ -208,6 +210,70 @@ def run_test(test, quick):
     return result
 
 
+def extension_identity():
+    """Identify the extension binary this interpreter is actually running.
+
+    `results.json` used to carry a hard-coded "built with --release"
+    string, which cannot prove which artifact was measured: a debug or
+    stale extension produced the same text. Record what the process
+    loaded instead — path, size, mtime and sha256 — so a published
+    number is traceable to one binary and two runs are comparable. The
+    compiler profile still comes from `make build-release` (and
+    `build-free`); the hash only proves *which* artifact those produced.
+    """
+    info = {
+        "python": platform.python_version(),
+        "executable": sys.executable,
+        "gil_enabled": bool(getattr(sys, "_is_gil_enabled", lambda: True)()),
+    }
+    pkg = pathlib.Path(rurex.__file__).resolve().parent
+    suffixes = importlib.machinery.EXTENSION_SUFFIXES
+    ext = next(
+        (
+            p
+            for p in sorted(pkg.iterdir())
+            if any(p.name.endswith(s) for s in suffixes)
+        ),
+        None,
+    )
+    if ext is None:
+        info["path"] = None
+        return info
+    digest = hashlib.sha256()
+    with open(ext, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    st = ext.stat()
+    info.update(
+        {
+            "path": str(ext),
+            "size": st.st_size,
+            "mtime_ns": st.st_mtime_ns,
+            "sha256": digest.hexdigest(),
+        }
+    )
+    return info
+
+
+def stale_against_sources(info):
+    """True when the loaded extension predates the Rust sources.
+
+    `make bench` rebuilds before measuring, so a stale binary means
+    someone bypassed it (or a build quietly failed); the run must say so
+    instead of publishing numbers that do not belong to the tree.
+    """
+    if not info.get("mtime_ns"):
+        return False
+    newest = 0
+    for path in (HERE.parent / "src").rglob("*.rs"):
+        newest = max(newest, path.stat().st_mtime_ns)
+    for name in ("Cargo.toml", "Cargo.lock"):
+        path = HERE.parent / name
+        if path.exists():
+            newest = max(newest, path.stat().st_mtime_ns)
+    return bool(newest) and info["mtime_ns"] < newest
+
+
 def environment():
     cpu = ""
     try:
@@ -223,7 +289,7 @@ def environment():
         "python": platform.python_implementation() + " " + platform.python_version(),
         "os": f"{platform.system()} {platform.release()}",
         "rurex": rurex.__version__,
-        "build": "maturin develop --release (opt-level=3, LTO=fat)",
+        "rurex_extension": extension_identity(),
         "timeout_s": PATHO_TIMEOUT_S,
     }
 
@@ -275,11 +341,19 @@ def main():
     if "--free-child" in sys.argv:
         out_path = pathlib.Path(sys.argv[sys.argv.index("--free-child") + 1])
         child = {
-            "environment": {"free_python": platform.python_version()},
+            "environment": {
+                "free_python": platform.python_version(),
+                "rurex_extension": extension_identity(),
+            },
             "tests": [],
         }
         if not is_freethreaded():
             raise SystemExit("--free-child requires a free-threaded interpreter")
+        if stale_against_sources(child["environment"]["rurex_extension"]):
+            print(
+                "WARNING: the free-threaded rurex extension is older than the "
+                "Rust sources; run `make build-free` before trusting this run."
+            )
         for test in TESTS:
             if test.get("interpreter") != "freethreaded":
                 continue
@@ -295,6 +369,11 @@ def main():
 
     results = {"environment": environment(), "tests": []}
     results["environment"]["cpus"] = os.cpu_count()
+    if stale_against_sources(results["environment"]["rurex_extension"]):
+        print(
+            "WARNING: the rurex extension is older than the Rust sources; "
+            "run `make build-release` before trusting this run."
+        )
     print(f"environment: {results['environment']['cpu']}\n")
 
     # GIL tests run in-process.
@@ -339,6 +418,9 @@ def main():
             results["tests"].extend(child["tests"])
             results["environment"]["free_python"] = child["environment"][
                 "free_python"
+            ]
+            results["environment"]["rurex_extension_free"] = child["environment"][
+                "rurex_extension"
             ]
 
     out = HERE / "results.json"

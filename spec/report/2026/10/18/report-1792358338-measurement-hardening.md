@@ -99,12 +99,15 @@ measurement noise.
 - [open] `make build-free` fails on a uv-created `.venv-t` without
   `pip`; install `pip` in the venv or teach the target to use
   `maturin develop --uv`.
-- [open] The remote `/web/benchmark/rurex` workspace now has web SSH
-  access, Rust, venvs, and cached corpora. Decide whether to keep it as
-  the standard clean benchmark host.
-- [open] Published numbers are now from `regexus`; laptop numbers are
-  no longer comparable. Keep the machine recorded in the result
-  environment.
+- [acted] The remote `/web/benchmark/rurex` workspace now has web SSH
+  access, Rust, venvs, and cached corpora. It is the standard clean
+  benchmark host: the rule and the rsync/verify procedure live in
+  `spec/docs/dev.md` ("Benchmarks") and in the final checks in
+  `spec/docs/testing.md`.
+- [acted] Published numbers are now from `regexus`; laptop numbers are
+  no longer comparable. `run.py` records the CPU and each interpreter's
+  extension sha256 in `results.json`, and `dev.md` forbids publishing a
+  laptop run.
 - [open] The benchmark scripts still do one run per invocation; the
   median-of-3 flow is documented but manual (`merge_runs.py`). A
   `--repeat` flag would make it one command.

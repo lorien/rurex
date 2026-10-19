@@ -82,47 +82,46 @@ long-document release from ADR-0014 is untouched.
 
 ### Benchmark pages refreshed
 
-`make bench` re-ran the main suite on the same 8-CPU laptop class as
-the published page, rewriting `benchmarks/results.json`, the nine
-charts and `docs/benchmarks.md` (plus the gitignored
-`docs/benchmarks.html` twin). Findings while refreshing:
+The first attempt was on the laptop and was wrong: the reports already
+say published numbers come from the benchmark host (`regexus`), but the
+rule lived only as an `[open]` item in a report, not in the workflow
+docs. Two local runs then died in the efficiency guard at free-threaded
+`threads=8` (worker efficiency 0.56–0.66 against the 0.90 floor)
+because the laptop was busy with unrelated processes. The rule is now in
+`spec/docs/dev.md` ("Benchmarks") and in the final checks in
+`spec/docs/testing.md`, and the two report items that carried it are
+marked `[acted]`.
 
-- The previous edition's rurex numbers were measured on a build about
-  2.5× slower: scan ratios move from ×12–13 to ×31–35, the GIL-thread
-  pile from 0.80 s to 0.32 s at one worker, while every `re` number
-  stays within a few percent (76.7 → 76.6 µs at 64 KB, 10.10 → 9.98 s
-  for Test 6). That is the signature of a debug extension left
-  installed: the run predates `make bench` forcing the release rebuild
-  (commit 87f6f2e), and `results.json`'s `build` field is a constant
-  string, so it never caught it.
-- Extraction improved independently of the build: ×1.4 → ×2.3–2.5
-  (Test 3), ×6.6/×1.0 → ×7.4/×1.7 across the density sweep (Test 4),
-  from the flat `findall` path landing after the old run.
-- GIL threading now looks completely different from the old text, and
-  the page was rewritten accordingly: rurex' pile drops 3.9× from one
-  worker to eight (GIL-released scans on four physical cores), so the
-  lead is ×31 at one worker and ×231 at eight, where the old edition
-  reported a flat 0.5–0.8 s. Test 8 likewise: rurex gains 2.2–3.9×
-  from four workers and leads ×69–97.
-- The nine result tables had no GFM delimiter row, so the HTML twin
-  rendered them as raw pipe text (only the environment table was a
-  real table). Delimiters added; the page now has ten tables.
-- Free-threaded cost is now measured and stated: the same pile takes
-  0.88 s on 3.14t against 0.32 s on GIL Python, i.e. per-object locking
-  makes rurex's Python side ~2.7× dearer, while `re` moves only 10.0 →
-  11.4 s. That is the next free-threaded target, not the scan.
+The published refresh comes from `web@regexus:/web/benchmark/rurex`
+(i5-13500, 20 logical CPUs, load 0.08, governor `performance`), synced
+with rsync, no commit for transport. `make bench` there rebuilt both
+venvs (new `build-free` dependency) and finished with zero rejected
+points in 3m05s.
 
-The two corpus pages were left as published: they ran at `83b6507`
-and measure `findall`, which neither of today's commits touched.
-
+- `results.json` now records the machine and, per interpreter, the
+  extension's path, size, mtime and sha256, replacing the hard-coded
+  `build` string that could not prove which binary ran.
+- Numbers moved to the host: scan ×30–43, extraction ×1.8–2.0, density
+  sweep ×1.5–4.5, GIL threads ×40 to ×179, free-threaded threads
+  ×28–43, position threads ×112–128 (GIL) and ×27–34 (free).
+- The "free-threaded costs 2.7×" claim in the previous edition was an
+  artifact of the stale `.venv-t`: on the clean host, with both
+  extensions rebuilt, the same pile costs 0.19 s free-threaded against
+  0.20 s on GIL.
+- Test 5 now completes n=26 (`re` 1.98 s) before n=28 times out, so the
+  table gained a row.
+- The nine result tables had no GFM delimiter row and rendered as raw
+  pipe text in the HTML twin; fixed, ten tables now.
 
 ### Spec/ADR amendments
 
-- [acted] `spec/docs/architecture.md` "Matching path" now records that
-  span conversion is in place with a stack buffer and that compact ASCII
-  skips it via `utf8::is_ascii_obj`.
-- [acted] No ADR: the change is a pure result-path optimization inside
-  the existing safety and API contracts.
+- [acted] `spec/docs/dev.md` "Benchmarks" now states that published
+  runs go to the benchmark host, with the rsync/build/pull-back
+  procedure; `spec/docs/testing.md` final checks point at it.
+- [acted] `spec/docs/architecture.md` "Matching path" records the
+  in-place span conversion and the per-step GIL rule.
+- [acted] No ADR: result-path optimizations inside the existing safety
+  and API contracts.
 
 ### Future-task notes
 
@@ -172,10 +171,10 @@ and measure `findall`, which neither of today's commits touched.
 - Throwaway probe scripts and perf data belong under `var/` (gitignored);
   the recorded recipes are the mode names in this report, not committed
   files.
-- [open] `benchmarks/run.py:226` hard-codes the `build` string in
-  `results.json`, so a run cannot prove which binary it measured. Record
-  something falsifiable instead (`rurex.__file__` plus its mtime or
-  sha256, or the cargo profile from the wheel metadata).
+- [acted] `benchmarks/run.py` no longer hard-codes the `build` string:
+  `extension_identity()` records the CPU plus each interpreter's
+  extension path, size, mtime and sha256, and warns when the extension
+  is older than the Rust sources.
 - [open] `benchmarks/run.py` ignores unknown flags: `--help` starts a
   full 45-second benchmark run and leaves `/tmp/core4.lock` metadata
   behind (harmless, but confusing). Parse the known flags and reject the

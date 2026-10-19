@@ -58,6 +58,7 @@ rust-test:
 check: fmt clippy rust-test test-all
 
 bench: build-release
+	@$(MAKE) build-free
 	$(PYTHON) benchmarks/run.py
 	$(PYTHON) benchmarks/make_charts.py
 
