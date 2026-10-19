@@ -197,16 +197,23 @@ single-threaded.
 
 Each point runs both input forms. The **str** variant is the real
 task on parsed text: `re` matches the UCS buffer directly, while
-rurex's engine matches UTF-8 and must materialize it. On these short
-posts `re` still wins the str row (×{x('gil', 1, 'str'):.1f}
-single-threaded, ×{x('gil', 4, 'str'):.1f} at four workers), even
-though the required-first-byte prefilter (ADR-0013) skips the
-transcode for the 77% of posts that cannot contain a match and the
-AVX2 kernel (ADR-0012) handles the rest. What remains is the per-call
-transcode and result building, which dominate when every post is a
-separate call. The `findall` path itself was also slimmed: it uses
-`find_at` and one flat span buffer instead of a `Captures` object and
-a `Vec` per match.
+rurex's engine matches UTF-8 and must materialize it. The
+required-first-byte prefilter (ADR-0013) skips that for the 81% of
+posts with no `@` at all; the **19% that carry a mention pay one
+UCS→UTF-8 encode per call**, and that encode is the entire gap on this
+row (×{x('gil', 1, 'str'):.1f} single-threaded,
+×{x('gil', 4, 'str'):.1f} at four workers). Measured on a 470-char
+post: a cold `str` costs 630 ns, the same object with CPython's UTF-8
+cache already populated costs 126 ns, and the same content as `bytes`
+costs 140 ns — with the encode out of the way, `str` and `bytes` are
+the same engine over the same bytes. rurex never fills that cache
+itself (ADR-0012 rules out writing CPython's buffer), so a string that
+nothing else has encoded is encoded on every call. That encode is
+already near the hardware limit (about 1.9 GB/s against an AVX2 ceiling
+of 2–3 GB/s, and this host has no AVX-512), so no fast path inside the
+binding removes it; keeping the text as UTF-8 `bytes` does. The
+`findall` path itself was also slimmed: it uses `find_at` and one flat
+span buffer instead of a `Captures` object and a `Vec` per match.
 
 The **bytes** variant feeds the same posts pre-encoded to UTF-8 —
 the corpus is already UTF-8 on disk, so a pipeline that stays in
