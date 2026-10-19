@@ -56,10 +56,10 @@ Checks:
 
 ### Future-task notes
 
-- [open] `dev.md` should document the throwaway-venv recipe for older
-  interpreters (uv install + `VIRTUAL_ENV=… maturin develop
-  --release`), because the project venv is 3.13 only and pre-3.12
-  regressions are invisible locally.
+- [acted] `dev.md` now has a "Releasing" section with the throwaway-venv
+  recipe (uv install + `VIRTUAL_ENV=… maturin develop --release`), since
+  the project venv is 3.13 only and pre-3.12 regressions are invisible
+  locally.
 - [open] CI only sees pushed commits: 19 local commits (all of the
   performance work plus the earlier benchmark republish) had never run
   in CI. Push before trusting a "local tests are green" claim.
