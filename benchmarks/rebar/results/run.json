@@ -1,0 +1,33 @@
+{
+  "measured_at": "2026-10-19",
+  "host": "regexus",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13500",
+  "governor": "performance",
+  "lease_cpus": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "pinned_cpu": 0,
+  "max_time": "3s",
+  "max_iters": 10,
+  "rebar": "0.1.0",
+  "rurex": "0.2.0",
+  "engines": [
+    "python/re",
+    "python/rurex",
+    "python/rurex-bytes",
+    "rust/regex"
+  ],
+  "files": {
+    "curated.csv": {
+      "sha256": "4a700644b280745b0311cd0fa11fcc1df34e663a8bdfc25e1b20d7662374bb35",
+      "lines": 141
+    },
+    "dict.csv": {
+      "sha256": "02a26650649db59928c9bce7799ae81bcc0c276025c9c51c1a0ebcfe9aafc9db",
+      "lines": 5
+    }
+  }
+}

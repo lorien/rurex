@@ -36,8 +36,12 @@ speed ratios, lower is better):
 | engine | version | geometric mean | benchmarks |
 |---|---|---:|---:|
 | `rust/regex` | 1.12.4 | 1.08 | 44 |
-| `python/rurex` | 0.2.0 | 3.02 | 44 |
-| `python/re` | 3.13.5 | 9.71 | 44 |
+| `python/rurex` | 0.2.0 | 3.04 | 44 |
+| `python/re` | 3.13.5 | 9.78 | 44 |
+
+The published page (`docs/rebar-benchmark.md`, generated from the
+committed CSVs) is authoritative for the numbers; this report keeps the
+stable findings and the decisions.
 
 Per group, ratio against `rust/regex` (my own recomputation from the
 medians, so it differs slightly from the weighted ranking above):
@@ -75,10 +79,10 @@ Individual points worth reading (median, µs; rurex / `re` / rust-regex):
   case: rurex answers linearly, `re` does not.
 
 Both modes on identical input: `dictionary/search/english-15`
-(Unicode mode, ASCII haystack, 61 KB) — `python/rurex` 632.7 MB/s,
-`python/rurex-bytes` 647.5 MB/s, `rust/regex` 653.5 MB/s, `re`
-162.6 KB/s. The bytes engine is 2.3% faster because the haystack is
-ASCII, where the text path borrows instead of transcoding; the 3%
+(Unicode mode, ASCII haystack, 61 KB) — `python/rurex` 664 MB/s,
+`python/rurex-bytes` 678 MB/s, `rust/regex` 687 MB/s, `re`
+166 KB/s. The bytes engine is 2.1% faster because the haystack is
+ASCII, where the text path borrows instead of transcoding; the 3.3%
 between rurex and the Rust engine is the Python boundary.
 
 ### Spec/ADR amendments

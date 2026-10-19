@@ -66,6 +66,9 @@ bench-telegram: build-release build-free
 	$(PYTHON) benchmarks/telegram.py
 	$(PYTHON) benchmarks/telegram_charts.py
 
+bench-rebar:
+	$(PYTHON) benchmarks/rebar_run.py
+
 bench-html: build-release build-free
 	$(PYTHON) benchmarks/frontend_html.py
 	$(PYTHON) benchmarks/frontend_html_charts.py
@@ -85,4 +88,4 @@ docs-pdf:
 
 .PHONY: venv build build-debug build-release build-free test \
 	test-conformance test-all fmt clippy rust-test check bench \
-	bench-telegram bench-html docs-pdf
+	bench-telegram bench-html bench-rebar docs-pdf

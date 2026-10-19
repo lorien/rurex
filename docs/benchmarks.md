@@ -54,6 +54,11 @@ bound) in [`telegram-benchmark.md`](telegram-benchmark.md), and
 frontend HTML `href`/`src` extraction (long documents, dense grouped
 extraction) in [`homepage-benchmark.md`](homepage-benchmark.md).
 
+A third-party check lives in
+[`rebar-benchmark.md`](rebar-benchmark.md): the same library measured by
+[rebar](https://github.com/BurntSushi/rebar) against stdlib `re` and the
+Rust engine it embeds, across 44 curated tasks.
+
 ## Methodology
 
 - **One variable per test.** Each test fixes its context (haystack

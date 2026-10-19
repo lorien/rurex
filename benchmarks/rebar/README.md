@@ -72,9 +72,14 @@ host interpreter, `rurex==0.2.0` the released wheel):
 
 ## Running
 
-Published numbers come from the benchmark host, under the core lease and
-pinned to the first physical core (see "Benchmarks" in
-`spec/docs/dev.md`):
+The supported entry point is the wrapper, which measures, verifies and
+rebuilds the page (`docs/rebar-benchmark.md` plus its HTML twin) in one
+step, under the core lease and pinned to CPU 0:
+
+    python3 benchmarks/rebar_run.py        # or: make bench-rebar
+
+It refuses to publish if any point failed. The raw rebar invocation
+underneath is:
 
     python3 benchmarks/corelock.py -- taskset -c 0 \
         /path/to/rebar/target/release/rebar measure \

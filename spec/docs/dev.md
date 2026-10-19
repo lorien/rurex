@@ -131,11 +131,14 @@ benchmark three times, copy each result file, then merge them:
 Use `benchmarks/frontend_html.py` and `frontend_html_results.json` for
 the homepage benchmark.
 
-Third-party comparison: rebar (BurntSushi's multi-engine barometer)
-can measure rurex next to `python/re` and `rust/regex`; the runner, the
-engine registration and the exact invocation live in
-`benchmarks/rebar/README.md`. Like every published benchmark it runs on
-the benchmark host under the core lease.
+Third-party comparison: `make bench-rebar` (or
+`python benchmarks/rebar_run.py`) measures rurex next to `python/re` and
+`rust/regex` with [rebar](https://github.com/BurntSushi/rebar), rebuilds
+`docs/rebar-benchmark.md` and its HTML twin, and refuses to publish if a
+point failed. The rebar-side setup (runner, engine registration,
+definition edits) lives in `benchmarks/rebar/README.md`. Like every
+published benchmark it takes the core lease and runs on the benchmark
+host.
 
 See `spec/docs/testing.md` for what each of these covers.
 
