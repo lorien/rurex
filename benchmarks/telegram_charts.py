@@ -87,6 +87,7 @@ def chart(data, interp, out_name):
                 color=color, fontsize=9, va="center", ha="left")
     ax.set_xticks(xs)
     ax.set_xlabel("worker threads")
+    ax.set_ylim(bottom=0)
     ax.set_ylabel("wall time for the whole pile (s)")
     ax.set_title(TITLES[interp], loc="left", fontsize=13,
                  fontweight="bold", pad=12)
