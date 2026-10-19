@@ -22,7 +22,7 @@
       "engine": "re",
       "threads": 1,
       "input": "str",
-      "wall_s": 3.4193459171801805,
+      "wall_s": 3.421761085744947,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
@@ -36,192 +36,192 @@
         ],
         "worker_pinning": "process",
         "worker_wall_s": [
-          3.411336777266115
+          3.4299809518270195
         ],
         "worker_cpu_s": [
-          3.4106945269999995
+          3.42807278
         ],
-        "efficiency": 0.9998117306182153,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          1292727
-        ],
-        "frequency_after_warmup_khz": [
-          4791395
-        ],
-        "frequency_after_khz": [
-          4767816
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.5,
-          0.55,
-          0.61
-        ],
-        "loadavg_after": [
-          0.54,
-          0.56,
-          0.62
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        3.411336777266115,
-        3.424285878892988,
-        3.4193459171801805
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 1,
-      "input": "bytes",
-      "wall_s": 1.6976305260322988,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          1.6945021990686655
-        ],
-        "worker_cpu_s": [
-          1.694195565
-        ],
-        "efficiency": 0.9998190417995125,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          4747325
-        ],
-        "frequency_after_warmup_khz": [
-          4695919
-        ],
-        "frequency_after_khz": [
-          4800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.54,
-          0.56,
-          0.62
-        ],
-        "loadavg_after": [
-          0.54,
-          0.56,
-          0.62
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        1.6945021990686655,
-        1.6976305260322988,
-        1.7008417597971857
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 1,
-      "input": "str",
-      "wall_s": 0.6115242158994079,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.6176329478621483
-        ],
-        "worker_cpu_s": [
-          0.6174818709999998
-        ],
-        "efficiency": 0.9997553937776937,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          4738572
-        ],
-        "frequency_after_warmup_khz": [
-          4800000
-        ],
-        "frequency_after_khz": [
-          4797688
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.54,
-          0.56,
-          0.62
-        ],
-        "loadavg_after": [
-          0.58,
-          0.57,
-          0.62
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        0.6176329478621483,
-        0.6093342127278447,
-        0.6115242158994079
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 1,
-      "input": "bytes",
-      "wall_s": 0.4913587151095271,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.48921852372586727
-        ],
-        "worker_cpu_s": [
-          0.489075387
-        ],
-        "efficiency": 0.999707417608031,
+        "efficiency": 0.9994436785936076,
         "efficiency_kind": "process",
         "frequency_before_khz": [
           800000
         ],
         "frequency_after_warmup_khz": [
           4800000
+        ],
+        "frequency_after_khz": [
+          4800000
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.3,
+          1.25,
+          0.86
+        ],
+        "loadavg_after": [
+          1.28,
+          1.24,
+          0.86
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        3.4299809518270195,
+        3.421761085744947,
+        3.4202017579227686
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 1.7023966736160219,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          1.7061877390369773
+        ],
+        "worker_cpu_s": [
+          1.7055105419999999
+        ],
+        "efficiency": 0.9996030934805805,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4791947
+        ],
+        "frequency_after_khz": [
+          4795814
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.28,
+          1.24,
+          0.86
+        ],
+        "loadavg_after": [
+          1.26,
+          1.24,
+          0.86
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        1.7061877390369773,
+        1.7023966736160219,
+        1.6991674602031708
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "str",
+      "wall_s": 0.609349602367729,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.609349602367729
+        ],
+        "worker_cpu_s": [
+          0.609118802
+        ],
+        "efficiency": 0.9996212348923638,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          4644147
+        ],
+        "frequency_after_warmup_khz": [
+          4800000
+        ],
+        "frequency_after_khz": [
+          4775405
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.26,
+          1.24,
+          0.86
+        ],
+        "loadavg_after": [
+          1.26,
+          1.24,
+          0.86
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        0.609349602367729,
+        0.6105971718207002,
+        0.60894377483055
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 0.489914592821151,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.4872912080027163
+        ],
+        "worker_cpu_s": [
+          0.4870857610000001
+        ],
+        "efficiency": 0.999578389678816,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          4647190
+        ],
+        "frequency_after_warmup_khz": [
+          4792468
         ],
         "frequency_after_khz": [
           4799987
@@ -230,14 +230,14 @@
           "performance"
         ],
         "loadavg_before": [
-          0.58,
-          0.57,
-          0.62
+          1.26,
+          1.24,
+          0.86
         ],
         "loadavg_after": [
-          0.58,
-          0.57,
-          0.62
+          1.24,
+          1.23,
+          0.86
         ]
       },
       "attempts": 1,
@@ -245,16 +245,16 @@
       "min_efficiency": 0.9,
       "interpreter": "gil",
       "wall_runs": [
-        0.48921852372586727,
-        0.5129234027117491,
-        0.4913587151095271
+        0.4872912080027163,
+        0.489914592821151,
+        0.4982273932546377
       ]
     },
     {
       "engine": "re",
       "threads": 2,
       "input": "str",
-      "wall_s": 3.4556883508339524,
+      "wall_s": 3.4546044627204537,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
@@ -270,39 +270,234 @@
         ],
         "worker_pinning": "process",
         "worker_wall_s": [
-          3.4113106867298484,
-          3.4558810656890273
+          3.3933494687080383,
+          3.453055994119495
         ],
         "worker_cpu_s": [
-          1.749278114,
-          1.7098268310000002
+          1.747448866,
+          1.7084166349999999
         ],
-        "efficiency": 1.000932867552353,
+        "efficiency": 1.0008136291115144,
         "efficiency_kind": "process",
         "frequency_before_khz": [
-          3684043,
+          800000,
+          4713816
+        ],
+        "frequency_after_warmup_khz": [
+          4766338,
+          4789586
+        ],
+        "frequency_after_khz": [
+          956453,
+          4771495
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.24,
+          1.23,
+          0.86
+        ],
+        "loadavg_after": [
+          1.3,
+          1.25,
+          0.87
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        3.453055994119495,
+        3.459416778758168,
+        3.4546044627204537
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 2,
+      "input": "bytes",
+      "wall_s": 1.7196113178506494,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          1.7108284677378833,
+          1.7196113178506494
+        ],
+        "worker_cpu_s": [
+          0.8721474169999999,
+          0.851716757
+        ],
+        "efficiency": 1.0024731496619053,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          1110718,
           800000
         ],
         "frequency_after_warmup_khz": [
-          4798507,
+          4797373,
+          4790581
+        ],
+        "frequency_after_khz": [
+          800000,
+          4791785
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.3,
+          1.25,
+          0.87
+        ],
+        "loadavg_after": [
+          1.3,
+          1.25,
+          0.87
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        1.7196113178506494,
+        1.7143942592665553,
+        1.761995174922049
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "input": "str",
+      "wall_s": 0.3413331159390509,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.3410100797191262,
+          0.28750778594985604
+        ],
+        "worker_cpu_s": [
+          0.33890609699999996,
+          0.28597471500000005
+        ],
+        "efficiency": 0.9938301450770628,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          4624212,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4679504,
+          4653307
+        ],
+        "frequency_after_khz": [
+          801404,
+          4800000
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.3,
+          1.25,
+          0.87
+        ],
+        "loadavg_after": [
+          1.35,
+          1.26,
+          0.87
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        0.3410100797191262,
+        0.3413331159390509,
+        0.3454003529623151
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 2,
+      "input": "bytes",
+      "wall_s": 0.27914925292134285,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.27869908418506384,
+          0.21928120264783502
+        ],
+        "worker_cpu_s": [
+          0.27824334900000003,
+          0.21841562000000003
+        ],
+        "efficiency": 0.9960526363528519,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000,
+          4711127
+        ],
+        "frequency_after_warmup_khz": [
+          4795889,
           4800000
         ],
         "frequency_after_khz": [
-          2457859,
-          4794974
+          4800000,
+          800000
         ],
         "governor": [
           "performance"
         ],
         "loadavg_before": [
-          0.58,
-          0.57,
-          0.62
+          1.35,
+          1.26,
+          0.87
         ],
         "loadavg_after": [
-          0.61,
-          0.58,
-          0.62
+          1.35,
+          1.26,
+          0.87
         ]
       },
       "attempts": 1,
@@ -310,16 +505,852 @@
       "min_efficiency": 0.9,
       "interpreter": "gil",
       "wall_runs": [
-        3.4558810656890273,
-        3.4556883508339524,
-        3.448984487913549
+        0.27869908418506384,
+        0.27914925292134285,
+        0.28099339781329036
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "input": "str",
+      "wall_s": 3.461310583166778,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          3.2459826008416712,
+          3.461310583166778,
+          3.4095308859832585
+        ],
+        "worker_cpu_s": [
+          1.100875609,
+          1.202557557,
+          1.1715300599999998
+        ],
+        "efficiency": 1.0039443564815067,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          800000,
+          4669447,
+          3605782
+        ],
+        "frequency_after_warmup_khz": [
+          4631093,
+          4663099,
+          4631076
+        ],
+        "frequency_after_khz": [
+          800000,
+          800000,
+          4795070
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.35,
+          1.26,
+          0.87
+        ],
+        "loadavg_after": [
+          1.33,
+          1.26,
+          0.87
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        3.461310583166778,
+        3.4592217528261244,
+        3.4830370768904686
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 1.721746508963406,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          1.5699351141229272,
+          1.713032172061503,
+          1.721746508963406
+        ],
+        "worker_cpu_s": [
+          0.547973708,
+          0.599222446,
+          0.5858056380000001
+        ],
+        "efficiency": 1.0065371313245004,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          800000,
+          4200404,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4700000,
+          4700000,
+          4699988
+        ],
+        "frequency_after_khz": [
+          801650,
+          973933,
+          4783461
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.33,
+          1.26,
+          0.87
+        ],
+        "loadavg_after": [
+          1.33,
+          1.26,
+          0.87
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        1.721746508963406,
+        1.7185883861966431,
+        1.7411879189312458
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "str",
+      "wall_s": 0.293248079251498,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.29163823183625937,
+          0.14310816209763288,
+          0.22460584994405508
+        ],
+        "worker_cpu_s": [
+          0.290915956,
+          0.1412855220000001,
+          0.223639162
+        ],
+        "efficiency": 0.9872638983624895,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000,
+          4722445,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4693262,
+          4686779,
+          4686769
+        ],
+        "frequency_after_khz": [
+          4785387,
+          800337,
+          800000
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.33,
+          1.26,
+          0.87
+        ],
+        "loadavg_after": [
+          1.46,
+          1.28,
+          0.89
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        0.29163823183625937,
+        0.2940053450874984,
+        0.293248079251498
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 0.2356912880204618,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.23551337979733944,
+          0.0987651851028204,
+          0.1855008862912655
+        ],
+        "worker_cpu_s": [
+          0.23491586499999995,
+          0.09778103400000016,
+          0.1852692010000001
+        ],
+        "efficiency": 0.9900354451642481,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000,
+          800000,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4700000,
+          4711788,
+          4700000
+        ],
+        "frequency_after_khz": [
+          800000,
+          1450238,
+          4800000
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.46,
+          1.28,
+          0.89
+        ],
+        "loadavg_after": [
+          1.46,
+          1.28,
+          0.89
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        0.23551337979733944,
+        0.2356912880204618,
+        0.23576321685686707
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "str",
+      "wall_s": 3.469747353810817,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          3.1712844357825816,
+          3.4412273443304002,
+          3.464158599730581,
+          3.43338619871065
+        ],
+        "worker_cpu_s": [
+          0.851739832,
+          0.914900517,
+          0.8471741530000001,
+          0.8823760740000002
+        ],
+        "efficiency": 1.009246682952654,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          800000,
+          800000,
+          800000,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4628844,
+          4676659,
+          4699988,
+          4676649
+        ],
+        "frequency_after_khz": [
+          940341,
+          4797188,
+          800000,
+          800489
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.46,
+          1.28,
+          0.89
+        ],
+        "loadavg_after": [
+          1.5,
+          1.3,
+          0.89
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        3.464158599730581,
+        3.477015799842775,
+        3.469747353810817
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "bytes",
+      "wall_s": 1.727132959291339,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          1.6772068538703024,
+          1.706228215713054,
+          1.6877410551533103,
+          1.7096561072394252
+        ],
+        "worker_cpu_s": [
+          0.425794738,
+          0.4563310519999999,
+          0.42005374400000006,
+          0.4403988569999999
+        ],
+        "efficiency": 1.0192566701696133,
+        "efficiency_kind": "process",
+        "frequency_before_khz": [
+          800000,
+          800000,
+          800000,
+          4646087
+        ],
+        "frequency_after_warmup_khz": [
+          4684780,
+          4684789,
+          4712677,
+          4684791
+        ],
+        "frequency_after_khz": [
+          800705,
+          799741,
+          4795552,
+          1090197
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.5,
+          1.3,
+          0.89
+        ],
+        "loadavg_after": [
+          1.5,
+          1.3,
+          0.89
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        1.7096561072394252,
+        1.727132959291339,
+        1.7290944419801235
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "input": "str",
+      "wall_s": 0.25193348387256265,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.2523849648423493,
+          0.10416104691103101,
+          0.12007283419370651,
+          0.2653541499748826
+        ],
+        "worker_cpu_s": [
+          0.251190088,
+          0.10283651000000016,
+          0.11773868899999984,
+          0.26401767500000006
+        ],
+        "efficiency": 0.9805605888344309,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000,
+          4782469,
+          800000,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4685341,
+          4700011,
+          4700000,
+          4685330
+        ],
+        "frequency_after_khz": [
+          800000,
+          800000,
+          800000,
+          4793094
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.54,
+          1.31,
+          0.9
+        ],
+        "loadavg_after": [
+          1.54,
+          1.31,
+          0.9
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        0.2653541499748826,
+        0.25193348387256265,
+        0.2500096629373729
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 4,
+      "input": "bytes",
+      "wall_s": 0.21895548002794385,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "process",
+        "worker_wall_s": [
+          0.21531898993998766,
+          0.0722324587404728,
+          0.08351025404408574,
+          0.1440310711041093
+        ],
+        "worker_cpu_s": [
+          0.21461946500000018,
+          0.07147350600000002,
+          0.08218418000000005,
+          0.14213949000000015
+        ],
+        "efficiency": 0.984120823732788,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000,
+          4607971,
+          800000,
+          1411553
+        ],
+        "frequency_after_warmup_khz": [
+          4687660,
+          4687657,
+          4719334,
+          4687689
+        ],
+        "frequency_after_khz": [
+          800000,
+          4789902,
+          800000,
+          800000
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.54,
+          1.31,
+          0.9
+        ],
+        "loadavg_after": [
+          1.54,
+          1.31,
+          0.9
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "gil",
+      "wall_runs": [
+        0.21531898993998766,
+        0.21895548002794385,
+        0.22059995494782925
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 1,
+      "input": "str",
+      "wall_s": 3.1717063798569143,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          3.169349323026836
+        ],
+        "worker_cpu_s": [
+          3.1682592309999995
+        ],
+        "efficiency": 0.9996560517899001,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4800000
+        ],
+        "frequency_after_khz": [
+          4779492
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.54,
+          1.31,
+          0.9
+        ],
+        "loadavg_after": [
+          1.5,
+          1.3,
+          0.9
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        3.169349323026836,
+        3.1717063798569143,
+        3.1718303221277893
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 1.904463268816471,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          1.912267732899636
+        ],
+        "worker_cpu_s": [
+          1.911812779
+        ],
+        "efficiency": 0.9997620867142143,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          4711295
+        ],
+        "frequency_after_warmup_khz": [
+          4800000
+        ],
+        "frequency_after_khz": [
+          4796170
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.5,
+          1.3,
+          0.9
+        ],
+        "loadavg_after": [
+          1.46,
+          1.3,
+          0.9
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        1.912267732899636,
+        1.904463268816471,
+        1.88026790227741
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "str",
+      "wall_s": 0.6068033641204238,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          0.6068033641204238
+        ],
+        "worker_cpu_s": [
+          0.6067691590000002
+        ],
+        "efficiency": 0.9999436306348215,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          4684325
+        ],
+        "frequency_after_warmup_khz": [
+          4795991
+        ],
+        "frequency_after_khz": [
+          4796218
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.46,
+          1.3,
+          0.9
+        ],
+        "loadavg_after": [
+          1.46,
+          1.3,
+          0.9
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        0.6068033641204238,
+        0.6311230938881636,
+        0.6032950473017991
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 1,
+      "input": "bytes",
+      "wall_s": 0.4878409206867218,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          0.4813590138219297
+        ],
+        "worker_cpu_s": [
+          0.48129131
+        ],
+        "efficiency": 0.9998593485943224,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          4707235
+        ],
+        "frequency_after_warmup_khz": [
+          4800000
+        ],
+        "frequency_after_khz": [
+          4800000
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.46,
+          1.3,
+          0.9
+        ],
+        "loadavg_after": [
+          1.46,
+          1.3,
+          0.9
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        0.4813590138219297,
+        0.4878409206867218,
+        0.48822605004534125
       ]
     },
     {
       "engine": "re",
       "threads": 2,
-      "input": "bytes",
-      "wall_s": 1.716723598074168,
+      "input": "str",
+      "wall_s": 1.6214751731604338,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
@@ -333,1072 +1364,41 @@
           true,
           true
         ],
-        "worker_pinning": "process",
+        "worker_pinning": "per-core",
         "worker_wall_s": [
-          1.7166593209840357,
-          1.7143421988002956
+          1.6168533279560506,
+          1.5715495888143778
         ],
         "worker_cpu_s": [
-          0.869433378,
-          0.8501433490000001
+          1.610573901,
+          1.57021941
         ],
-        "efficiency": 1.00169946708721,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          800000,
-          4741968
-        ],
-        "frequency_after_warmup_khz": [
-          4792430,
-          4792422
-        ],
-        "frequency_after_khz": [
-          4797764,
-          800821
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.61,
-          0.58,
-          0.62
-        ],
-        "loadavg_after": [
-          0.72,
-          0.6,
-          0.63
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        1.7166593209840357,
-        1.7184290569275618,
-        1.716723598074168
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 2,
-      "input": "str",
-      "wall_s": 0.34514706674963236,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.34514706674963236,
-          0.29072621604427695
-        ],
-        "worker_cpu_s": [
-          0.3423136859999999,
-          0.289328261
-        ],
-        "efficiency": 0.9917908015956346,
+        "efficiency": 0.9961162667958331,
         "efficiency_kind": "per-worker",
         "frequency_before_khz": [
-          4628235,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4700000,
-          4700000
-        ],
-        "frequency_after_khz": [
-          801610,
-          4759587
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.72,
-          0.6,
-          0.63
-        ],
-        "loadavg_after": [
-          0.72,
-          0.6,
-          0.63
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        0.34514706674963236,
-        0.34128063218668103,
-        0.3471629968844354
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 2,
-      "input": "bytes",
-      "wall_s": 0.2815321311354637,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.28035261761397123,
-          0.2193613019771874
-        ],
-        "worker_cpu_s": [
-          0.28009827,
-          0.21871071200000003
-        ],
-        "efficiency": 0.9970341624920925,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          4486074,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4800000,
-          4793729
-        ],
-        "frequency_after_khz": [
-          4796113,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.72,
-          0.6,
-          0.63
-        ],
-        "loadavg_after": [
-          0.72,
-          0.6,
-          0.63
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        0.28035261761397123,
-        0.28244733391329646,
-        0.2815321311354637
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 3,
-      "input": "str",
-      "wall_s": 3.460137654095888,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          3.1651628082618117,
-          3.460137654095888,
-          3.326611994765699
-        ],
-        "worker_cpu_s": [
-          1.099144642,
-          1.2035923560000001,
-          1.1702082109999998
-        ],
-        "efficiency": 1.0037014582032455,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          800000,
-          800000,
-          2302600
-        ],
-        "frequency_after_warmup_khz": [
-          4700000,
-          4785453,
-          4700000
-        ],
-        "frequency_after_khz": [
-          800000,
-          4800012,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.72,
-          0.6,
-          0.63
-        ],
-        "loadavg_after": [
-          0.98,
-          0.66,
-          0.65
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        3.460137654095888,
-        3.4690334741026163,
-        3.4538773968815804
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 3,
-      "input": "bytes",
-      "wall_s": 1.730308722704649,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          1.5658206469379365,
-          1.730308722704649,
-          1.710533162113279
-        ],
-        "worker_cpu_s": [
-          0.548751136,
-          0.5964002820000001,
-          0.58819731
-        ],
-        "efficiency": 1.0017569149686765,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          4591083,
-          800000,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4700000,
-          4700000,
-          4700000
-        ],
-        "frequency_after_khz": [
-          866631,
-          799673,
-          4796117
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.98,
-          0.66,
-          0.65
-        ],
-        "loadavg_after": [
-          0.99,
-          0.66,
-          0.65
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        1.730308722704649,
-        1.7060794769786298,
-        1.7311223838478327
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 3,
-      "input": "str",
-      "wall_s": 0.2838261816650629,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.2838261816650629,
-          0.14633460761979222,
-          0.220612115226686
-        ],
-        "worker_cpu_s": [
-          0.2826237079999999,
-          0.14348912999999996,
-          0.22006512700000003
-        ],
-        "efficiency": 0.9805549919730171,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          4696221,
-          800000,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4712767,
-          4700000,
-          4700000
-        ],
-        "frequency_after_khz": [
-          4800000,
-          800000,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.99,
-          0.66,
-          0.65
-        ],
-        "loadavg_after": [
-          0.99,
-          0.66,
-          0.65
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        0.2838261816650629,
-        0.28322805603966117,
-        0.28473363909870386
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 3,
-      "input": "bytes",
-      "wall_s": 0.24380536191165447,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.24380536191165447,
-          0.09751397976651788,
-          0.17481966502964497
-        ],
-        "worker_cpu_s": [
-          0.24323500799999986,
-          0.09727688000000012,
-          0.1740866040000002
-        ],
-        "efficiency": 0.9958067587561132,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          800000,
-          4764595,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4700000,
-          4700000,
-          4700000
-        ],
-        "frequency_after_khz": [
-          800000,
-          4800000,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.99,
-          0.66,
-          0.65
-        ],
-        "loadavg_after": [
-          0.99,
-          0.66,
-          0.65
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        0.24380536191165447,
-        0.25370458187535405,
-        0.2385517479851842
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 4,
-      "input": "str",
-      "wall_s": 3.451049777213484,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          3.282927706837654,
-          3.4495833162218332,
-          3.451049777213484,
-          3.359057529363781
-        ],
-        "worker_cpu_s": [
-          0.8514357529999999,
-          0.9173713430000001,
-          0.84656715,
-          0.8838762280000001
-        ],
-        "efficiency": 1.0139669665458826,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          800000,
-          800000,
-          800000,
-          1242438
-        ],
-        "frequency_after_warmup_khz": [
-          4684754,
-          4684722,
-          4684734,
-          4684741
-        ],
-        "frequency_after_khz": [
-          800000,
-          800268,
-          4797712,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          0.99,
-          0.66,
-          0.65
-        ],
-        "loadavg_after": [
-          1.23,
-          0.72,
-          0.67
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        3.451049777213484,
-        3.450760983861983,
-        3.4700701576657593
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 4,
-      "input": "bytes",
-      "wall_s": 1.719633738975972,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          1.7047405140474439,
-          1.7385629448108375,
-          1.6958438223227859,
-          1.7250388017855585
-        ],
-        "worker_cpu_s": [
-          0.4269938149999999,
-          0.4722008099999999,
-          0.41951073299999986,
-          0.439162791
-        ],
-        "efficiency": 1.0111041157565122,
-        "efficiency_kind": "process",
-        "frequency_before_khz": [
-          4632189,
-          800000,
-          800000,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4700000,
-          4700000,
-          4700000,
-          4699976
-        ],
-        "frequency_after_khz": [
-          849365,
-          4529377,
-          1450133,
-          4770449
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.23,
-          0.72,
-          0.67
-        ],
-        "loadavg_after": [
-          1.69,
-          0.82,
-          0.7
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        1.7385629448108375,
-        1.7038505631498992,
-        1.719633738975972
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 4,
-      "input": "str",
-      "wall_s": 0.2586757489480078,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.2571231876499951,
-          0.10212645679712296,
-          0.11680640513077378,
-          0.18377599911764264
-        ],
-        "worker_cpu_s": [
-          0.255687994,
-          0.10006134899999997,
-          0.11489298399999992,
-          0.18136466500000004
-        ],
-        "efficiency": 0.9797789146721757,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          4742132,
-          800000,
-          800000,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4692957,
-          4692958,
-          4692954,
-          4692954
-        ],
-        "frequency_after_khz": [
-          800000,
-          4790278,
-          800000,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.69,
-          0.82,
-          0.7
-        ],
-        "loadavg_after": [
-          1.69,
-          0.82,
-          0.7
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        0.2571231876499951,
-        0.2586757489480078,
-        0.2587146917358041
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 4,
-      "input": "bytes",
-      "wall_s": 0.21889487328007817,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "process",
-        "worker_wall_s": [
-          0.22194775799289346,
-          0.0769095690920949,
-          0.08536700299009681,
-          0.14717435790225863
-        ],
-        "worker_cpu_s": [
-          0.22072190800000002,
-          0.07640097800000012,
-          0.08410456099999997,
-          0.1452446060000001
-        ],
-        "efficiency": 0.985211592935466,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          800000,
-          800000,
-          4714172,
-          800000
+          4792006,
+          936939
         ],
         "frequency_after_warmup_khz": [
           4500000,
-          4500000,
-          4500011,
           4500000
         ],
         "frequency_after_khz": [
-          4793694,
-          800000,
-          800000,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.69,
-          0.82,
-          0.7
-        ],
-        "loadavg_after": [
-          1.71,
-          0.84,
-          0.71
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "gil",
-      "wall_runs": [
-        0.22194775799289346,
-        0.2188101247884333,
-        0.21889487328007817
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 1,
-      "input": "str",
-      "wall_s": 3.1700370009057224,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          3.1700370009057224
-        ],
-        "worker_cpu_s": [
-          3.1691284049999995
-        ],
-        "efficiency": 0.9997133800313803,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4799987
-        ],
-        "frequency_after_khz": [
-          4800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.71,
-          0.84,
-          0.71
-        ],
-        "loadavg_after": [
-          1.71,
-          0.84,
-          0.71
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        3.1700370009057224,
-        3.1770520149730146,
-        3.1667484156787395
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 1,
-      "input": "bytes",
-      "wall_s": 1.9072218420915306,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          1.9079103921540082
-        ],
-        "worker_cpu_s": [
-          1.907353854
-        ],
-        "efficiency": 0.9997082996369762,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          4518956
-        ],
-        "frequency_after_warmup_khz": [
-          4800000
-        ],
-        "frequency_after_khz": [
-          4779486
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.71,
-          0.84,
-          0.71
-        ],
-        "loadavg_after": [
-          1.66,
-          0.85,
-          0.71
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        1.9079103921540082,
-        1.9072218420915306,
-        1.9047298743389547
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 1,
-      "input": "str",
-      "wall_s": 0.6029131403192878,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          0.6044889646582305
-        ],
-        "worker_cpu_s": [
-          0.6042085420000001
-        ],
-        "efficiency": 0.9995360996236068,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          4616646
-        ],
-        "frequency_after_warmup_khz": [
-          4795476
-        ],
-        "frequency_after_khz": [
-          4767265
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.66,
-          0.85,
-          0.71
-        ],
-        "loadavg_after": [
-          1.66,
-          0.85,
-          0.71
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        0.6044889646582305,
-        0.5977425407618284,
-        0.6029131403192878
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 1,
-      "input": "bytes",
-      "wall_s": 0.485611320938915,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          0.485611320938915
-        ],
-        "worker_cpu_s": [
-          0.48544683099999997
-        ],
-        "efficiency": 0.9996612724378068,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          800565
-        ],
-        "frequency_after_warmup_khz": [
-          4799987
-        ],
-        "frequency_after_khz": [
-          4791353
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.66,
-          0.85,
-          0.71
-        ],
-        "loadavg_after": [
-          1.6,
-          0.85,
-          0.71
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        0.485611320938915,
-        0.4860279089771211,
-        0.4810142433270812
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 2,
-      "input": "str",
-      "wall_s": 1.619336936622858,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          1.6183573948219419,
-          1.5740503561683
-        ],
-        "worker_cpu_s": [
-          1.6112359880000002,
-          1.572727211
-        ],
-        "efficiency": 0.995599608068819,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          800000,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
           4800000,
-          4800000
-        ],
-        "frequency_after_khz": [
-          4700000,
           800000
         ],
         "governor": [
           "performance"
         ],
         "loadavg_before": [
-          1.6,
-          0.85,
-          0.71
+          1.46,
+          1.3,
+          0.9
         ],
         "loadavg_after": [
-          1.6,
-          0.85,
-          0.71
+          1.5,
+          1.31,
+          0.91
         ]
       },
       "attempts": 1,
@@ -1406,16 +1406,16 @@
       "min_efficiency": 0.9,
       "interpreter": "free",
       "wall_runs": [
-        1.6183573948219419,
-        1.619336936622858,
-        1.6207547560334206
+        1.6168533279560506,
+        1.6214751731604338,
+        1.6236718902364373
       ]
     },
     {
       "engine": "re",
       "threads": 2,
       "input": "bytes",
-      "wall_s": 0.9773426898755133,
+      "wall_s": 0.966694185975939,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
@@ -1431,169 +1431,39 @@
         ],
         "worker_pinning": "per-core",
         "worker_wall_s": [
-          0.9770687958225608,
-          0.9464593837037683
+          0.9638306368142366,
+          0.950258222874254
         ],
         "worker_cpu_s": [
-          0.972918001,
-          0.945046652
+          0.95950975,
+          0.9488806219999999
         ],
-        "efficiency": 0.995751788573837,
+        "efficiency": 0.9955169646520903,
         "efficiency_kind": "per-worker",
         "frequency_before_khz": [
           800000,
-          800000
-        ],
-        "frequency_after_warmup_khz": [
-          4800000,
-          4800000
-        ],
-        "frequency_after_khz": [
-          4800000,
-          800343
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.6,
-          0.85,
-          0.71
-        ],
-        "loadavg_after": [
-          1.64,
-          0.87,
-          0.72
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        0.9770687958225608,
-        0.9773426898755133,
-        0.9815000109374523
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 2,
-      "input": "str",
-      "wall_s": 0.33720969455316663,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          0.33720969455316663,
-          0.27692208671942353
-        ],
-        "worker_cpu_s": [
-          0.3371278179999999,
-          0.2757088619999999
-        ],
-        "efficiency": 0.9956188950697425,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          4692223,
-          1787268
-        ],
-        "frequency_after_warmup_khz": [
-          4696379,
-          4696359
-        ],
-        "frequency_after_khz": [
-          4770739,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.64,
-          0.87,
-          0.72
-        ],
-        "loadavg_after": [
-          1.64,
-          0.87,
-          0.72
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        0.33720969455316663,
-        0.3412685692310333,
-        0.33636346785351634
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 2,
-      "input": "bytes",
-      "wall_s": 0.2770736091770232,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          0.2770736091770232,
-          0.216787185985595
-        ],
-        "worker_cpu_s": [
-          0.27699939099999993,
-          0.2157864759999999
-        ],
-        "efficiency": 0.9953839061979356,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          800000,
-          4800000
+          4727373
         ],
         "frequency_after_warmup_khz": [
           4700011,
           4700000
         ],
         "frequency_after_khz": [
-          4800000,
-          800000
+          4795741,
+          799463
         ],
         "governor": [
           "performance"
         ],
         "loadavg_before": [
-          1.64,
-          0.87,
-          0.72
+          1.5,
+          1.31,
+          0.91
         ],
         "loadavg_after": [
-          1.64,
-          0.87,
-          0.72
+          1.5,
+          1.31,
+          0.91
         ]
       },
       "attempts": 1,
@@ -1601,143 +1471,64 @@
       "min_efficiency": 0.9,
       "interpreter": "free",
       "wall_runs": [
-        0.2770736091770232,
-        0.275823837146163,
-        0.2818155949935317
+        0.9638306368142366,
+        0.966694185975939,
+        0.9784330539405346
       ]
     },
     {
-      "engine": "re",
-      "threads": 3,
+      "engine": "rurex",
+      "threads": 2,
       "input": "str",
-      "wall_s": 1.1261511142365634,
+      "wall_s": 0.35598724195733666,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
         "distinct_physical_cores": true,
         "affinity_cpus": [
           0,
-          2,
-          4
+          2
         ],
         "affinity_pinned": true,
         "worker_affinity_pinned": [
-          true,
           true,
           true
         ],
         "worker_pinning": "per-core",
         "worker_wall_s": [
-          1.0333232609555125,
-          1.1221005232073367,
-          1.1034468580037355
+          0.35598724195733666,
+          0.2819482837803662
         ],
         "worker_cpu_s": [
-          1.0277195790000002,
-          1.120654006,
-          1.0969432580000003
+          0.3557364810000001,
+          0.28081982699999997
         ],
-        "efficiency": 0.994106104923348,
+        "efficiency": 0.9959976462164059,
         "efficiency_kind": "per-worker",
         "frequency_before_khz": [
-          800000,
-          4733935,
-          800000
+          800701,
+          4653277
         ],
         "frequency_after_warmup_khz": [
-          4700000,
-          4700000,
+          4673188,
           4700000
         ],
         "frequency_after_khz": [
-          800077,
-          4796091,
-          799714
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.64,
-          0.87,
-          0.72
-        ],
-        "loadavg_after": [
-          1.75,
-          0.9,
-          0.73
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        1.1221005232073367,
-        1.126460260245949,
-        1.1261511142365634
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 3,
-      "input": "bytes",
-      "wall_s": 0.6669392371550202,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          0.623702600132674,
-          0.6715827728621662,
-          0.663402299862355
-        ],
-        "worker_cpu_s": [
-          0.620606958,
-          0.6701718830000001,
-          0.6593052349999999
-        ],
-        "efficiency": 0.9938241624076294,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          4580556,
-          800000,
+          4775729,
           800000
         ],
-        "frequency_after_warmup_khz": [
-          4500000,
-          4500011,
-          4500000
-        ],
-        "frequency_after_khz": [
-          800325,
-          4795344,
-          800225
-        ],
         "governor": [
           "performance"
         ],
         "loadavg_before": [
-          1.75,
-          0.9,
-          0.73
+          1.5,
+          1.31,
+          0.91
         ],
         "loadavg_after": [
-          1.75,
-          0.9,
-          0.73
+          1.54,
+          1.32,
+          0.91
         ]
       },
       "attempts": 1,
@@ -1745,143 +1536,64 @@
       "min_efficiency": 0.9,
       "interpreter": "free",
       "wall_runs": [
-        0.6715827728621662,
-        0.6635232507251203,
-        0.6669392371550202
+        0.35598724195733666,
+        0.36045291274785995,
+        0.3403173917904496
       ]
     },
     {
       "engine": "rurex",
-      "threads": 3,
-      "input": "str",
-      "wall_s": 0.27281251596286893,
+      "threads": 2,
+      "input": "bytes",
+      "wall_s": 0.278971501160413,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
         "distinct_physical_cores": true,
         "affinity_cpus": [
           0,
-          2,
-          4
+          2
         ],
         "affinity_pinned": true,
         "worker_affinity_pinned": [
-          true,
           true,
           true
         ],
         "worker_pinning": "per-core",
         "worker_wall_s": [
-          0.27605437859892845,
-          0.13672196306288242,
-          0.21936000604182482
+          0.2771752462722361,
+          0.21817852836102247
         ],
         "worker_cpu_s": [
-          0.27586130099999995,
-          0.13549593800000004,
-          0.21810847499999997
+          0.2771789840000001,
+          0.217218154
         ],
-        "efficiency": 0.9910327131397426,
+        "efficiency": 0.995598217807055,
         "efficiency_kind": "per-worker",
         "frequency_before_khz": [
           800000,
-          4702705,
-          800000
+          4058600
         ],
         "frequency_after_warmup_khz": [
-          4500000,
-          4500000,
-          4500000
-        ],
-        "frequency_after_khz": [
           4800000,
-          800000,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.75,
-          0.9,
-          0.73
-        ],
-        "loadavg_after": [
-          1.85,
-          0.94,
-          0.74
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        0.27605437859892845,
-        0.27281251596286893,
-        0.2726250160485506
-      ]
-    },
-    {
-      "engine": "rurex",
-      "threads": 3,
-      "input": "bytes",
-      "wall_s": 0.23284895811229944,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          0.23257667385041714,
-          0.09850033419206738,
-          0.17028636718168855
-        ],
-        "worker_cpu_s": [
-          0.232488998,
-          0.09764015099999979,
-          0.17018741399999993
-        ],
-        "efficiency": 0.9912672053437879,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          800000,
-          800000,
           4800000
         ],
-        "frequency_after_warmup_khz": [
-          4699988,
-          4699988,
-          4700000
-        ],
         "frequency_after_khz": [
-          4779548,
-          800000,
+          4783948,
           800000
         ],
         "governor": [
           "performance"
         ],
         "loadavg_before": [
-          1.85,
-          0.94,
-          0.74
+          1.54,
+          1.32,
+          0.91
         ],
         "loadavg_after": [
-          1.85,
-          0.94,
-          0.74
+          1.54,
+          1.32,
+          0.91
         ]
       },
       "attempts": 1,
@@ -1889,16 +1601,16 @@
       "min_efficiency": 0.9,
       "interpreter": "free",
       "wall_runs": [
-        0.23257667385041714,
-        0.23284895811229944,
-        0.23506650887429714
+        0.2771752462722361,
+        0.278971501160413,
+        0.2794186705723405
       ]
     },
     {
       "engine": "re",
-      "threads": 4,
+      "threads": 3,
       "input": "str",
-      "wall_s": 0.8509069331921637,
+      "wall_s": 1.121607897337526,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
@@ -1906,140 +1618,54 @@
         "affinity_cpus": [
           0,
           2,
-          4,
-          6
+          4
         ],
         "affinity_pinned": true,
         "worker_affinity_pinned": [
-          true,
           true,
           true,
           true
         ],
         "worker_pinning": "per-core",
         "worker_wall_s": [
-          0.7996231899596751,
-          0.8555656559765339,
-          0.7918541389517486,
-          0.8210544609464705
+          1.0357098071835935,
+          1.1199569241143763,
+          1.0995150501839817
         ],
         "worker_cpu_s": [
-          0.7966189130000001,
-          0.8514776850000001,
-          0.7885231640000001,
-          0.8196502800000001
+          1.0305168779999998,
+          1.118428272,
+          1.0934142779999998
         ],
-        "efficiency": 0.9952219085140019,
+        "efficiency": 0.9944513972928692,
         "efficiency_kind": "per-worker",
         "frequency_before_khz": [
           800000,
-          4632966,
-          800000,
-          3021169
-        ],
-        "frequency_after_warmup_khz": [
-          4700000,
-          4700000,
-          4700000,
-          4700000
-        ],
-        "frequency_after_khz": [
-          800000,
-          4796159,
-          800000,
-          800000
-        ],
-        "governor": [
-          "performance"
-        ],
-        "loadavg_before": [
-          1.85,
-          0.94,
-          0.74
-        ],
-        "loadavg_after": [
-          1.85,
-          0.94,
-          0.74
-        ]
-      },
-      "attempts": 1,
-      "rejected": [],
-      "min_efficiency": 0.9,
-      "interpreter": "free",
-      "wall_runs": [
-        0.8555656559765339,
-        0.8509069331921637,
-        0.8508171970024705
-      ]
-    },
-    {
-      "engine": "re",
-      "threads": 4,
-      "input": "bytes",
-      "wall_s": 0.5029164152219892,
-      "matches": 335801,
-      "measurement": {
-        "warmup_s": 1.0,
-        "distinct_physical_cores": true,
-        "affinity_cpus": [
-          0,
-          2,
-          4,
-          6
-        ],
-        "affinity_pinned": true,
-        "worker_affinity_pinned": [
-          true,
-          true,
-          true,
-          true
-        ],
-        "worker_pinning": "per-core",
-        "worker_wall_s": [
-          0.48488104483112693,
-          0.5127142476849258,
-          0.4671346922405064,
-          0.49321035109460354
-        ],
-        "worker_cpu_s": [
-          0.48157494600000006,
-          0.511289404,
-          0.46280533300000015,
-          0.4902435920000001
-        ],
-        "efficiency": 0.9907320965185834,
-        "efficiency_kind": "per-worker",
-        "frequency_before_khz": [
-          1285219,
-          4478890,
           800000,
           800000
         ],
         "frequency_after_warmup_khz": [
-          4700000,
+          4699988,
           4700011,
-          4700000,
           4700000
         ],
         "frequency_after_khz": [
-          800174,
-          4791267,
-          799737,
-          1580054
+          886864,
+          4789608,
+          800247
         ],
         "governor": [
           "performance"
         ],
         "loadavg_before": [
-          1.85,
-          0.94,
-          0.74
+          1.54,
+          1.32,
+          0.91
         ],
         "loadavg_after": [
-          2.02,
-          0.99,
-          0.76
+          1.54,
+          1.32,
+          0.91
         ]
       },
       "attempts": 1,
@@ -2047,16 +1673,390 @@
       "min_efficiency": 0.9,
       "interpreter": "free",
       "wall_runs": [
-        0.5127142476849258,
-        0.5024176971055567,
-        0.5029164152219892
+        1.1199569241143763,
+        1.123473062645644,
+        1.121607897337526
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 0.6751710348762572,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          0.619131410960108,
+          0.6751710348762572,
+          0.662404390051961
+        ],
+        "worker_cpu_s": [
+          0.616144942,
+          0.673756469,
+          0.65845061
+        ],
+        "efficiency": 0.9940311687070027,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          1458345,
+          800000,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4692649,
+          4692649,
+          4692664
+        ],
+        "frequency_after_khz": [
+          836357,
+          4796023,
+          800244
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.54,
+          1.32,
+          0.91
+        ],
+        "loadavg_after": [
+          1.58,
+          1.33,
+          0.92
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        0.6751710348762572,
+        0.6724626929499209,
+        0.6753402119502425
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "str",
+      "wall_s": 0.27875436656177044,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          0.27729459991678596,
+          0.13720941310748458,
+          0.21715572010725737
+        ],
+        "worker_cpu_s": [
+          0.277234043,
+          0.13651092799999986,
+          0.21602438800000012
+        ],
+        "efficiency": 0.994790226540206,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          4800000,
+          1939052,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4700000,
+          4699988,
+          4700000
+        ],
+        "frequency_after_khz": [
+          4800000,
+          3973458,
+          800000
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.58,
+          1.33,
+          0.92
+        ],
+        "loadavg_after": [
+          1.58,
+          1.33,
+          0.92
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        0.27729459991678596,
+        0.2890156665816903,
+        0.27875436656177044
+      ]
+    },
+    {
+      "engine": "rurex",
+      "threads": 3,
+      "input": "bytes",
+      "wall_s": 0.23381784604862332,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          0.23381784604862332,
+          0.10029759304597974,
+          0.1723523112013936
+        ],
+        "worker_cpu_s": [
+          0.23379130699999995,
+          0.09945472600000005,
+          0.17235575799999991
+        ],
+        "efficiency": 0.9915963382531693,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          4700954,
+          800000,
+          800000
+        ],
+        "frequency_after_warmup_khz": [
+          4699988,
+          4700000,
+          4700000
+        ],
+        "frequency_after_khz": [
+          4800000,
+          800000,
+          800560
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.58,
+          1.33,
+          0.92
+        ],
+        "loadavg_after": [
+          1.58,
+          1.33,
+          0.92
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        0.23381784604862332,
+        0.23308994062244892,
+        0.23448700224980712
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "str",
+      "wall_s": 0.8537067547440529,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          0.7997054480947554,
+          0.8556779799982905,
+          0.7880173278972507,
+          0.8262015348300338
+        ],
+        "worker_cpu_s": [
+          0.7968231300000002,
+          0.85190338,
+          0.7845169860000001,
+          0.82488199
+        ],
+        "efficiency": 0.9955580394322154,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000,
+          800000,
+          4606125,
+          3687198
+        ],
+        "frequency_after_warmup_khz": [
+          4700000,
+          4700000,
+          4700000,
+          4700000
+        ],
+        "frequency_after_khz": [
+          800000,
+          4795789,
+          800000,
+          797317
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.53,
+          1.33,
+          0.92
+        ],
+        "loadavg_after": [
+          1.53,
+          1.33,
+          0.92
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        0.8556779799982905,
+        0.8516412791796029,
+        0.8537067547440529
+      ]
+    },
+    {
+      "engine": "re",
+      "threads": 4,
+      "input": "bytes",
+      "wall_s": 0.5119930407963693,
+      "matches": 335801,
+      "measurement": {
+        "warmup_s": 1.0,
+        "distinct_physical_cores": true,
+        "affinity_cpus": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "affinity_pinned": true,
+        "worker_affinity_pinned": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "worker_pinning": "per-core",
+        "worker_wall_s": [
+          0.47741976007819176,
+          0.5139732738025486,
+          0.47333941888064146,
+          0.49084923369809985
+        ],
+        "worker_cpu_s": [
+          0.475564785,
+          0.511084949,
+          0.470270242,
+          0.48947803599999995
+        ],
+        "efficiency": 0.993515906856227,
+        "efficiency_kind": "per-worker",
+        "frequency_before_khz": [
+          800000,
+          800000,
+          4528475,
+          799324
+        ],
+        "frequency_after_warmup_khz": [
+          4624361,
+          4624378,
+          4624381,
+          4624377
+        ],
+        "frequency_after_khz": [
+          801880,
+          4693867,
+          1314128,
+          800351
+        ],
+        "governor": [
+          "performance"
+        ],
+        "loadavg_before": [
+          1.53,
+          1.33,
+          0.92
+        ],
+        "loadavg_after": [
+          1.53,
+          1.33,
+          0.92
+        ]
+      },
+      "attempts": 1,
+      "rejected": [],
+      "min_efficiency": 0.9,
+      "interpreter": "free",
+      "wall_runs": [
+        0.5139732738025486,
+        0.5018646200187504,
+        0.5119930407963693
       ]
     },
     {
       "engine": "rurex",
       "threads": 4,
       "input": "str",
-      "wall_s": 0.24647535011172295,
+      "wall_s": 0.2527848551981151,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
@@ -2076,34 +2076,34 @@
         ],
         "worker_pinning": "per-core",
         "worker_wall_s": [
-          0.24647535011172295,
-          0.0978464032523334,
-          0.11172788683325052,
-          0.17616712534800172
+          0.24824207508936524,
+          0.10004777275025845,
+          0.11356098297983408,
+          0.18075835006311536
         ],
         "worker_cpu_s": [
-          0.24632810700000007,
-          0.09704107100000003,
-          0.11054611599999986,
-          0.1750986699999999
+          0.248142914,
+          0.09902827800000003,
+          0.11229063499999992,
+          0.179529673
         ],
-        "efficiency": 0.9894227764728567,
+        "efficiency": 0.988813517226601,
         "efficiency_kind": "per-worker",
         "frequency_before_khz": [
           800000,
           800000,
-          4789768,
+          4800000,
           800000
         ],
         "frequency_after_warmup_khz": [
-          4700000,
-          4700000,
-          4700000,
-          4700000
+          4692838,
+          4692821,
+          4692841,
+          4692841
         ],
         "frequency_after_khz": [
-          4777677,
-          3111794,
+          4769599,
+          800000,
           800000,
           800000
         ],
@@ -2111,14 +2111,14 @@
           "performance"
         ],
         "loadavg_before": [
-          2.02,
-          0.99,
-          0.76
+          1.53,
+          1.33,
+          0.92
         ],
         "loadavg_after": [
-          2.02,
-          0.99,
-          0.76
+          1.73,
+          1.37,
+          0.94
         ]
       },
       "attempts": 1,
@@ -2126,16 +2126,16 @@
       "min_efficiency": 0.9,
       "interpreter": "free",
       "wall_runs": [
-        0.24647535011172295,
-        0.2467035399749875,
-        0.24639757396653295
+        0.24824207508936524,
+        0.2527848551981151,
+        0.25793296890333295
       ]
     },
     {
       "engine": "rurex",
       "threads": 4,
       "input": "bytes",
-      "wall_s": 0.21591597516089678,
+      "wall_s": 0.2146604908630252,
       "matches": 335801,
       "measurement": {
         "warmup_s": 1.0,
@@ -2155,34 +2155,34 @@
         ],
         "worker_pinning": "per-core",
         "worker_wall_s": [
-          0.21665544714778662,
-          0.07242052583023906,
-          0.08314146008342505,
-          0.14222893584519625
+          0.23865861119702458,
+          0.07305656606331468,
+          0.08400299306958914,
+          0.14392965286970139
         ],
         "worker_cpu_s": [
-          0.216613186,
-          0.07146742000000006,
-          0.08202770100000012,
-          0.1409310560000001
+          0.23854634100000016,
+          0.07217973100000008,
+          0.08285143600000011,
+          0.1426917630000002
         ],
-        "efficiency": 0.9866040470986753,
+        "efficiency": 0.9862914757259297,
         "efficiency_kind": "per-worker",
         "frequency_before_khz": [
           800000,
-          800000,
+          4675895,
           800000,
           800000
         ],
         "frequency_after_warmup_khz": [
-          4700000,
-          4700000,
-          4700000,
-          4700000
+          4664638,
+          4649866,
+          4649689,
+          4609922
         ],
         "frequency_after_khz": [
-          4762850,
-          800000,
+          4716165,
+          4569080,
           800000,
           800000
         ],
@@ -2190,14 +2190,14 @@
           "performance"
         ],
         "loadavg_before": [
-          2.02,
-          0.99,
-          0.76
+          1.73,
+          1.37,
+          0.94
         ],
         "loadavg_after": [
-          2.02,
-          0.99,
-          0.76
+          1.73,
+          1.37,
+          0.94
         ]
       },
       "attempts": 1,
@@ -2205,9 +2205,9 @@
       "min_efficiency": 0.9,
       "interpreter": "free",
       "wall_runs": [
-        0.21665544714778662,
-        0.21571083506569266,
-        0.21591597516089678
+        0.23865861119702458,
+        0.2146604908630252,
+        0.21442022593691945
       ]
     }
   ],

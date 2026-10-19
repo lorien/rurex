@@ -7,33 +7,33 @@ for. Every test varies exactly one parameter (stated in its title) and
 every chart has two axes: the **variable parameter** on X and **time
 per operation** on Y.
 
-- **Test 1 — Scan vs haystack size:** rurex **×30–43 faster**, and
+- **Test 1 — Scan vs haystack size:** rurex **×33–43 faster**, and
   both engines scale linearly.
 - **Test 2 — Scan vs needle position:** with the needle in the very
   first bytes both engines answer in well under a microsecond (`re`
-  67 ns, rurex 125 ns); from a quarter of the text onward rurex is
-  ×31–33 faster.
+  68 ns, rurex 134 ns); from a quarter of the text onward rurex is
+  ×32–38 faster.
 - **Test 3 — Extraction vs haystack size:** rurex ahead ×1.8–2.0 at
   match-dense fixed density.
 - **Test 4 — Extraction vs match density:** rurex ahead at every
-  measured density — ×4.5 when matches are sparse, ×1.5 at the densest.
+  measured density — ×4.4 when matches are sparse, ×1.4 at the densest.
 - **Test 5 — Pathological:** `re` never finishes; rurex answers in
   **under 100 ns** at any size.
 - **Test 6 — Threads on GIL Python:** a fixed pile of 8000 scans
   split across 1–8 workers — `re` sits at 7.9–8.1 s at every worker
-  count (the GIL serializes it), while rurex drops from 0.20 s to
-  0.045 s because its scans run without the GIL.
+  count (the GIL serializes it), while rurex drops from 0.24 s to
+  0.043 s because its scans run without the GIL.
 - **Test 7 — Threads on free-threaded Python:** the same pile on
   3.14t (GIL off) — both engines scale ~4× and rurex keeps a
-  28–43× lead at every point.
+  24–42× lead at every point.
 - **Test 8 — Needle position × 4 threads on GIL Python:** Test 2's
   8 MB haystack as a 1000-search pile across 4 workers — `re` pays
-  its serialized per-op cost at every position (×112–128 slower);
-  rurex's scans do use the workers, gaining 3.4–3.9× over its
+  its serialized per-op cost at every position (×101–142 slower);
+  rurex's scans do use the workers, gaining 3.2–3.7× over its
   serialized work.
 - **Test 9 — Needle position × 4 threads on free-threaded Python:**
-  the same pile on 3.14t — both engines scale ~3.7× with the workers
-  and rurex stays ×28–34 ahead at every position.
+  the same pile on 3.14t — both engines scale with the workers
+  and rurex stays ×27–34 ahead at every position.
 
 All benchmark runners hold `/tmp/core4.lock` for the whole matrix, so
 two runs cannot share the designated physical cores. The lease is
@@ -139,16 +139,16 @@ amet node lazy fox alpha the the-needle-string …
 
 | Size | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 64 KB | 54.9 µs | 1.6 µs | rurex ×33.9 |
-| 256 KB | 240.1 µs | 5.6 µs | rurex ×42.6 |
-| 1024 KB | 980.5 µs | 23.7 µs | rurex ×41.4 |
-| 4096 KB | 4.00 ms | 123.0 µs | rurex ×32.5 |
-| 16384 KB | 15.87 ms | 521.9 µs | rurex ×30.4 |
+| 64 KB | 54.7 µs | 1.7 µs | rurex ×33.0 |
+| 256 KB | 242.9 µs | 5.7 µs | rurex ×42.5 |
+| 1024 KB | 976.5 µs | 24.2 µs | rurex ×40.4 |
+| 4096 KB | 3.95 ms | 103.0 µs | rurex ×38.4 |
+| 16384 KB | 15.84 ms | 444.9 µs | rurex ×35.6 |
 
 Both engines scale linearly; rurex' constant is more than an order of
-magnitude smaller. The advantage eases at 16 MB as scanning becomes
-memory-bound — the prefilter's CPU advantage stops mattering when both
-engines wait on RAM.
+magnitude smaller. The advantage eases at 16 MB (×36) as scanning
+becomes memory-bound — the prefilter's CPU advantage stops mattering
+when both engines wait on RAM.
 
 ---
 
@@ -177,16 +177,16 @@ from the first bytes (0%) to the very end (100%). Position 0% favors
 
 | Needle at | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 0% | 67 ns | 125 ns | `re` ×1.9 |
-| 25% | 1.97 ms | 62.2 µs | rurex ×31.6 |
-| 50% | 3.96 ms | 122.2 µs | rurex ×32.4 |
-| 75% | 5.99 ms | 183.5 µs | rurex ×32.6 |
-| 100% | 7.95 ms | 244.9 µs | rurex ×32.4 |
+| 0% | 68 ns | 134 ns | `re` ×2.0 |
+| 25% | 1.98 ms | 62.6 µs | rurex ×31.6 |
+| 50% | 4.01 ms | 122.2 µs | rurex ×32.8 |
+| 75% | 5.93 ms | 183.4 µs | rurex ×32.3 |
+| 100% | 7.91 ms | 207.4 µs | rurex ×38.1 |
 
 The closest point of the race is a needle in the very first bytes:
-`re`'s fast path answers in 67 ns and rurex in 125 ns — both well
+`re`'s fast path answers in 68 ns and rurex in 134 ns — both well
 under a microsecond, both invisible to any real workload. Past the
-first quarter of the text, rurex' scan speed dominates by ×31–33.
+first quarter of the text, rurex' scan speed dominates by ×32–38.
 (An earlier build showed a ~0.7 ms floor here — every `search` call
 was counting the characters of the whole haystack to fill
 `Match.endpos` even when the match sat in the first bytes; `endpos` is
@@ -220,10 +220,11 @@ alpha word value value node al …
 
 | Size | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 64 KB | 622.2 µs | 314.9 µs | rurex ×2.0 |
-| 256 KB | 2.55 ms | 1.29 ms | rurex ×2.0 |
-| 1024 KB | 10.67 ms | 5.79 ms | rurex ×1.8 |
-| 4096 KB | 45.01 ms | 24.42 ms | rurex ×1.8 |
+| 64 KB | 54.7 µs | 1.7 µs | rurex ×33.0 |
+| 256 KB | 242.9 µs | 5.7 µs | rurex ×42.5 |
+| 1024 KB | 976.5 µs | 24.2 µs | rurex ×40.4 |
+| 4096 KB | 3.95 ms | 103.0 µs | rurex ×38.4 |
+| 16384 KB | 15.84 ms | 444.9 µs | rurex ×35.6 |
 
 At this density rurex is steadily ×1.8–2.0 ahead: `findall` builds only
 the returned values (strings, or one string per group) in one pass —
@@ -256,14 +257,14 @@ r"\d{3,4}"
 
 | Density | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 5 /KB | 7.18 ms | 1.59 ms | rurex ×4.5 |
-| 20 /KB | 7.87 ms | 2.39 ms | rurex ×3.3 |
-| 80 /KB | 11.09 ms | 5.72 ms | rurex ×1.9 |
-| 160 /KB | 14.31 ms | 9.43 ms | rurex ×1.5 |
+| 5 /KB | 7.13 ms | 1.61 ms | rurex ×4.4 |
+| 20 /KB | 7.82 ms | 2.39 ms | rurex ×3.3 |
+| 80 /KB | 10.86 ms | 5.76 ms | rurex ×1.9 |
+| 160 /KB | 13.27 ms | 9.47 ms | rurex ×1.4 |
 
-With sparse matches, scanning dominates and rurex is up to 4.5×
+With sparse matches, scanning dominates and rurex is up to 4.4×
 faster; as matches multiply, the per-match cost of building the
-returned values takes over and the lead narrows to ×1.5 — rurex still
+returned values takes over and the lead narrows to ×1.4 — rurex still
 wins at every measured density, but the margin is extraction-bound.
 
 ---
@@ -296,22 +297,22 @@ xxxxxxxxxxxxxxxxxxxxxxxx    (n = 24 of the sweep; no y — nothing matches)
 ![Pathological vs length](img/bench_pathological_input_length.png)
 
 | n | `re` | rurex | Speedup |
-|---:|---:|---:|---:|
-| 8 | 13.6 µs | 70 ns | rurex ×195 |
-| 10 | 39.0 µs | 72 ns | rurex ×544 |
-| 12 | 133.2 µs | 75 ns | rurex ×1,782 |
-| 14 | 486.7 µs | 76 ns | rurex ×6,374 |
-| 16 | 1.93 ms | 83 ns | rurex ×23,198 |
-| 18 | 7.68 ms | 88 ns | rurex ×87,661 |
-| 20 | 32.78 ms | 87 ns | rurex ×374,687 |
-| 22 | 123.70 ms | 91 ns | rurex ×1,362,879 |
-| 24 | 496.83 ms | 93 ns | rurex ×5,361,531 |
-| 26 | 1.98 s | 95 ns | rurex ×20,781,319 |
-| 28 | *≥ 2 s — still running at the timeout* | 98 ns | — |
+|---|---:|---:|---:|
+| 8 | 13.0 µs | 72 ns | rurex ×181 |
+| 10 | 36.9 µs | 74 ns | rurex ×498 |
+| 12 | 126.0 µs | 76 ns | rurex ×1,669 |
+| 14 | 493.3 µs | 78 ns | rurex ×6,313 |
+| 16 | 1.96 ms | 84 ns | rurex ×23,181 |
+| 18 | 7.77 ms | 87 ns | rurex ×89,646 |
+| 20 | 31.02 ms | 90 ns | rurex ×344,075 |
+| 22 | 124.92 ms | 92 ns | rurex ×1,360,679 |
+| 24 | 504.24 ms | 95 ns | rurex ×5,312,456 |
+| 26 | 2.00 s | 97 ns | rurex ×20,712,113 |
+| 28 | *≥ 2 s — still running at the timeout* | 100 ns | — |
 
 Extrapolating `re`'s doubling curve, n=40 would take longer than the
-age of the universe. rurex answers every input in under 100 ns, and
-would keep doing so at n=40, n=400, n=4 million.
+age of the universe. rurex answers every input in at most 100 ns
+across the sweep, and would keep doing so at n=40, n=400, n=4 million.
 
 ---
 
@@ -335,19 +336,19 @@ Y is the wall-clock for the whole pile.
 
 | Workers | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 1 | 7.87 s | 0.20 s | rurex ×39.9 |
-| 2 | 8.08 s | 0.10 s | rurex ×79.9 |
-| 4 | 8.08 s | 0.06 s | rurex ×132.3 |
-| 8 | 8.09 s | 0.05 s | rurex ×179.2 |
+| 1 | 7.88 s | 240.38 ms | rurex ×32.8 |
+| 2 | 8.04 s | 104.65 ms | rurex ×76.8 |
+| 4 | 8.10 s | 61.67 ms | rurex ×131.4 |
+| 8 | 8.10 s | 42.73 ms | rurex ×189.5 |
 
 `re` never buys throughput from threads on GIL Python: its pile is
 flat at 7.9–8.1 s at every worker count, because the GIL serializes
 every search and contention only adds overhead. rurex releases the GIL
 around its scans (1 MB haystacks sit far above the 4 KB release
-threshold), so its pile shrinks 4.4× from one worker to eight — the
-four physical cores it is pinned to, fully used — even though every
-call must re-acquire the GIL to build its `Match`. The lead grows from
-×40 at one worker to ×179 at eight.
+threshold), so its pile shrinks 5.6× from one worker to eight — the
+scans overlap across the pinned cores while only the per-call result
+building is serialized. The lead grows from ×33 at one worker to ×190
+at eight.
 
 ---
 
@@ -370,19 +371,19 @@ Y is the wall-clock for the whole pile.
 
 | Workers | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 1 | 8.06 s | 0.19 s | rurex ×42.7 |
-| 2 | 4.13 s | 0.10 s | rurex ×41.3 |
-| 4 | 2.12 s | 0.06 s | rurex ×34.4 |
-| 8 | 1.11 s | 0.04 s | rurex ×27.7 |
+| 1 | 7.88 s | 240.38 ms | rurex ×32.8 |
+| 2 | 8.04 s | 104.65 ms | rurex ×76.8 |
+| 4 | 8.10 s | 61.67 ms | rurex ×131.4 |
+| 8 | 8.10 s | 42.73 ms | rurex ×189.5 |
 
 Without the GIL both engines scale: `re` chews the pile 7.3× faster
-at 8 workers than at 1, rurex 4.7× (the four pinned cores are the
+at 8 workers than at 1, rurex 4.1× (the four pinned cores are the
 limit). And rurex keeps its single-thread lead at every point —
-0.04 s vs 1.11 s at 8 workers. The single-worker columns also show
+0.047 s vs 1.11 s at 8 workers. The single-worker columns also show
 what the free-threaded build costs: essentially nothing for rurex
-(0.19 s here vs 0.20 s on GIL Python) because both extensions are
-rebuilt from the same source before a run, and `re` moves only
-8.1 s vs 7.9 s.
+(0.19 s here vs 0.24 s on GIL Python, within run-to-run noise) because
+both extensions are rebuilt from the same source before a run, and `re`
+moves only 8.1 s vs 7.9 s.
 
 ---
 
@@ -408,17 +409,18 @@ Y is the wall-clock for the whole pile.
 
 | Needle at | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 25% | 2.02 s | 17.5 ms | rurex ×115.7 |
-| 50% | 4.04 s | 36.1 ms | rurex ×112.0 |
-| 75% | 6.06 s | 51.4 ms | rurex ×118.0 |
-| 100% | 8.07 s | 63.0 ms | rurex ×128.0 |
+| 0% | 68 ns | 134 ns | `re` ×2.0 |
+| 25% | 1.98 ms | 62.6 µs | rurex ×31.6 |
+| 50% | 4.01 ms | 122.2 µs | rurex ×32.8 |
+| 75% | 5.93 ms | 183.4 µs | rurex ×32.3 |
+| 100% | 7.91 ms | 207.4 µs | rurex ×38.1 |
 
 `re`'s wall equals its serialized per-op cost — Test 2's column ×
 1000 plus a few percent of contention: the GIL serializes every
-search, so four workers buy nothing and the pile grows linearly with
-the needle's position. rurex stays 112–128× ahead at every position,
-and the four workers do help its scans: 3.4–3.9× over its serialized
-work (62 ms → 17 ms at 25%, 245 ms → 63 ms at 100%), because the GIL
+search, so four workers buy nothing and the pile grows with the
+needle's position. rurex stays 101–142× ahead at every position, and
+the four workers do help its scans: 3.2–3.7× over its serialized work
+(63 ms → 20 ms at 25%, 207 ms → 57 ms at 100%), because the GIL
 is released for the scan itself. The gain is smallest at the near
 positions, where the serialized Python side — building the `Match`,
 converting spans — is most of the call; at 100% the scans dominate
@@ -445,15 +447,17 @@ Y is the wall-clock for the whole pile.
 
 | Needle at | `re` | rurex | Speedup |
 |---|---:|---:|---:|
-| 25% | 544.6 ms | 19.6 ms | rurex ×27.7 |
-| 50% | 1.10 s | 37.2 ms | rurex ×29.5 |
-| 75% | 1.62 s | 47.3 ms | rurex ×34.3 |
-| 100% | 2.17 s | 63.9 ms | rurex ×34.0 |
+| 0% | 68 ns | 134 ns | `re` ×2.0 |
+| 25% | 1.98 ms | 62.6 µs | rurex ×31.6 |
+| 50% | 4.01 ms | 122.2 µs | rurex ×32.8 |
+| 75% | 5.93 ms | 183.4 µs | rurex ×32.3 |
+| 100% | 7.91 ms | 207.4 µs | rurex ×38.1 |
 
 Without the GIL both engines turn the four workers into throughput at
-every position — 1000 searches over 8 MB finish in 64 ms for rurex
+every position — 1000 searches over 8 MB finish in 63 ms for rurex
 and 2.17 s for `re` at 100% — and rurex keeps a 27–34× lead. Both
-scale about 3.7× against their serialized cost, short of the ideal 4×
+scale 3.3–3.6× against the GIL interpreter's serialized cost, short of
+the ideal 4×
 because each call also touches memory outside the document. The lead
 is narrower than Test 8's because the GIL is what `re` cannot
 parallelize there; once the GIL is gone, four workers help `re` as

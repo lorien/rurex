@@ -57,9 +57,9 @@ and capture groups are part of the result.
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
 | 1 | 3.42 s | 1.70 s | 0.61 s | 0.49 s | ×0.18 | ×0.29 |
-| 2 | 3.46 s | 1.72 s | 0.35 s | 0.28 s | ×0.10 | ×0.16 |
-| 3 | 3.46 s | 1.73 s | 0.28 s | 0.24 s | ×0.08 | ×0.14 |
-| 4 | 3.45 s | 1.72 s | 0.26 s | 0.22 s | ×0.07 | ×0.13 |
+| 2 | 3.45 s | 1.72 s | 0.34 s | 0.28 s | ×0.10 | ×0.16 |
+| 3 | 3.46 s | 1.72 s | 0.29 s | 0.24 s | ×0.08 | ×0.14 |
+| 4 | 3.47 s | 1.73 s | 0.25 s | 0.22 s | ×0.07 | ×0.13 |
 
 *(ratio < 1 = rurex faster)*
 
@@ -81,11 +81,11 @@ GIL-release threshold, so rurex releases the GIL during the scan, and
 source buffers of at least 32 KB also release it around the cold
 transcode itself, so one worker's encode does not block the others:
 `str` drops from 0.61 to
-0.26 s and bytes from
+0.25 s and bytes from
 0.49 to
 0.22 s at four workers. `re` stays flat
 on `str` (3.42 to
-3.45 s) because it never releases the GIL
+3.47 s) because it never releases the GIL
 during matching.
 
 ## Free-threaded Python
@@ -94,21 +94,21 @@ during matching.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 3.17 s | 1.91 s | 0.60 s | 0.49 s | ×0.19 | ×0.25 |
-| 2 | 1.62 s | 0.98 s | 0.34 s | 0.28 s | ×0.21 | ×0.28 |
-| 3 | 1.13 s | 0.67 s | 0.27 s | 0.23 s | ×0.24 | ×0.35 |
-| 4 | 0.85 s | 0.50 s | 0.25 s | 0.22 s | ×0.29 | ×0.43 |
+| 1 | 3.17 s | 1.90 s | 0.61 s | 0.49 s | ×0.19 | ×0.26 |
+| 2 | 1.62 s | 0.97 s | 0.36 s | 0.28 s | ×0.22 | ×0.29 |
+| 3 | 1.12 s | 0.68 s | 0.28 s | 0.23 s | ×0.25 | ×0.35 |
+| 4 | 0.85 s | 0.51 s | 0.25 s | 0.21 s | ×0.30 | ×0.42 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both engines scale. rurex goes from
-0.60 to
+0.61 to
 0.25 s on `str` and from
 0.49 to
-0.22 s on bytes; `re` goes from
+0.21 s on bytes; `re` goes from
 3.17 to 0.85 s
-on `str` and from 1.91 to
-0.50 s on bytes. rurex keeps the lead at
+on `str` and from 1.90 to
+0.51 s on bytes. rurex keeps the lead at
 every thread count. The `str` and bytes rows are close for rurex
 because the transcode is a small part of a long-document pass.
 
@@ -138,5 +138,5 @@ python benchmarks/frontend_html_charts.py     # charts, this page, and the HTML 
 ---
 
 *Raw results: [`benchmarks/frontend_html_results.json`](../benchmarks/frontend_html_results.json).
-Numbers on this page were measured on 2026-10-18 with rurex 0.1.0;
+Numbers on this page were measured on 2026-10-19 with rurex 0.2.0;
 see the raw results file for the exact environment.*

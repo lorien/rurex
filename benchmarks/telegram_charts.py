@@ -282,7 +282,7 @@ python benchmarks/telegram_charts.py   # regenerates the charts, this page
 ---
 
 *Raw results: [`benchmarks/telegram_results.json`](../benchmarks/telegram_results.json).
-Numbers on this page were measured on 2026-10-18 with rurex 0.2.0;
+Numbers on this page were measured on 2026-10-19 with rurex 0.2.0;
 see the raw results file for the exact environment.*
 """
     out = DOCS / "telegram-benchmark.md"

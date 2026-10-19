@@ -55,10 +55,10 @@ single-threaded.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.18 s | 0.19 s | 0.25 s | 0.12 s | ×1.4 | ×0.6 |
-| 2 | 0.19 s | 0.19 s | 0.26 s | 0.14 s | ×1.4 | ×0.7 |
-| 3 | 0.19 s | 0.19 s | 0.28 s | 0.15 s | ×1.4 | ×0.8 |
-| 4 | 0.19 s | 0.18 s | 0.28 s | 0.15 s | ×1.5 | ×0.9 |
+| 1 | 0.19 s | 0.19 s | 0.25 s | 0.12 s | ×1.3 | ×0.6 |
+| 2 | 0.19 s | 0.20 s | 0.27 s | 0.14 s | ×1.4 | ×0.7 |
+| 3 | 0.19 s | 0.19 s | 0.28 s | 0.15 s | ×1.5 | ×0.8 |
+| 4 | 0.18 s | 0.19 s | 0.28 s | 0.15 s | ×1.5 | ×0.8 |
 
 *(ratio < 1 = rurex faster)*
 
@@ -68,7 +68,7 @@ rurex's engine matches UTF-8 and must materialize it. The
 required-first-byte prefilter (ADR-0013) skips that for the 81% of
 posts with no `@` at all; the **19% that carry a mention pay one
 UCS→UTF-8 encode per call**, and that encode is the entire gap on this
-row (×1.4 single-threaded,
+row (×1.3 single-threaded,
 ×1.5 at four workers). Measured on a 470-char
 post: a cold `str` costs 630 ns, the same object with CPython's UTF-8
 cache already populated costs 126 ns, and the same content as `bytes`
@@ -89,7 +89,7 @@ bytes never pays the transcode: rurex answers in
 0.19 s (×0.6)**
 single-threaded, and remains ahead at four workers
 (0.15 s vs
-0.18 s). That is the
+0.19 s). That is the
 RE2-binding-recommended shape (feed UTF-8 bytes), and rurex makes it
 a first-class mode.
 
@@ -99,7 +99,7 @@ bytes 0.12 → 0.15 s
 at four workers): the scans are sub-µs, so the GIL-held per-call result
 building dominates and the workers convoy on the lock. `re` bytes
 shows the same shape
-(0.19 → 0.18 s). An earlier
+(0.19 → 0.19 s). An earlier
 build degraded to 5.38 s before the 4 KB GIL-release threshold landed;
 releasing the GIL for every tiny scan was worse.
 
@@ -109,23 +109,23 @@ releasing the GIL for every tiny scan was worse.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.19 s | 0.20 s | 0.28 s | 0.16 s | ×1.5 | ×0.8 |
-| 2 | 0.12 s | 0.13 s | 0.18 s | 0.16 s | ×1.4 | ×1.2 |
-| 3 | 0.11 s | 0.11 s | 0.17 s | 0.16 s | ×1.6 | ×1.5 |
-| 4 | 0.11 s | 0.10 s | 0.15 s | 0.16 s | ×1.4 | ×1.6 |
+| 1 | 0.19 s | 0.20 s | 0.29 s | 0.18 s | ×1.5 | ×0.9 |
+| 2 | 0.12 s | 0.13 s | 0.20 s | 0.20 s | ×1.7 | ×1.6 |
+| 3 | 0.11 s | 0.11 s | 0.20 s | 0.19 s | ×1.9 | ×1.8 |
+| 4 | 0.11 s | 0.09 s | 0.20 s | 0.20 s | ×1.9 | ×2.1 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both variants scale: rurex str
-0.28 s → 0.15 s
+0.29 s → 0.20 s
 and bytes
-0.16 s → 0.16 s;
+0.18 s → 0.20 s;
 `re` 0.19 s → 0.11 s str,
-0.20 s → 0.10 s bytes.
+0.20 s → 0.09 s bytes.
 `re` scales further on these short texts: at four workers it wins both
-forms (str ×1.4, bytes
-×1.6), while rurex bytes still wins
-single-threaded (×0.8). The four-worker rurex
+forms (str ×1.9, bytes
+×2.1), while rurex bytes still wins
+single-threaded (×0.9). The four-worker rurex
 cost is per-call result building and allocator work, not the scan.
 
 ## Reading the numbers
@@ -155,5 +155,5 @@ python benchmarks/telegram_charts.py   # regenerates the charts, this page
 ---
 
 *Raw results: [`benchmarks/telegram_results.json`](../benchmarks/telegram_results.json).
-Numbers on this page were measured on 2026-10-18 with rurex 0.1.0;
+Numbers on this page were measured on 2026-10-19 with rurex 0.2.0;
 see the raw results file for the exact environment.*
