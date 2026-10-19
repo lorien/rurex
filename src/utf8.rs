@@ -135,18 +135,25 @@ impl Layout {
 }
 
 impl Layout {
-    /// Derive the remaining fields from the `length` offset. The
-    /// field order is fixed by PEP 393: length, hash, state (4 bytes
-    /// padded to 8), then the compact pair utf8_length/utf8, then
-    /// the data.
-    const fn from_length(length: usize, extra_compact: usize, state_shift: u32) -> Layout {
+    /// Derive the remaining fields from the `length` offset. The field
+    /// order is fixed by PEP 393: length, hash, state (4 bytes padded
+    /// to 8), then the compact pair utf8_length/utf8, then the data.
+    ///
+    /// Before CPython 3.12 the object also carries an eight-byte
+    /// `wstr_length` field, and the base object itself is eight bytes
+    /// longer, so everything after `state` sits 8 bytes further out —
+    /// including the ASCII data — and the non-ASCII data sits 16 bytes
+    /// further out (8 for the longer base, 8 for `wstr_length`). Both
+    /// shapes are measured on 3.10, 3.11, 3.12 and 3.13; `extra` is 0
+    /// or 8 and `validate` decides which.
+    const fn from_length(length: usize, extra: usize, state_shift: u32) -> Layout {
         Layout {
             length,
             state: length + 16,
-            utf8_length: length + 24,
-            utf8: length + 32,
-            data_ascii: length + 24,
-            data_nonascii: length + 40 + extra_compact,
+            utf8_length: length + 24 + extra,
+            utf8: length + 32 + extra,
+            data_ascii: length + 24 + extra,
+            data_nonascii: length + 40 + 2 * extra,
             state_shift,
         }
     }
@@ -619,11 +626,15 @@ mod tests {
     fn layout_detected_and_validated() {
         Python::attach(|py| {
             let l = layout(py).expect("PEP 393 layout not detected/validated");
-            // The derived offsets must be self-consistent.
+            // The derived offsets must be self-consistent: hash and
+            // state are fixed, and the pre-3.12 shapes add 8 or 16
+            // bytes after `state`.
             assert_eq!(l.state, l.length + 16);
-            assert_eq!(l.utf8_length, l.length + 24);
-            assert_eq!(l.utf8, l.length + 32);
-            assert_eq!(l.data_ascii, l.length + 24);
+            let extra = l.utf8_length - (l.length + 24);
+            assert!(matches!(extra, 0 | 8), "extra = {extra}");
+            assert_eq!(l.utf8, l.length + 32 + extra);
+            assert_eq!(l.data_ascii, l.length + 24 + extra);
+            assert_eq!(l.data_nonascii, l.length + 40 + 2 * extra);
             assert!(l.data_nonascii > l.utf8);
             assert!(matches!(l.state_shift, 0 | 6));
         });

@@ -76,7 +76,14 @@ Two further facts were discovered while doing this work:
    PEP 393 order, and the candidate layout is accepted only if the
    `state` bits, the ASCII data, a CPython-warmed UTF-8 cache and a
    UCS-2 string's units all match `PyUnicode_AsUTF8AndSize`'s
-   behaviour. Detection is cached per process. **If it fails, every
+   behaviour. The pre-3.12 shape is not just the non-ASCII data
+   moving: the base object is eight bytes longer, so `utf8_length`,
+   `utf8` and even the ASCII data sit eight bytes further out, and the
+   non-ASCII data sixteen. The candidate layout models that with one
+   `extra` parameter (0 or 8) and lets validation pick; hard-coding
+   "the ASCII data is always at `length + 24`" made detection fail on
+   3.10 and 3.11, which silently disabled the prefilter there.
+   Detection is cached per process. **If it fails, every
    `str` haystack takes `to_cow`** — CPython's encoder, i.e. exactly
    the pre-optimization behaviour. A future CPython layout change
    therefore degrades to "slow", never to "wrong".
