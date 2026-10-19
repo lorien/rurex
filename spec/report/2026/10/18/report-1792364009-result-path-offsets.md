@@ -113,6 +113,37 @@ points in 3m05s.
 - The nine result tables had no GFM delimiter row and rendered as raw
   pipe text in the HTML twin; fixed, ten tables now.
 
+### Follow-up: where the Telegram `str` row actually goes
+
+Isolated with a genuinely warm CPython UTF-8 cache (via `ctypes`
+`PyUnicode_AsUTF8AndSize`; `str.encode()` and `json.dumps()` do *not*
+warm it, which invalidated a first attempt): `is_match` on a 470-char
+Cyrillic post costs **630 ns cold, 126 ns cache-warm, and bytes 140 ns**
+on the same content. The whole str-vs-bytes deficit is therefore the
+UCS→UTF-8 transcode, about 500 ns per 940-byte post (~1.9 GB/s), and a
+warm cache erases it completely. Per corpus population (470-byte posts,
+81.4% without a mention): the no-mention case is 233–271 ns with the
+prefilter skipping the transcode and is *faster* than `re`; the
+mention case is 779 ns and is the only losing population.
+
+Tried the `findall` result path accordingly: a lazily taken per-thread
+span buffer plus direct list append, dropping the intermediate object
+vector. Microbenchmarks improved 2.5–9% of instructions on matching
+calls (one match str 8,973 → 8,748; bytes 3,770 → 3,548; 20 matches
+bytes 26,074 → 25,414) and were flat on the no-match majority. The
+paired A/B on the host (Telegram, 5 samples) was mixed, though:
+bytes −2.6% at one worker and −3.3% at four (CIs exclude zero), but
+**str +1.7% at one worker** (CI [+1.4%, +2.8%]). Reverted: the row that
+matters got worse, and a mixed trade is not worth the added machinery.
+
+So the remaining `str` gap is not binding work; it is the encoder.
+Levers, in order of honesty: a faster kernel (AVX-512 is unavailable on
+both the benchmark host, Raptor Lake, and the laptop, Kaby Lake, so that
+ADR-0012 follow-up is dead for these machines), or caching the encoded
+form across calls so a string is encoded once rather than once per call
+(a semantic and memory trade-off that needs an ADR and does not help a
+single-pass benchmark).
+
 ### Spec/ADR amendments
 
 - [acted] `spec/docs/dev.md` "Benchmarks" now states that published
@@ -142,11 +173,12 @@ points in 3m05s.
   cache, which may be a deliberate memory/CPU trade-off nobody has
   written down. Measure before changing it.
 - [open] Short non-ASCII strings pay ~570 instructions of fixed cost plus
-  ~8 instructions per character to transcode (measured by length sweep).
-  On the Telegram `str` row that fixed cost is most of the remaining
-  ~90 ns/post gap to `re`, which never encodes. Candidate: fold the
-  required-byte prefilter scan and the transcode's first chunk, or cut
-  the scratch-pool TLS round trip.
+  ~8 instructions per character to transcode. Measured directly since
+  (see "Follow-up" above): the *per-character* cost dominates at corpus
+  sizes (a 470-char post costs ~500 ns cold against 126 ns cache-warm),
+  so folding the prefilter or trimming the fixed cost would buy well
+  under 10% of this row. The real lever is encoding once per string
+  instead of once per call, which needs an ADR.
 - [open] The shared `regex` cache-pool contention under free-threaded
   Python remains unaddressed; upstream (`regex-automata` docs,
   rust-lang/regex#934) prescribes a per-thread `Regex` clone or an
