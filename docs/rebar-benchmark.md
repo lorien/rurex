@@ -74,11 +74,22 @@ three groups:
   automata, so `03-date/compile-unicode` costs
   8.15 ms against `re`'s
   3.71 ms.
-- **Unicode word matching** (3 points): `\w`/`\b` over a
-  non-ASCII `str` pay both the transcode and a Unicode word automaton,
-  while `re` matches the UCS buffer directly. `08-words/all-russian` is
-  10.37 ms for rurex against
-  3.03 ms for `re`.
+- **Match-heavy iteration** (1 point):
+  rebar's counting models call `m.group(0)` per match, so a haystack with
+  tens of thousands of matches measures Python object construction. In
+  `08-words/all-english` (byte mode, no transcode, 56,601 matches) rurex
+  takes 3.56 ms against
+  2.25 ms for `re` and
+  714.35 µs for the engine alone: about 63 ns per
+  match for rurex, 40 for `re`, 13 for the engine's own loop.
+- **Unicode word boundaries on non-ASCII text** (2 points,
+  `all-russian` and `long-russian`): the engine itself is slower than `re` here — `rust/regex`
+  takes 6.07 ms against `re`'s
+  3.03 ms — because its fast DFA cannot handle a
+  Unicode-aware `\b` on non-ASCII bytes and falls back to a slower engine.
+  rurex adds its per-match objects on top (10.37 ms
+  total); its transcode of this 130 KB haystack is about 65 µs, under 1% of
+  the call. Beating `re` there is not a binding task.
 - **Near parity scans** (5 points): within 15% of each other, with
   `re` marginally ahead.
 

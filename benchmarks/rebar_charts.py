@@ -490,6 +490,8 @@ non-ASCII text, the cost of materialising UTF-8.
             re_wins.append((name, rx, re_t, re_t / rx))
     compile_wins = [w for w in re_wins if "/compile" in w[0]]
     words_wins = [w for w in re_wins if w[0].startswith("curated/08-words/")]
+    ascii_words = [w for w in words_wins if "english" in w[0]]
+    unicode_words = [w for w in words_wins if "russian" in w[0]]
     other_wins = [w for w in re_wins if w not in compile_wins and w not in words_wins]
 
     md += f"""
@@ -501,11 +503,22 @@ three groups:
   automata, so `03-date/compile-unicode` costs
   {fmt_time(dict((n, v) for n, v, _, _ in compile_wins)[ 'curated/03-date/compile-unicode' ])} against `re`'s
   {fmt_time(dict((n, re_t) for n, _, re_t, _ in compile_wins)['curated/03-date/compile-unicode'])}.
-- **Unicode word matching** ({len(words_wins)} points): `\\w`/`\\b` over a
-  non-ASCII `str` pay both the transcode and a Unicode word automaton,
-  while `re` matches the UCS buffer directly. `08-words/all-russian` is
-  {fmt_time(med[('curated/08-words/all-russian', 'python/rurex')])} for rurex against
-  {fmt_time(med[('curated/08-words/all-russian', 'python/re')])} for `re`.
+- **Match-heavy iteration** ({len(ascii_words)} point):
+  rebar's counting models call `m.group(0)` per match, so a haystack with
+  tens of thousands of matches measures Python object construction. In
+  `08-words/all-english` (byte mode, no transcode, 56,601 matches) rurex
+  takes {fmt_time(med[('curated/08-words/all-english', 'python/rurex')])} against
+  {fmt_time(med[('curated/08-words/all-english', 'python/re')])} for `re` and
+  {fmt_time(med[('curated/08-words/all-english', 'rust/regex')])} for the engine alone: about 63 ns per
+  match for rurex, 40 for `re`, 13 for the engine's own loop.
+- **Unicode word boundaries on non-ASCII text** ({len(unicode_words)} points,
+  `all-russian` and `long-russian`): the engine itself is slower than `re` here — `rust/regex`
+  takes {fmt_time(med[('curated/08-words/all-russian', 'rust/regex')])} against `re`'s
+  {fmt_time(med[('curated/08-words/all-russian', 'python/re')])} — because its fast DFA cannot handle a
+  Unicode-aware `\\b` on non-ASCII bytes and falls back to a slower engine.
+  rurex adds its per-match objects on top ({fmt_time(med[('curated/08-words/all-russian', 'python/rurex')])}
+  total); its transcode of this 130 KB haystack is about 65 µs, under 1% of
+  the call. Beating `re` there is not a binding task.
 - **Near parity scans** ({len(other_wins)} points): within 15% of each other, with
   `re` marginally ahead.
 

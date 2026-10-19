@@ -47,3 +47,35 @@ model is the benchmark that proves it.
 
 References: ADR-0002, ADR-0006,
 `spec/report/2026/10/19/report-1792446048-rebar-comparison.md`
+
+## Cheaper per-match objects for finditer-heavy workloads
+
+Status: new
+Priority: 0
+
+rebar's `08-words/all-english` (byte mode, 56,601 matches in 2,500
+subtitle lines) measures 3.56 ms for rurex against 2.25 ms for stdlib
+`re` and 0.71 ms for the `rust/regex` engine alone. The gap is not the
+scan: with that many matches, the cost is one Python object per match,
+about 63 ns per match for rurex against 40 ns for `re` and 13 ns for the
+engine's own loop. Every `finditer`/`count`-shaped workload pays it, and
+it is the largest single reason rurex trails `re` on a benchmark family
+that is otherwise scan-bound.
+
+`Match` currently allocates a `Vec` for its spans (plus the pyclass
+itself) and clones an `Arc` of capture names. The candidate fixes are
+those already noted in the result-path report: an inline array for the
+usual 0–3 groups with a heap fallback, and a thread-local span buffer
+returned on drop, measured against rebar's words benchmarks and the
+existing `finditer` microbenchmarks.
+
+Not part of this task: the Russian variants of that group. There the
+engine itself is slower than `re` (6.07 ms against 3.03 ms) because its
+DFA cannot handle a Unicode-aware `\b` on non-ASCII bytes, and rurex's
+transcode of the 130 KB haystack is under 1% of the call. That is an
+upstream engine limitation, recorded on the rebar page, not something
+the binding can fix.
+
+References: ADR-0008,
+`spec/report/2026/10/18/report-1792364009-result-path-offsets.md`,
+`spec/report/2026/10/19/report-1792446048-rebar-comparison.md`

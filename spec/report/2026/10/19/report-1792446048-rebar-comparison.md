@@ -93,6 +93,14 @@ between rurex and the Rust engine is the Python boundary.
 
 ### Future-task notes
 
+- [acted] The `08-words` loss was re-scoped after reading the
+  definitions: `all-english` is byte mode with 56,601 matches and is
+  per-match Python object cost (63 ns/match against `re`'s 40 and the
+  engine's 13), now a plan task; the two Russian points are upstream
+  engine behaviour (its DFA cannot handle a Unicode `\b` on non-ASCII
+  bytes, so `rust/regex` itself is 2x `re`) and the transcode is under 1%
+  of that call, so there is nothing for the binding to fix there. The
+  rebar page states both.
 - [open] The bytes mode is only sound where both engines agree on the
   match count, i.e. ASCII haystacks in Unicode mode. rebar has exactly
   one such benchmark, so the non-ASCII str-versus-bytes split remains
