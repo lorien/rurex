@@ -29,6 +29,14 @@ mode off, so classes are ASCII-only single bytes exactly like `re`.
 Before compilation the pattern is parsed with `regex-syntax` (the
 engine's own parser, under the same flag configuration) so syntax
 errors carry structured positions; `src/error.rs` turns them into
+Each thread also keeps a one-entry front for the module cache: the
+most recent (pattern bytes, flags, handle) is compared by slice, with
+no lock, no hash and no key allocation, and a generation counter bumped
+by `purge()` invalidates it everywhere. Module functions call the same
+Rust implementation as the `Regex` methods instead of dispatching
+through Python, so a module call costs a handful of instructions more
+than a compiled-pattern call rather than a method lookup.
+
 `rurex.error` instances with the full `re.error` attribute set
 (`msg`, `pattern`, `pos`, `lineno`, `colno`). A compile failure at
 the engine level (size limits) is mapped to `rurex.error` with `None`

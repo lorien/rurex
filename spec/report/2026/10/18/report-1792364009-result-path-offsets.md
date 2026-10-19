@@ -144,6 +144,44 @@ form across calls so a string is encoded once rather than once per call
 (a semantic and memory trade-off that needs an ADR and does not help a
 single-pass benchmark).
 
+### Module call path: per-thread front cache and direct dispatch
+
+Module-level functions (`rurex.findall(pattern, ...)` and friends) were
+the other half of the call-dense problem: every call took the shared
+cache mutex, hashed the pattern, allocated a key vector, cloned a
+handle, and then reached the implementation through Python attribute
+lookup and `call_method`. Measured overhead against a compiled pattern
+on the same 470-char post, instructions per call:
+
+| function | before | after |
+|---|---:|---:|
+| `findall` | +1,891 | +216 |
+| `search` | +1,875 | +251 |
+| `match` | +1,870 | +333 |
+| `fullmatch` | +1,966 | +266 |
+| `split` | +2,004 | +179 |
+| `sub` | +1,967 | +280 |
+| `finditer` (first item) | +1,841 | +295 |
+
+Two changes:
+
+- **One-entry per-thread front cache.** The last (pattern bytes, flags,
+  handle) is compared by slice, with no lock, no hash and no key
+  allocation; a miss falls through to the shared FIFO cache and is then
+  recorded. A generation counter bumped by `purge()` invalidates every
+  thread's entry, so `purge` still forces a fresh object (the existing
+  identity test covers it).
+- **Direct dispatch.** The bodies of `search`, `prefixmatch`/`match`,
+  `fullmatch`, `findall`, `finditer`, `split` and `substitute` moved to
+  `pub(crate)` `*_from(this: &Py<Regex>, ...)` functions that the
+  pyclass methods and the module functions both call, instead of the
+  module side doing `call_method` and extracting the result.
+
+Wall clock on the same post (min of five runs): `findall` 324 ns module
+against 321 ns compiled (was ~400 against ~220), `split` and `sub` at
+parity, `search` still +51 ns because the module side boxes the
+`Match`.
+
 ### Spec/ADR amendments
 
 - [acted] `spec/docs/dev.md` "Benchmarks" now states that published
@@ -183,10 +221,11 @@ single-pass benchmark).
   Python remains unaddressed; upstream (`regex-automata` docs,
   rust-lang/regex#934) prescribes a per-thread `Regex` clone or an
   explicit per-thread `Cache`, neither of which is in this build.
-- [open] The module-level pattern cache still takes a process-wide
-  `Mutex`; a module-level `findall` measures 574 ns against 369 ns for a
-  compiled pattern on the same input, and the mutex is a convoy under
-  free-threading.
+- [acted] The module-level pattern cache no longer takes the process-wide
+  `Mutex` on a hit: a per-thread one-entry front cache compares the
+  pattern by slice, and module functions dispatch straight into the same
+  Rust implementation as the methods. Overhead against a compiled
+  pattern fell from ~1,900 to ~200-330 instructions per call.
 
 ### Tooling/process
 

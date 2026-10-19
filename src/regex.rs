@@ -756,13 +756,14 @@ impl Regex {
 
     /// Shared `match`/`prefixmatch` implementation (kept out of
     /// `#[pymethods]` so it is not exposed as a Python method).
-    pub(crate) fn match_impl<'py>(
-        slf: PyRef<'_, Self>,
+    pub(crate) fn match_from<'py>(
+        this: &Py<Regex>,
         py: Python<'py>,
         string: &Bound<'py, PyAny>,
         pos: usize,
         endpos: Option<usize>,
     ) -> PyResult<Option<Match>> {
+        let slf = this.bind(py).get();
         // Same scan as `search`, accepted only if the match starts
         // exactly at the (length-clamped) window start; leftmost-first
         // guarantees the match there is found first when it exists.
@@ -783,225 +784,20 @@ impl Regex {
             }
             Hay::Bytes(b) => pos.min(b.len()),
         };
-        let m = Self::search(slf, py, string, pos, endpos)?;
+        let m = Self::search_from(this, py, string, pos, endpos)?;
         Ok(m.filter(|m| m.start0() == start as isize))
     }
-}
 
-#[pymethods]
-impl Regex {
-    #[new]
-    #[pyo3(signature = (pattern, flags = 0))]
-    fn new(pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Self> {
-        Self::build(pattern, flags)
-    }
-
-    /// The pattern text this regex was compiled from.
-    #[getter]
-    fn pattern<'py>(&self, py: Python<'py>) -> Bound<'py, PyAny> {
-        match &self.pattern {
-            Pattern::Text(s) => PyString::new(py, s).into_any(),
-            Pattern::Bytes(b) => PyBytes::new(py, b).into_any(),
-        }
-    }
-
-    /// The flags value this regex was compiled with. Like `re`,
-    /// `UNICODE` is reported for str patterns (it is forced on unless
-    /// `ASCII` is given).
-    #[getter]
-    fn flags(&self) -> u32 {
-        self.flags
-    }
-
-    /// The number of capture groups.
-    #[getter]
-    fn groups(&self) -> usize {
-        self.groups
-    }
-
-    /// A mapping of group name to group number, read-only like
-    /// `re.Pattern.groupindex` (a `types.MappingProxyType` view).
-    #[getter]
-    fn groupindex<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let dict = PyDict::new(py);
-        match &self.inner {
-            Inner::Text(re) => {
-                for (i, name) in re.capture_names().enumerate() {
-                    if let Some(name) = name {
-                        let _ = dict.set_item(name, i);
-                    }
-                }
-            }
-            Inner::Bytes(re) => {
-                for (i, name) in re.capture_names().enumerate() {
-                    if let Some(name) = name {
-                        let _ = dict.set_item(name, i);
-                    }
-                }
-            }
-        }
-        let proxy = py.import("types")?.getattr("MappingProxyType")?;
-        Ok(proxy.call1((dict,))?.into_any())
-    }
-
-    /// True if the pattern matches anywhere in `text`.
-    fn is_match<'py>(&self, py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<bool> {
-        let mut keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
-        let Some(hay) = keep.hay_with(self.first.as_ref())? else {
-            return Ok(false);
-        };
-        match hay {
-            Hay::Text(s) => {
-                let re = match &self.inner {
-                    Inner::Text(re) => re,
-                    Inner::Bytes(_) => unreachable!(),
-                };
-                Ok(maybe_detach(py, s.len(), || re.is_match(s)))
-            }
-            Hay::Bytes(b) => {
-                let re = match &self.inner {
-                    Inner::Bytes(re) => re,
-                    Inner::Text(_) => unreachable!(),
-                };
-                Ok(maybe_detach(py, b.len(), || re.is_match(b)))
-            }
-        }
-    }
-
-    /// First match anywhere in the `[pos, endpos)` window. Unlike
-    /// slicing, `^`/`\A` still anchor at the real text start, exactly
-    /// like `re.search`.
-    #[pyo3(signature = (string, pos = 0, endpos = None))]
-    fn search<'py>(
-        slf: PyRef<'_, Self>,
+    pub(crate) fn fullmatch_from<'py>(
+        this: &Py<Regex>,
         py: Python<'py>,
         string: &Bound<'py, PyAny>,
         pos: usize,
         endpos: Option<usize>,
     ) -> PyResult<Option<Match>> {
+        let slf = this.bind(py).get();
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let re = py_handle(&slf, py);
-        let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
-            return Ok(None);
-        };
-        match hay {
-            Hay::Text(s) => {
-                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
-                    return Ok(None);
-                };
-                let engine = match &slf.inner {
-                    Inner::Text(re) => re,
-                    Inner::Bytes(_) => unreachable!(),
-                };
-                let hay = &s[..eb];
-                let spans = maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, pb));
-                Ok(spans.map(|mut sp| {
-                    to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
-                    Match::new(
-                        re,
-                        string.clone().unbind(),
-                        pos,
-                        Endpos::from_opt(endpos),
-                        sp,
-                        slf.names.clone(),
-                        false,
-                    )
-                }))
-            }
-            Hay::Bytes(b) => {
-                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
-                    return Ok(None);
-                };
-                let engine = match &slf.inner {
-                    Inner::Bytes(re) => re,
-                    Inner::Text(_) => unreachable!(),
-                };
-                let hay = &b[..eb];
-                let spans = maybe_detach(py, hay.len(), || captures_spans_bytes(engine, hay, pb));
-                Ok(spans.map(|sp| {
-                    Match::new(
-                        re,
-                        string.clone().unbind(),
-                        pos,
-                        Endpos::from_opt(endpos),
-                        sp,
-                        slf.names.clone(),
-                        true,
-                    )
-                }))
-            }
-        }
-    }
-
-    /// Match anchored at the start of the `[pos, endpos)` window.
-    /// The Python 3.15 preferred name (ADR-0007); `re.match` under its
-    /// historic name — both expose the same behavior, like CPython.
-    #[pyo3(signature = (string, pos = 0, endpos = None))]
-    fn prefixmatch<'py>(
-        slf: PyRef<'_, Self>,
-        py: Python<'py>,
-        string: &Bound<'py, PyAny>,
-        pos: usize,
-        endpos: Option<usize>,
-    ) -> PyResult<Option<Match>> {
-        Self::match_impl(slf, py, string, pos, endpos)
-    }
-
-    /// The historic name for `prefixmatch`, soft deprecated in
-    /// CPython 3.15 but kept for compatibility — exactly like `re`.
-    #[pyo3(name = "match", signature = (string, pos = 0, endpos = None))]
-    fn match_<'py>(
-        slf: PyRef<'_, Self>,
-        py: Python<'py>,
-        string: &Bound<'py, PyAny>,
-        pos: usize,
-        endpos: Option<usize>,
-    ) -> PyResult<Option<Match>> {
-        Self::match_impl(slf, py, string, pos, endpos)
-    }
-
-    /// A scanner for successive `match`/`search` calls over one text,
-    /// like `re.Pattern.scanner` (`_sre.SRE_Scanner`).
-    #[pyo3(signature = (string, pos = 0, endpos = None))]
-    fn scanner<'py>(
-        slf: PyRef<'_, Self>,
-        py: Python<'py>,
-        string: &Bound<'py, PyAny>,
-        pos: usize,
-        endpos: Option<usize>,
-    ) -> PyResult<SreScanner> {
-        // Same window computation as finditer; the scanner owns its
-        // advancing cursor from there.
-        let it = Self::finditer(slf, py, string, pos, endpos)?;
-        Ok(SreScanner {
-            re: it.re,
-            string: it.string,
-            snapshot: it.snapshot,
-            pos: it.pos,
-            endpos: it.endpos,
-            scan: it.scan,
-            pending: it.pending,
-            end_b: it.end_b,
-            chars_seen: it.chars_seen,
-            bytes_seen: it.bytes_seen,
-            names: it.names,
-            bytes_mode: it.bytes_mode,
-            done: it.done,
-        })
-    }
-
-    /// The whole `[pos, endpos)` window must match.
-    #[pyo3(signature = (string, pos = 0, endpos = None))]
-    fn fullmatch<'py>(
-        slf: PyRef<'_, Self>,
-        py: Python<'py>,
-        string: &Bound<'py, PyAny>,
-        pos: usize,
-        endpos: Option<usize>,
-    ) -> PyResult<Option<Match>> {
-        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let re = py_handle(&slf, py);
+        let re = this.clone_ref(py);
         let mut keep = extract_hay(bytes_mode, string)?;
         let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
             return Ok(None);
@@ -1104,16 +900,14 @@ impl Regex {
             }
         }
     }
-
-    /// A lazy iterator of matches over the `[pos, endpos)` window.
-    #[pyo3(signature = (string, pos = 0, endpos = None))]
-    fn finditer<'py>(
-        slf: PyRef<'_, Self>,
+    pub(crate) fn finditer_from<'py>(
+        this: &Py<Regex>,
         py: Python<'py>,
         string: &Bound<'py, PyAny>,
         pos: usize,
         endpos: Option<usize>,
     ) -> PyResult<FindIter> {
+        let slf = this.bind(py).get();
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut keep = extract_hay(bytes_mode, string)?;
         // A bytes-like input (bytearray, memoryview, ...) is copied
@@ -1143,7 +937,7 @@ impl Regex {
             None => (1, 0, true),
         };
         Ok(FindIter {
-            re: py_handle(&slf, py),
+            re: this.clone_ref(py),
             string: string.clone().unbind(),
             snapshot,
             pos,
@@ -1158,65 +952,13 @@ impl Regex {
             done,
         })
     }
-
-    /// All matches as values: whole-match strings without groups, the
-    /// single group with one, tuples otherwise. Unmatched groups yield
-    /// the empty string, like `re.findall`.
-    ///
-    /// Dedicated path: all matches are scanned and their spans
-    /// collected in one GIL-released Rust loop, then only the returned
-    /// values are constructed — no `Match` objects, no per-match
-    /// span-to-character conversion (byte-unit slices produce the same
-    /// strings).
-    #[pyo3(signature = (string, pos = 0, endpos = None))]
-    fn findall<'py>(
-        slf: PyRef<'_, Self>,
-        py: Python<'py>,
-        string: &Bound<'py, PyAny>,
-        pos: usize,
-        endpos: Option<usize>,
-    ) -> PyResult<Bound<'py, PyList>> {
-        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
-        let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
-            return Ok(PyList::empty(py));
-        };
-        match (hay, &slf.inner) {
-            (Hay::Text(s), Inner::Text(engine)) => {
-                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
-                    return Ok(PyList::empty(py));
-                };
-                let retry = slf.retry_engine().map(Arc::as_ref);
-                let groups = slf.groups;
-                let spans = maybe_detach(py, eb - pb, || {
-                    scan_all_flat_text(engine, retry, s, pb, eb, groups)
-                });
-                findall_list_text(py, s, groups, &spans)
-            }
-            (Hay::Bytes(b), Inner::Bytes(engine)) => {
-                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
-                    return Ok(PyList::empty(py));
-                };
-                let retry = slf.retry_engine().map(Arc::as_ref);
-                let groups = slf.groups;
-                let spans = maybe_detach(py, eb - pb, || {
-                    scan_all_flat_bytes(engine, retry, b, pb, eb, groups)
-                });
-                findall_list_bytes(py, b, groups, &spans)
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    /// Split `text` on matches, including capture groups in the result
-    /// (None when a group did not participate).
-    #[pyo3(signature = (string, maxsplit = 0))]
-    fn split<'py>(
-        slf: PyRef<'_, Self>,
+    pub(crate) fn split_from<'py>(
+        this: &Py<Regex>,
         py: Python<'py>,
         string: &Bound<'py, PyAny>,
         maxsplit: usize,
     ) -> PyResult<Bound<'py, PyList>> {
+        let slf = this.bind(py).get();
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut items: Vec<Bound<'_, PyAny>> = Vec::new();
         let mut keep = extract_hay(bytes_mode, string)?;
@@ -1298,6 +1040,327 @@ impl Regex {
         }
         PyList::new(py, items)
     }
+}
+
+impl Regex {
+    pub(crate) fn search_from<'py>(
+        this: &Py<Regex>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        let slf = this.bind(py).get();
+        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
+        let re = this.clone_ref(py);
+        let mut keep = extract_hay(bytes_mode, string)?;
+        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+            return Ok(None);
+        };
+        match hay {
+            Hay::Text(s) => {
+                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
+                    return Ok(None);
+                };
+                let engine = match &slf.inner {
+                    Inner::Text(re) => re,
+                    Inner::Bytes(_) => unreachable!(),
+                };
+                let hay = &s[..eb];
+                let spans = maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, pb));
+                Ok(spans.map(|mut sp| {
+                    to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
+                    Match::new(
+                        re,
+                        string.clone().unbind(),
+                        pos,
+                        Endpos::from_opt(endpos),
+                        sp,
+                        slf.names.clone(),
+                        false,
+                    )
+                }))
+            }
+            Hay::Bytes(b) => {
+                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
+                    return Ok(None);
+                };
+                let engine = match &slf.inner {
+                    Inner::Bytes(re) => re,
+                    Inner::Text(_) => unreachable!(),
+                };
+                let hay = &b[..eb];
+                let spans = maybe_detach(py, hay.len(), || captures_spans_bytes(engine, hay, pb));
+                Ok(spans.map(|sp| {
+                    Match::new(
+                        re,
+                        string.clone().unbind(),
+                        pos,
+                        Endpos::from_opt(endpos),
+                        sp,
+                        slf.names.clone(),
+                        true,
+                    )
+                }))
+            }
+        }
+    }
+
+    pub(crate) fn findall_from<'py>(
+        this: &Py<Regex>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let slf = this.bind(py).get();
+        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
+        let mut keep = extract_hay(bytes_mode, string)?;
+        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+            return Ok(PyList::empty(py));
+        };
+        match (hay, &slf.inner) {
+            (Hay::Text(s), Inner::Text(engine)) => {
+                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
+                    return Ok(PyList::empty(py));
+                };
+                let retry = slf.retry_engine().map(Arc::as_ref);
+                let groups = slf.groups;
+                let spans = maybe_detach(py, eb - pb, || {
+                    scan_all_flat_text(engine, retry, s, pb, eb, groups)
+                });
+                findall_list_text(py, s, groups, &spans)
+            }
+            (Hay::Bytes(b), Inner::Bytes(engine)) => {
+                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
+                    return Ok(PyList::empty(py));
+                };
+                let retry = slf.retry_engine().map(Arc::as_ref);
+                let groups = slf.groups;
+                let spans = maybe_detach(py, eb - pb, || {
+                    scan_all_flat_bytes(engine, retry, b, pb, eb, groups)
+                });
+                findall_list_bytes(py, b, groups, &spans)
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[pymethods]
+impl Regex {
+    #[new]
+    #[pyo3(signature = (pattern, flags = 0))]
+    fn new(pattern: &Bound<'_, PyAny>, flags: u32) -> PyResult<Self> {
+        Self::build(pattern, flags)
+    }
+
+    /// The pattern text this regex was compiled from.
+    #[getter]
+    fn pattern<'py>(&self, py: Python<'py>) -> Bound<'py, PyAny> {
+        match &self.pattern {
+            Pattern::Text(s) => PyString::new(py, s).into_any(),
+            Pattern::Bytes(b) => PyBytes::new(py, b).into_any(),
+        }
+    }
+
+    /// The flags value this regex was compiled with. Like `re`,
+    /// `UNICODE` is reported for str patterns (it is forced on unless
+    /// `ASCII` is given).
+    #[getter]
+    fn flags(&self) -> u32 {
+        self.flags
+    }
+
+    /// The number of capture groups.
+    #[getter]
+    fn groups(&self) -> usize {
+        self.groups
+    }
+
+    /// A mapping of group name to group number, read-only like
+    /// `re.Pattern.groupindex` (a `types.MappingProxyType` view).
+    #[getter]
+    fn groupindex<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let dict = PyDict::new(py);
+        match &self.inner {
+            Inner::Text(re) => {
+                for (i, name) in re.capture_names().enumerate() {
+                    if let Some(name) = name {
+                        let _ = dict.set_item(name, i);
+                    }
+                }
+            }
+            Inner::Bytes(re) => {
+                for (i, name) in re.capture_names().enumerate() {
+                    if let Some(name) = name {
+                        let _ = dict.set_item(name, i);
+                    }
+                }
+            }
+        }
+        let proxy = py.import("types")?.getattr("MappingProxyType")?;
+        Ok(proxy.call1((dict,))?.into_any())
+    }
+
+    /// True if the pattern matches anywhere in `text`.
+    fn is_match<'py>(&self, py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<bool> {
+        let mut keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
+        let Some(hay) = keep.hay_with(self.first.as_ref())? else {
+            return Ok(false);
+        };
+        match hay {
+            Hay::Text(s) => {
+                let re = match &self.inner {
+                    Inner::Text(re) => re,
+                    Inner::Bytes(_) => unreachable!(),
+                };
+                Ok(maybe_detach(py, s.len(), || re.is_match(s)))
+            }
+            Hay::Bytes(b) => {
+                let re = match &self.inner {
+                    Inner::Bytes(re) => re,
+                    Inner::Text(_) => unreachable!(),
+                };
+                Ok(maybe_detach(py, b.len(), || re.is_match(b)))
+            }
+        }
+    }
+
+    /// First match anywhere in the `[pos, endpos)` window. Unlike
+    /// slicing, `^`/`\A` still anchor at the real text start, exactly
+    /// like `re.search`.
+    #[pyo3(signature = (string, pos = 0, endpos = None))]
+    fn search<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        let this = py_handle(&slf, py);
+        Self::search_from(&this, py, string, pos, endpos)
+    }
+
+    /// Match anchored at the start of the `[pos, endpos)` window.
+    /// The Python 3.15 preferred name (ADR-0007); `re.match` under its
+    /// historic name — both expose the same behavior, like CPython.
+    #[pyo3(signature = (string, pos = 0, endpos = None))]
+    fn prefixmatch<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        let this = py_handle(&slf, py);
+        Self::match_from(&this, py, string, pos, endpos)
+    }
+
+    /// The historic name for `prefixmatch`, soft deprecated in
+    /// CPython 3.15 but kept for compatibility — exactly like `re`.
+    #[pyo3(name = "match", signature = (string, pos = 0, endpos = None))]
+    fn match_<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        let this = py_handle(&slf, py);
+        Self::match_from(&this, py, string, pos, endpos)
+    }
+
+    /// A scanner for successive `match`/`search` calls over one text,
+    /// like `re.Pattern.scanner` (`_sre.SRE_Scanner`).
+    #[pyo3(signature = (string, pos = 0, endpos = None))]
+    fn scanner<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<SreScanner> {
+        // Same window computation as finditer; the scanner owns its
+        // advancing cursor from there.
+        let this = py_handle(&slf, py);
+        let it = Self::finditer_from(&this, py, string, pos, endpos)?;
+        Ok(SreScanner {
+            re: it.re,
+            string: it.string,
+            snapshot: it.snapshot,
+            pos: it.pos,
+            endpos: it.endpos,
+            scan: it.scan,
+            pending: it.pending,
+            end_b: it.end_b,
+            chars_seen: it.chars_seen,
+            bytes_seen: it.bytes_seen,
+            names: it.names,
+            bytes_mode: it.bytes_mode,
+            done: it.done,
+        })
+    }
+
+    /// The whole `[pos, endpos)` window must match.
+    #[pyo3(signature = (string, pos = 0, endpos = None))]
+    fn fullmatch<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Option<Match>> {
+        let this = py_handle(&slf, py);
+        Self::fullmatch_from(&this, py, string, pos, endpos)
+    }
+
+    /// A lazy iterator of matches over the `[pos, endpos)` window.
+    #[pyo3(signature = (string, pos = 0, endpos = None))]
+    fn finditer<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<FindIter> {
+        let this = py_handle(&slf, py);
+        Self::finditer_from(&this, py, string, pos, endpos)
+    }
+
+    /// All matches as values: whole-match strings without groups, the
+    /// single group with one, tuples otherwise. Unmatched groups yield
+    /// the empty string, like `re.findall`.
+    ///
+    /// Dedicated path: all matches are scanned and their spans
+    /// collected in one GIL-released Rust loop, then only the returned
+    /// values are constructed — no `Match` objects, no per-match
+    /// span-to-character conversion (byte-unit slices produce the same
+    /// strings).
+    #[pyo3(signature = (string, pos = 0, endpos = None))]
+    fn findall<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let this = py_handle(&slf, py);
+        Self::findall_from(&this, py, string, pos, endpos)
+    }
+
+    /// Split `text` on matches, including capture groups in the result
+    /// (None when a group did not participate).
+    #[pyo3(signature = (string, maxsplit = 0))]
+    fn split<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        maxsplit: usize,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let this = py_handle(&slf, py);
+        Self::split_from(&this, py, string, maxsplit)
+    }
 
     /// Substitute matches: `repl` is an `re`-style template string or a
     /// callable receiving each `Match`.
@@ -1309,7 +1372,8 @@ impl Regex {
         string: &Bound<'_, PyAny>,
         count: usize,
     ) -> PyResult<Py<PyAny>> {
-        let (result, _) = substitute(slf, py, repl, string, count)?;
+        let this = py_handle(&slf, py);
+        let (result, _) = substitute(&this, py, repl, string, count)?;
         Ok(result)
     }
 
@@ -1322,7 +1386,8 @@ impl Regex {
         string: &Bound<'_, PyAny>,
         count: usize,
     ) -> PyResult<(Py<PyAny>, usize)> {
-        substitute(slf, py, repl, string, count)
+        let this = py_handle(&slf, py);
+        substitute(&this, py, repl, string, count)
     }
 
     /// Value equality like `re.Pattern`: same pattern text (str vs
@@ -1661,15 +1726,14 @@ fn offset_spans(spans: Vec<Option<(usize, usize)>>, off: usize) -> Vec<Option<(u
 }
 
 /// Shared implementation of `sub` and `subn`.
-fn substitute(
-    slf: PyRef<'_, Regex>,
+pub(crate) fn substitute(
+    this: &Py<Regex>,
     py: Python<'_>,
     repl: &Bound<'_, PyAny>,
     string: &Bound<'_, PyAny>,
     count: usize,
 ) -> PyResult<(Py<PyAny>, usize)> {
-    let this: Py<Regex> = py_handle(&slf, py);
-    let reg: &Regex = &slf;
+    let reg: &Regex = this.bind(py).get();
     let bytes_mode = matches!(reg.inner, Inner::Bytes(_));
     // Validate the replacement eagerly (CPython parses templates even
     // when nothing matches).
@@ -1700,7 +1764,7 @@ fn substitute(
         let bytes = repl_keep.as_bytes();
         Repl::Template(
             bytes.to_vec(),
-            template::parse(bytes, slf.groups, &names_map)
+            template::parse(bytes, reg.groups, &names_map)
                 .map_err(|e| template_error(py, e, repl, bytes, true))?,
         )
     } else {

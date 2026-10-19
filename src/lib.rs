@@ -1,7 +1,9 @@
 //! rurex: Python bindings to the Rust `regex` crate.
 
+use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -19,7 +21,7 @@ mod utf8;
 mod vendor;
 
 use match_::Match;
-use regex::{FindIter, Regex, Scanner};
+use regex::{FindIter, Regex, Scanner, substitute};
 use regexset::RegexSet;
 
 /// Maximum entries in the module pattern cache, like `re._MAXCACHE`.
@@ -47,6 +49,53 @@ static CACHE: std::sync::LazyLock<Mutex<CacheState>> = std::sync::LazyLock::new(
     })
 });
 
+/// Bumped by `purge`, so every thread can drop its own last hit
+/// without the cache reaching into another thread's storage.
+static CACHE_GENERATION: AtomicU64 = AtomicU64::new(1);
+
+/// One-entry per-thread front for the module cache.
+///
+/// Module functions (`rurex.findall(pattern, ...)` and friends) are
+/// call-dense: the same pattern text is used on every call, and the
+/// shared cache charges a lock, a hash and a key allocation each time.
+/// Comparing the pattern bytes against the previous hit by slice avoids
+/// all three. A miss falls through to the shared cache and is then
+/// recorded here; `purge` invalidates the entry through the generation
+/// counter.
+struct LastHit {
+    generation: u64,
+    bytes_mode: bool,
+    flags: u32,
+    pattern: Vec<u8>,
+    rx: Py<Regex>,
+}
+
+fn last_hit() -> &'static std::thread::LocalKey<RefCell<Option<LastHit>>> {
+    thread_local! {
+        static LAST: RefCell<Option<LastHit>> = const { RefCell::new(None) };
+    }
+    &LAST
+}
+
+fn remember_hit(
+    py: Python<'_>,
+    generation: u64,
+    bytes_mode: bool,
+    flags: u32,
+    pattern: &[u8],
+    rx: &Py<Regex>,
+) {
+    last_hit().with(|slot| {
+        *slot.borrow_mut() = Some(LastHit {
+            generation,
+            bytes_mode,
+            flags,
+            pattern: pattern.to_vec(),
+            rx: rx.clone_ref(py),
+        });
+    });
+}
+
 /// Compile (or fetch from the module cache) a pattern for a
 /// module-level convenience function. Mirrors CPython's `re._compile`:
 /// FIFO eviction at 512 entries, keyed by pattern type, text, and
@@ -62,38 +111,63 @@ fn cached_compile(py: Python<'_>, pattern: &Bound<'_, PyAny>, flags: u32) -> PyR
         }
         return Ok(rx.into_pyobject(py).expect("infallible").unbind());
     }
-    let key: CacheKey = if let Ok(s) = pattern.cast::<PyString>() {
+    // Borrow the pattern text (zero-copy) before any cache work: the
+    // fast path compares it against the thread's last hit by slice, and
+    // only a miss pays for a key.
+    let (bytes_mode, text): (bool, &[u8]) = if let Ok(s) = pattern.cast::<PyString>() {
         (
             false,
             s.to_str()
                 .map_err(|_| PyTypeError::new_err("invalid str pattern"))?
-                .as_bytes()
-                .to_vec(),
-            flags,
+                .as_bytes(),
         )
     } else if let Ok(b) = pattern.cast::<PyBytes>() {
-        (true, b.as_bytes().to_vec(), flags)
+        (true, b.as_bytes())
     } else {
         return Err(PyTypeError::new_err(format!(
             "pattern must be str or bytes, not {}",
             pattern.get_type()
         )));
     };
+
+    let generation = CACHE_GENERATION.load(Ordering::Relaxed);
+    let hit = last_hit().with(|slot| match &*slot.borrow() {
+        Some(h)
+            if h.generation == generation
+                && h.bytes_mode == bytes_mode
+                && h.flags == flags
+                && h.pattern.as_slice() == text =>
+        {
+            Some(h.rx.clone_ref(py))
+        }
+        _ => None,
+    });
+    if let Some(rx) = hit {
+        return Ok(rx);
+    }
+
+    let key: CacheKey = (bytes_mode, text.to_vec(), flags);
     {
         let cache = CACHE.lock().expect("pattern cache lock");
         if let Some(rx) = cache.map.get(&key) {
-            return Ok(rx.clone_ref(py));
+            let rx = rx.clone_ref(py);
+            drop(cache);
+            remember_hit(py, generation, bytes_mode, flags, text, &rx);
+            return Ok(rx);
         }
     }
     let rx = Py::new(py, Regex::build(pattern, flags)?)?;
-    let mut cache = CACHE.lock().expect("pattern cache lock");
-    if cache.map.len() >= MAX_CACHE {
-        if let Some(oldest) = cache.order.pop_front() {
-            cache.map.remove(&oldest);
+    {
+        let mut cache = CACHE.lock().expect("pattern cache lock");
+        if cache.map.len() >= MAX_CACHE {
+            if let Some(oldest) = cache.order.pop_front() {
+                cache.map.remove(&oldest);
+            }
         }
+        cache.map.insert(key.clone(), rx.clone_ref(py));
+        cache.order.push_back(key);
     }
-    cache.map.insert(key.clone(), rx.clone_ref(py));
-    cache.order.push_back(key);
+    remember_hit(py, generation, bytes_mode, flags, text, &rx);
     Ok(rx)
 }
 
@@ -160,6 +234,7 @@ fn compile_set(patterns: &Bound<'_, PyAny>, flags: u32) -> PyResult<RegexSet> {
 /// Clear the module pattern cache (like `re.purge`).
 #[pyfunction]
 fn purge() {
+    CACHE_GENERATION.fetch_add(1, Ordering::Relaxed);
     CACHE.lock().expect("pattern cache lock").clear();
 }
 
@@ -172,10 +247,10 @@ fn search<'py>(
     flags: u32,
 ) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
-    Ok(rx
-        .bind(py)
-        .call_method("search", (string,), None)?
-        .extract()?)
+    Ok(match Regex::search_from(&rx, py, string, 0, None)? {
+        Some(m) => Some(Py::new(py, m)?),
+        None => None,
+    })
 }
 
 /// `re.prefixmatch` — the Python 3.15 preferred name for `match`.
@@ -188,10 +263,10 @@ fn prefixmatch<'py>(
     flags: u32,
 ) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
-    Ok(rx
-        .bind(py)
-        .call_method("prefixmatch", (string,), None)?
-        .extract()?)
+    Ok(match Regex::match_from(&rx, py, string, 0, None)? {
+        Some(m) => Some(Py::new(py, m)?),
+        None => None,
+    })
 }
 
 /// The historic name for `prefixmatch`, soft deprecated in CPython
@@ -205,10 +280,10 @@ fn py_match<'py>(
     flags: u32,
 ) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
-    Ok(rx
-        .bind(py)
-        .call_method("match", (string,), None)?
-        .extract()?)
+    Ok(match Regex::match_from(&rx, py, string, 0, None)? {
+        Some(m) => Some(Py::new(py, m)?),
+        None => None,
+    })
 }
 
 #[pyfunction]
@@ -220,10 +295,10 @@ fn fullmatch<'py>(
     flags: u32,
 ) -> PyResult<Option<Py<Match>>> {
     let rx = cached_compile(py, pattern, flags)?;
-    Ok(rx
-        .bind(py)
-        .call_method("fullmatch", (string,), None)?
-        .extract()?)
+    Ok(match Regex::fullmatch_from(&rx, py, string, 0, None)? {
+        Some(m) => Some(Py::new(py, m)?),
+        None => None,
+    })
 }
 
 #[pyfunction]
@@ -235,7 +310,7 @@ fn findall<'py>(
     flags: u32,
 ) -> PyResult<Bound<'py, PyAny>> {
     let rx = cached_compile(py, pattern, flags)?;
-    rx.bind(py).call_method("findall", (string,), None)
+    Ok(Regex::findall_from(&rx, py, string, 0, None)?.into_any())
 }
 
 #[pyfunction]
@@ -247,10 +322,8 @@ fn finditer(
     flags: u32,
 ) -> PyResult<Py<FindIter>> {
     let rx = cached_compile(py, pattern, flags)?;
-    Ok(rx
-        .bind(py)
-        .call_method("finditer", (string,), None)?
-        .extract()?)
+    let it = Regex::finditer_from(&rx, py, string, 0, None)?;
+    Py::new(py, it)
 }
 
 #[pyfunction]
@@ -263,7 +336,7 @@ fn split<'py>(
     flags: u32,
 ) -> PyResult<Bound<'py, PyAny>> {
     let rx = cached_compile(py, pattern, flags)?;
-    rx.bind(py).call_method("split", (string, maxsplit), None)
+    Ok(Regex::split_from(&rx, py, string, maxsplit)?.into_any())
 }
 
 #[pyfunction]
@@ -277,7 +350,8 @@ fn sub<'py>(
     flags: u32,
 ) -> PyResult<Bound<'py, PyAny>> {
     let rx = cached_compile(py, pattern, flags)?;
-    rx.bind(py).call_method("sub", (repl, string, count), None)
+    let (result, _) = substitute(&rx, py, repl, string, count)?;
+    Ok(result.into_bound(py))
 }
 
 #[pyfunction]
@@ -291,9 +365,7 @@ fn subn(
     flags: u32,
 ) -> PyResult<(Py<PyAny>, usize)> {
     let rx = cached_compile(py, pattern, flags)?;
-    rx.bind(py)
-        .call_method("subn", (repl, string, count), None)?
-        .extract()
+    substitute(&rx, py, repl, string, count)
 }
 
 #[pymodule]

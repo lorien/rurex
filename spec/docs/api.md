@@ -39,9 +39,12 @@ Python 3.15):
 
 They are backed by a bounded pattern cache exactly like `re`'s:
 keyed by pattern type, text, and flags; at most 512 entries with FIFO
-eviction. All error paths are identical to `rurex.compile` since they
-share it (ADR-0006; ADR-0002's compile-once advice still applies for
-hot loops).
+eviction. Each thread additionally keeps its most recent hit in front
+of the shared cache (compared by pattern bytes, no lock and no hashing),
+and `purge()` clears that front cache as well. All error paths are
+identical to `rurex.compile` since they share it (ADR-0006;
+ADR-0002's compile-once advice still applies to hot loops, though a
+module call is now within a few percent of a compiled pattern's).
 
 ## Flags
 
