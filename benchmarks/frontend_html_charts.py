@@ -107,14 +107,12 @@ def chart(data, interp, out_name):
     ax.set_ylim(bottom=0)
     ax.set_ylabel("wall time for the whole pile (s)")
     ax.set_title(TITLES[interp], loc="left", fontsize=13, fontweight="bold", pad=12)
-    # On the GIL panel the upper-right corner holds the last point of the
-    # re/str line and its value label, and the 0.7-1.6 s band between the
-    # re/bytes and rurex lines is empty across the whole width: park the
-    # legend there instead of over the data.
-    anchor = (0.94, 0.43) if interp == "gil" else (1.0, 1.0)
+    # Pulled in from the right edge so it does not sit on the last
+    # point of the re/str line and its value label; same spot on both
+    # panels.
     ax.legend(
         loc="upper right",
-        bbox_to_anchor=anchor,
+        bbox_to_anchor=(0.87, 1.0),
         handlelength=4.2,
         handletextpad=0.8,
     )
