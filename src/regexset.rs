@@ -20,6 +20,9 @@ enum SetInner {
 pub struct RegexSet {
     inner: SetInner,
     bytes_mode: bool,
+    /// See `Regex::stand_in`: true when every pattern permits mapping a
+    /// lone surrogate instead of raising.
+    stand_in: bool,
 }
 
 /// Shared build path for `rurex.compile_set`.
@@ -137,7 +140,15 @@ pub(crate) fn build(py: Python<'_>, patterns: &Bound<'_, PyAny>, flags: u32) -> 
         };
         SetInner::Text(Box::new(set))
     };
-    Ok(RegexSet { inner, bytes_mode })
+    let stand_in = !bytes_mode
+        && texts
+            .iter()
+            .all(|text| crate::utf8::pattern_allows_stand_in(text));
+    Ok(RegexSet {
+        inner,
+        bytes_mode,
+        stand_in,
+    })
 }
 
 #[pymethods]
@@ -145,8 +156,8 @@ impl RegexSet {
     /// True if any pattern in the set matches `text`.
     fn is_match(&self, py: Python<'_>, text: &Bound<'_, PyAny>) -> PyResult<bool> {
         let mut keep = extract_hay(self.bytes_mode, text)?;
-        match keep.hay()? {
-            Hay::Text(s) => match &self.inner {
+        match keep.hay(self.stand_in)? {
+            Hay::Text(s, _) => match &self.inner {
                 SetInner::Text(set) => Ok(py.detach(|| set.is_match(s))),
                 SetInner::Bytes(_) => unreachable!(),
             },
@@ -164,8 +175,8 @@ impl RegexSet {
         text: &Bound<'py, PyAny>,
     ) -> PyResult<Bound<'py, PyList>> {
         let mut keep = extract_hay(self.bytes_mode, text)?;
-        let flags_vec: Vec<bool> = match keep.hay()? {
-            Hay::Text(s) => match &self.inner {
+        let flags_vec: Vec<bool> = match keep.hay(self.stand_in)? {
+            Hay::Text(s, _) => match &self.inner {
                 SetInner::Text(set) => {
                     let found = py.detach(|| set.matches(s));
                     (0..found.len()).map(|i| found.matched(i)).collect()

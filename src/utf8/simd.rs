@@ -100,9 +100,11 @@ pub(crate) unsafe fn transcode(
     kind: Kind,
     len: usize,
     data: *const u8,
+    stand_in: bool,
+    mapped: &mut bool,
     out: &mut Vec<u8>,
 ) -> PyResult<usize> {
-    unsafe { transcode_avx2(kind, len, data, out) }
+    unsafe { transcode_avx2(kind, len, data, stand_in, mapped, out) }
 }
 
 /// The whole kernel lives in one `#[target_feature]` function so
@@ -120,9 +122,16 @@ unsafe fn transcode_avx2(
     kind: Kind,
     len: usize,
     data: *const u8,
+    stand_in: bool,
+    mapped: &mut bool,
     out: &mut Vec<u8>,
 ) -> PyResult<usize> {
     let mut written = 0usize;
+    // Whether a lone surrogate may be mapped to its stand-in code point.
+    // A UCS-4 haystack that already contains a stand-in character turns
+    // this off for the rest of the string (the two would be
+    // indistinguishable), so it is threaded through the chunk loop.
+    let mut stand_in = stand_in;
     let outptr = unsafe { out.as_mut_ptr().add(out.len()) };
     let mut i = 0usize;
 
@@ -149,7 +158,17 @@ unsafe fn transcode_avx2(
                     _mm256_cvtepu16_epi32(_mm_loadu_si128(data.add(i * 2) as *const __m128i))
                 };
                 if unsafe { has_surrogates(v) } {
-                    unsafe { scalar_into(kind, data, i, i + 8, outptr, &mut written)? };
+                    unsafe {
+                        scalar_into(
+                            kind,
+                            data,
+                            i,
+                            i + 8,
+                            (&mut stand_in, mapped),
+                            outptr,
+                            &mut written,
+                        )?
+                    };
                 } else {
                     unsafe { chunk(v, outptr, &mut written) };
                 }
@@ -160,7 +179,17 @@ unsafe fn transcode_avx2(
             while i + 8 <= len {
                 let v = unsafe { _mm256_loadu_si256(data.add(i * 4) as *const __m256i) };
                 if unsafe { has_surrogates(v) || has_overlong(v) } {
-                    unsafe { scalar_into(kind, data, i, i + 8, outptr, &mut written)? };
+                    unsafe {
+                        scalar_into(
+                            kind,
+                            data,
+                            i,
+                            i + 8,
+                            (&mut stand_in, mapped),
+                            outptr,
+                            &mut written,
+                        )?
+                    };
                 } else {
                     unsafe { chunk(v, outptr, &mut written) };
                 }
@@ -170,7 +199,17 @@ unsafe fn transcode_avx2(
     }
 
     if i < len {
-        unsafe { scalar_into(kind, data, i, len, outptr, &mut written)? };
+        unsafe {
+            scalar_into(
+                kind,
+                data,
+                i,
+                len,
+                (&mut stand_in, mapped),
+                outptr,
+                &mut written,
+            )?
+        };
     }
     unsafe { out.set_len(out.len() + written) };
     debug_assert!(
@@ -219,9 +258,11 @@ unsafe fn scalar_into(
     data: *const u8,
     from: usize,
     to: usize,
+    flags: (&mut bool, &mut bool),
     out: *mut u8,
     written: &mut usize,
 ) -> PyResult<()> {
+    let (stand_in, mapped) = flags;
     let mut buf = [0u8; 4];
     for k in from..to {
         let cp = unsafe {
@@ -231,7 +272,19 @@ unsafe fn scalar_into(
                 Kind::Ucs4 => *(data.add(k * 4) as *const u32),
             }
         };
-        let c = char::from_u32(cp).ok_or_else(super::surrogate_error)?;
+        if matches!(kind, Kind::Ucs4) && *stand_in && super::in_stand_in_block(cp) {
+            // A real character from the stand-in block: stop mapping so
+            // the two can never be confused; a later surrogate raises.
+            *stand_in = false;
+        }
+        let c = match char::from_u32(cp) {
+            Some(c) => c,
+            None if *stand_in && (0xD800..0xE000).contains(&cp) => {
+                *mapped = true;
+                char::from_u32(super::surrogate_stand_in(cp)).expect("stand-in is valid")
+            }
+            None => return Err(super::surrogate_error()),
+        };
         let s = c.encode_utf8(&mut buf);
         unsafe {
             std::ptr::copy_nonoverlapping(s.as_ptr(), out.add(*written), s.len());
@@ -488,16 +541,15 @@ mod tests {
         }
     }
 
+    type Transcoder =
+        unsafe fn(Kind, usize, *const u8, bool, &mut bool, &mut Vec<u8>) -> PyResult<usize>;
+
     /// Call a transcoder variant with a fresh output buffer and
     /// return the UTF-8 as a String.
-    fn call(
-        kind: Kind,
-        n: usize,
-        p: *const u8,
-        f: unsafe fn(Kind, usize, *const u8, &mut Vec<u8>) -> PyResult<usize>,
-    ) -> PyResult<String> {
+    fn call(kind: Kind, n: usize, p: *const u8, f: Transcoder) -> PyResult<String> {
         let mut out: Vec<u8> = Vec::with_capacity(n * 4 + 32);
-        let written = unsafe { f(kind, n, p, &mut out)? };
+        let mut mapped = false;
+        let written = unsafe { f(kind, n, p, false, &mut mapped, &mut out)? };
         Ok(String::from_utf8(out[..written].to_vec()).expect("kernel emits UTF-8"))
     }
 

@@ -60,6 +60,11 @@ pub struct Regex {
     /// Whether the pattern can match the empty string; `false` skips
     /// building the zero-width retry engine entirely.
     nullable: bool,
+    /// Whether a lone surrogate in a `str` haystack may be mapped into
+    /// the private-use stand-in block instead of raising. False when
+    /// the pattern could tell the stand-in from a surrogate (see
+    /// `utf8::pattern_allows_stand_in`); bytes patterns never use it.
+    stand_in: bool,
 }
 
 /// Rewrite engine byte spans to Python character offsets in place.
@@ -77,6 +82,53 @@ pub struct Regex {
 /// only the characters between the previous match and this one instead
 /// of walking the whole haystack again on every step. Every span
 /// offset must be at or after `start.0`.
+/// Build a Python `str` from a UTF-8 slice, restoring lone surrogates.
+///
+/// The engine matches UTF-8, so a lone surrogate in a `str` haystack is
+/// matched through a private-use stand-in (see `utf8::SURROGATE_BASE`).
+/// Results must be the text the user gave us, not the stand-in, so any
+/// slice that contains the stand-in's UTF-8 prefix is rebuilt from its
+/// code points with the surrogates restored (`surrogatepass` keeps them
+/// alive in the resulting `str`). Slices without a stand-in take the
+/// plain `PyString::new` path; the scan is a `memmem` over the slice,
+/// which is short for a match.
+fn text_result<'py>(py: Python<'py>, s: &str, mapped: bool) -> PyResult<Bound<'py, PyString>> {
+    if !mapped || memchr::memmem::find(s.as_bytes(), b"\xF3\xB0").is_none() {
+        return Ok(PyString::new(py, s));
+    }
+    let mut units: Vec<u16> = Vec::with_capacity(s.len());
+    for c in s.chars() {
+        let cp = c as u32;
+        if crate::utf8::in_stand_in_block(cp) {
+            units.push((0xD800 + (cp - crate::utf8::SURROGATE_BASE)) as u16);
+        } else if cp > 0xFFFF {
+            let v = cp - 0x1_0000;
+            units.push(0xD800 + (v >> 10) as u16);
+            units.push(0xDC00 + (v & 0x3FF) as u16);
+        } else {
+            units.push(cp as u16);
+        }
+    }
+    let mut buf: Vec<u8> = Vec::with_capacity(units.len() * 2);
+    for unit in units {
+        buf.extend_from_slice(&unit.to_ne_bytes());
+    }
+    let ptr = unsafe {
+        pyo3::ffi::PyUnicode_DecodeUTF16(
+            buf.as_ptr() as *const std::os::raw::c_char,
+            buf.len() as pyo3::ffi::Py_ssize_t,
+            c"surrogatepass".as_ptr(),
+            std::ptr::null_mut(),
+        )
+    };
+    if ptr.is_null() {
+        return Err(PyErr::fetch(py));
+    }
+    unsafe { Bound::<PyAny>::from_owned_ptr(py, ptr) }
+        .cast_into::<PyString>()
+        .map_err(PyErr::from)
+}
+
 fn to_py_spans(s: &str, ascii: bool, start: (usize, usize), spans: &mut [Option<(usize, usize)>]) {
     if ascii {
         return;
@@ -312,7 +364,10 @@ fn window(pos: usize, end: Option<usize>, len: usize) -> Option<(usize, usize)> 
 }
 
 pub(crate) enum Hay<'a> {
-    Text(&'a str),
+    /// The UTF-8 view, plus whether a lone surrogate was mapped to a
+    /// stand-in (in which case text results are rebuilt from the
+    /// original object).
+    Text(&'a str, bool),
     Bytes(&'a [u8]),
 }
 
@@ -442,9 +497,9 @@ impl<'py> HayKeep<'py> {
     /// non-ASCII strings are transcoded in Rust (several times
     /// faster than CPython's encoder) into `owned`. CPython's cache
     /// is never populated by us.
-    pub(crate) fn hay(&mut self) -> PyResult<Hay<'_>> {
+    pub(crate) fn hay(&mut self, stand_in: bool) -> PyResult<Hay<'_>> {
         Ok(self
-            .hay_impl(None)?
+            .hay_impl(None, stand_in)?
             .expect("without a prefilter a haystack always exists"))
     }
 
@@ -452,22 +507,34 @@ impl<'py> HayKeep<'py> {
     /// `None` means the prefilter proved that no match can exist in
     /// this haystack, so the caller returns its no-match answer without
     /// transcoding or scanning.
-    pub(crate) fn hay_with(&mut self, prefilter: Option<&Prefilter>) -> PyResult<Option<Hay<'_>>> {
-        self.hay_impl(prefilter)
+    pub(crate) fn hay_with(
+        &mut self,
+        prefilter: Option<&Prefilter>,
+        stand_in: bool,
+    ) -> PyResult<Option<Hay<'_>>> {
+        self.hay_impl(prefilter, stand_in)
     }
 
-    fn hay_impl(&mut self, prefilter: Option<&Prefilter>) -> PyResult<Option<Hay<'_>>> {
+    fn hay_impl(
+        &mut self,
+        prefilter: Option<&Prefilter>,
+        stand_in: bool,
+    ) -> PyResult<Option<Hay<'_>>> {
         match self {
-            HayKeep::Text(bound, owned) => match crate::utf8::utf8_of_filtered(bound, prefilter)? {
-                crate::utf8::Utf8Buf::Borrowed(s) => Ok(Some(Hay::Text(s))),
-                crate::utf8::Utf8Buf::Owned(s) => {
-                    *owned = Some(s);
-                    Ok(Some(Hay::Text(
-                        owned.as_ref().expect("just stored").as_str(),
-                    )))
+            HayKeep::Text(bound, owned) => {
+                match crate::utf8::utf8_of_filtered(bound, prefilter, stand_in)? {
+                    crate::utf8::Utf8Buf::Borrowed(s, mapped) => Ok(Some(Hay::Text(s, mapped))),
+                    crate::utf8::Utf8Buf::Owned(s) => {
+                        let mapped = s.mapped();
+                        *owned = Some(s);
+                        Ok(Some(Hay::Text(
+                            owned.as_ref().expect("just stored").as_str(),
+                            mapped,
+                        )))
+                    }
+                    crate::utf8::Utf8Buf::NoMatch => Ok(None),
                 }
-                crate::utf8::Utf8Buf::NoMatch => Ok(None),
-            },
+            }
             HayKeep::Bytes { bound, .. } => Ok(Some(Hay::Bytes(bound.as_bytes()))),
         }
     }
@@ -683,6 +750,7 @@ impl Regex {
             Inner::Bytes(re) => names_of_bytes(re),
         });
         let analysis = prefilter::analyze(text, &cfg, bytes_mode);
+        let stand_in = !bytes_mode && crate::utf8::pattern_allows_stand_in(text);
         Ok(Regex {
             inner,
             pattern: pat,
@@ -694,6 +762,7 @@ impl Regex {
             retry: OnceLock::new(),
             first: analysis.first,
             nullable: analysis.nullable,
+            stand_in,
         })
     }
 
@@ -769,13 +838,13 @@ impl Regex {
         // guarantees the match there is found first when it exists.
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
             return Ok(None);
         };
         let start = match hay {
             // `pos == 0` skips the walk: counting every character of a
             // large text is O(n) and 0 is the answer anyway.
-            Hay::Text(s) => {
+            Hay::Text(s, _mapped) => {
                 if pos == 0 {
                     0
                 } else {
@@ -799,11 +868,11 @@ impl Regex {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = this.clone_ref(py);
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
             return Ok(None);
         };
         match hay {
-            Hay::Text(s) => {
+            Hay::Text(s, _mapped) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(None);
                 };
@@ -924,8 +993,8 @@ impl Regex {
         };
         // `None` from the prefilter means no match can exist, which is
         // the same state as an invalid window: an exhausted iterator.
-        let window_ok = match keep.hay_with(slf.first.as_ref())? {
-            Some(Hay::Text(s)) => window_bytes(s, pos, endpos),
+        let window_ok = match keep.hay_with(slf.first.as_ref(), slf.stand_in)? {
+            Some(Hay::Text(s, _)) => window_bytes(s, pos, endpos),
             Some(Hay::Bytes(b)) => window(pos, endpos, b.len()),
             None => None,
         };
@@ -947,6 +1016,8 @@ impl Regex {
             end_b,
             chars_seen: 0,
             bytes_seen: 0,
+            utf8: None,
+            mapped: false,
             names,
             bytes_mode,
             done,
@@ -962,9 +1033,9 @@ impl Regex {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut items: Vec<Bound<'_, PyAny>> = Vec::new();
         let mut keep = extract_hay(bytes_mode, string)?;
-        let hay = keep.hay()?;
+        let hay = keep.hay(slf.stand_in)?;
         match (hay, &slf.inner) {
-            (Hay::Text(s), Inner::Text(engine)) => {
+            (Hay::Text(s, mapped), Inner::Text(engine)) => {
                 let retry = slf.retry_engine().map(Arc::as_ref);
                 let mut prev = 0usize;
                 let mut scan = 0usize;
@@ -987,10 +1058,10 @@ impl Regex {
                         break;
                     };
                     let (sb, se) = spans[0].expect("group 0 always matches");
-                    items.push(PyString::new(py, &s[prev..sb]).into_any());
+                    items.push(text_result(py, &s[prev..sb], mapped)?.into_any());
                     for span in spans.iter().skip(1) {
                         items.push(match span {
-                            Some((a, b)) => PyString::new(py, &s[*a..*b]).into_any(),
+                            Some((a, b)) => text_result(py, &s[*a..*b], mapped)?.into_any(),
                             None => py.None().into_bound(py),
                         });
                     }
@@ -998,7 +1069,7 @@ impl Regex {
                     pending = advance_after(&spans, &mut scan).or(pending);
                     n += 1;
                 }
-                items.push(PyString::new(py, &s[prev..]).into_any());
+                items.push(text_result(py, &s[prev..], mapped)?.into_any());
             }
             (Hay::Bytes(b), Inner::Bytes(engine)) => {
                 let retry = slf.retry_engine().map(Arc::as_ref);
@@ -1054,11 +1125,11 @@ impl Regex {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = this.clone_ref(py);
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
             return Ok(None);
         };
         match hay {
-            Hay::Text(s) => {
+            Hay::Text(s, _mapped) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(None);
                 };
@@ -1116,11 +1187,11 @@ impl Regex {
         let slf = this.bind(py).get();
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref())? else {
+        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
             return Ok(PyList::empty(py));
         };
         match (hay, &slf.inner) {
-            (Hay::Text(s), Inner::Text(engine)) => {
+            (Hay::Text(s, mapped), Inner::Text(engine)) => {
                 let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
                     return Ok(PyList::empty(py));
                 };
@@ -1129,7 +1200,7 @@ impl Regex {
                 let spans = maybe_detach(py, eb - pb, || {
                     scan_all_flat_text(engine, retry, s, pb, eb, groups)
                 });
-                findall_list_text(py, s, groups, &spans)
+                findall_list_text(py, s, groups, &spans, mapped)
             }
             (Hay::Bytes(b), Inner::Bytes(engine)) => {
                 let Some((pb, eb)) = window(pos, endpos, b.len()) else {
@@ -1206,11 +1277,11 @@ impl Regex {
     /// True if the pattern matches anywhere in `text`.
     fn is_match<'py>(&self, py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<bool> {
         let mut keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
-        let Some(hay) = keep.hay_with(self.first.as_ref())? else {
+        let Some(hay) = keep.hay_with(self.first.as_ref(), self.stand_in)? else {
             return Ok(false);
         };
         match hay {
-            Hay::Text(s) => {
+            Hay::Text(s, _mapped) => {
                 let re = match &self.inner {
                     Inner::Text(re) => re,
                     Inner::Bytes(_) => unreachable!(),
@@ -1296,6 +1367,8 @@ impl Regex {
             end_b: it.end_b,
             chars_seen: it.chars_seen,
             bytes_seen: it.bytes_seen,
+            utf8: it.utf8,
+            mapped: it.mapped,
             names: it.names,
             bytes_mode: it.bytes_mode,
             done: it.done,
@@ -1617,6 +1690,7 @@ fn findall_list_text<'py>(
     s: &str,
     groups: usize,
     spans: &[Option<(usize, usize)>],
+    mapped: bool,
 ) -> PyResult<Bound<'py, PyList>> {
     if spans.is_empty() {
         return Ok(PyList::empty(py));
@@ -1624,7 +1698,7 @@ fn findall_list_text<'py>(
     let stride = groups + 1;
     let mut items = Vec::with_capacity(spans.len() / stride);
     for chunk in spans.chunks_exact(stride) {
-        items.push(findall_item_text(py, s, groups, chunk)?);
+        items.push(findall_item_text(py, s, groups, chunk, mapped)?);
     }
     PyList::new(py, items)
 }
@@ -1655,25 +1729,26 @@ fn findall_item_text<'py>(
     s: &str,
     groups: usize,
     spans: &[Option<(usize, usize)>],
+    mapped: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     Ok(match groups {
         0 => {
             let (a, b) = spans[0].expect("group 0 always matches");
-            PyString::new(py, &s[a..b]).into_any()
+            text_result(py, &s[a..b], mapped)?.into_any()
         }
         1 => match spans[1] {
-            Some((a, b)) => PyString::new(py, &s[a..b]).into_any(),
+            Some((a, b)) => text_result(py, &s[a..b], mapped)?.into_any(),
             None => PyString::new(py, "").into_any(),
         },
         _ => {
-            let parts: Vec<Bound<'py, PyAny>> = spans[1..=groups]
+            let parts: PyResult<Vec<Bound<'py, PyAny>>> = spans[1..=groups]
                 .iter()
                 .map(|sp| match sp {
-                    Some((a, b)) => PyString::new(py, &s[*a..*b]).into_any(),
-                    None => PyString::new(py, "").into_any(),
+                    Some((a, b)) => Ok(text_result(py, &s[*a..*b], mapped)?.into_any()),
+                    None => Ok(PyString::new(py, "").into_any()),
                 })
                 .collect();
-            PyTuple::new(py, parts)?.into_any()
+            PyTuple::new(py, parts?)?.into_any()
         }
     })
 }
@@ -1780,9 +1855,9 @@ pub(crate) fn substitute(
 
     let mut keep = extract_hay(bytes_mode, string)?;
     let ascii = crate::utf8::is_ascii_obj(string);
-    let hay = keep.hay()?;
+    let hay = keep.hay(reg.stand_in)?;
     match (hay, &reg.inner) {
-        (Hay::Text(s), Inner::Text(engine)) => {
+        (Hay::Text(s, mapped), Inner::Text(engine)) => {
             let names = reg.names.clone();
             let retry = reg.retry_engine().map(Arc::as_ref);
             let mut out = String::new();
@@ -1845,7 +1920,7 @@ pub(crate) fn substitute(
                 n += 1;
             }
             out.push_str(&s[prev..]);
-            Ok((PyString::new(py, &out).into_any().unbind(), n))
+            Ok((text_result(py, &out, mapped)?.into_any().unbind(), n))
         }
         (Hay::Bytes(b), Inner::Bytes(engine)) => {
             let names = reg.names.clone();
@@ -1958,6 +2033,13 @@ pub struct FindIter {
     /// haystack from its start (text mode only).
     chars_seen: usize,
     bytes_seen: usize,
+    /// The transcoded UTF-8, kept for the iterator's lifetime when the
+    /// cold path had to materialise it (see `utf8_of`). Borrowed (ASCII
+    /// or warm) haystacks leave this empty and are re-borrowed per step.
+    utf8: Option<crate::utf8::Utf8Scratch>,
+    /// Whether the text view had a surrogate mapped to a stand-in (see
+    /// `SreScanner::mapped`); carried into a scanner built from here.
+    mapped: bool,
     names: Arc<Vec<Option<String>>>,
     bytes_mode: bool,
     done: bool,
@@ -1984,7 +2066,29 @@ impl FindIter {
         let re_ref = self.re.bind(py).get();
         match (&re_ref.inner, self.bytes_mode) {
             (Inner::Text(engine), false) => {
-                let s = self.string.bind(py).extract::<&str>()?;
+                let bound = self.string.bind(py);
+                // One extraction per step: it is the cheap borrow path
+                // (ASCII data or CPython's warm cache). Only when it
+                // fails -- a haystack with a lone surrogate -- do we
+                // transcode ourselves and keep the buffer for the
+                // iterator's lifetime.
+                let borrowed = if self.utf8.is_none() {
+                    bound.extract::<&str>().ok()
+                } else {
+                    None
+                };
+                if self.utf8.is_none() && borrowed.is_none() {
+                    if let crate::utf8::Utf8Buf::Owned(scratch) =
+                        crate::utf8::utf8_of(bound.cast::<PyString>()?, re_ref.stand_in)?
+                    {
+                        self.mapped = scratch.mapped();
+                        self.utf8 = Some(scratch);
+                    }
+                }
+                let s: &str = match &self.utf8 {
+                    Some(scratch) => scratch.as_str(),
+                    None => borrowed.expect("extracted or transcoded above"),
+                };
                 let hay = &s[..self.end_b];
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
@@ -2091,6 +2195,10 @@ pub struct SreScanner {
     end_b: usize,
     chars_seen: usize,
     bytes_seen: usize,
+    utf8: Option<crate::utf8::Utf8Scratch>,
+    /// Whether the text view had a surrogate mapped to a stand-in; set
+    /// on the first step from the transcoder.
+    mapped: bool,
     names: Arc<Vec<Option<String>>>,
     bytes_mode: bool,
     done: bool,
@@ -2108,7 +2216,29 @@ impl SreScanner {
         let re_ref = self.re.bind(py).get();
         match (&re_ref.inner, self.bytes_mode) {
             (Inner::Text(engine), false) => {
-                let s = self.string.bind(py).extract::<&str>()?;
+                let bound = self.string.bind(py);
+                // One extraction per step: it is the cheap borrow path
+                // (ASCII data or CPython's warm cache). Only when it
+                // fails -- a haystack with a lone surrogate -- do we
+                // transcode ourselves and keep the buffer for the
+                // iterator's lifetime.
+                let borrowed = if self.utf8.is_none() {
+                    bound.extract::<&str>().ok()
+                } else {
+                    None
+                };
+                if self.utf8.is_none() && borrowed.is_none() {
+                    if let crate::utf8::Utf8Buf::Owned(scratch) =
+                        crate::utf8::utf8_of(bound.cast::<PyString>()?, re_ref.stand_in)?
+                    {
+                        self.mapped = scratch.mapped();
+                        self.utf8 = Some(scratch);
+                    }
+                }
+                let s: &str = match &self.utf8 {
+                    Some(scratch) => scratch.as_str(),
+                    None => borrowed.expect("extracted or transcoded above"),
+                };
                 let hay = &s[..self.end_b];
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
@@ -2337,6 +2467,8 @@ impl Scanner {
             end_b: s.len(),
             chars_seen: 0,
             bytes_seen: 0,
+            utf8: None,
+            mapped: false,
             names: Arc::new(Vec::new()),
             bytes_mode: false,
             done: false,
@@ -2357,7 +2489,7 @@ impl Scanner {
             }
             i_char = j_char;
             i_byte = state.bytes_seen;
-            let token = PyString::new(py, &s[byte_start..state.bytes_seen]);
+            let token = text_result(py, &s[byte_start..state.bytes_seen], state.mapped)?;
             let Some(lastindex) = m.lastindex() else {
                 break;
             };
@@ -2377,7 +2509,7 @@ impl Scanner {
                 result.push(value.into_bound(py));
             }
         }
-        let rest = PyString::new(py, &s[i_byte..]);
+        let rest = text_result(py, &s[i_byte..], state.mapped)?;
         Ok((PyList::new(py, result)?, rest.into_any()))
     }
 }

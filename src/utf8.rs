@@ -285,6 +285,9 @@ pub(crate) fn layout(py: Python<'_>) -> Option<&'static Layout> {
 pub(crate) struct Utf8Scratch {
     buf: Vec<u8>,
     len: usize,
+    /// True when a lone surrogate was mapped to the stand-in block, so
+    /// text results must be rebuilt with the surrogates restored.
+    mapped: bool,
 }
 
 /// Retained buffers per thread, and the largest capacity kept (a
@@ -305,7 +308,16 @@ impl Utf8Scratch {
         let mut buf = pool().with(|p| p.borrow_mut().pop()).unwrap_or_default();
         buf.clear();
         buf.reserve(cap);
-        Utf8Scratch { buf, len: 0 }
+        Utf8Scratch {
+            buf,
+            len: 0,
+            mapped: false,
+        }
+    }
+
+    /// Whether the transcode replaced any lone surrogate.
+    pub(crate) fn mapped(&self) -> bool {
+        self.mapped
     }
 
     /// The UTF-8 written by the transcoder.
@@ -335,7 +347,7 @@ impl Drop for Utf8Scratch {
 /// (the string object, and with it the internal/cache buffer, cannot
 /// be freed).
 pub(crate) enum Utf8Buf<'py> {
-    Borrowed(&'py str),
+    Borrowed(&'py str, bool),
     /// Transcoded in Rust (cache was cold) or copied by CPython
     /// (layout undetected).
     Owned(Utf8Scratch),
@@ -351,7 +363,7 @@ impl Utf8Buf<'_> {
     #[cfg(test)]
     fn as_str(&self) -> &str {
         match self {
-            Utf8Buf::Borrowed(s) => s,
+            Utf8Buf::Borrowed(s, _) => s,
             Utf8Buf::Owned(s) => s.as_str(),
             Utf8Buf::NoMatch => unreachable!("tests only pass haystacks"),
         }
@@ -430,9 +442,8 @@ pub(crate) fn is_ascii_obj(obj: &Bound<'_, PyAny>) -> bool {
 /// in Rust. When the object layout could not be validated (or the
 /// string is a non-compact legacy object) this falls back to
 /// CPython's encoder via `to_cow`.
-#[cfg(test)]
-pub(crate) fn utf8_of<'py>(bound: &Bound<'py, PyString>) -> PyResult<Utf8Buf<'py>> {
-    utf8_of_filtered(bound, None)
+pub(crate) fn utf8_of<'py>(bound: &Bound<'py, PyString>, stand_in: bool) -> PyResult<Utf8Buf<'py>> {
+    utf8_of_filtered(bound, None, stand_in)
 }
 
 /// Like `utf8_of`, but on the cold-transcode path consult `prefilter`
@@ -443,10 +454,11 @@ pub(crate) fn utf8_of<'py>(bound: &Bound<'py, PyString>) -> PyResult<Utf8Buf<'py
 pub(crate) fn utf8_of_filtered<'py>(
     bound: &Bound<'py, PyString>,
     prefilter: Option<&Prefilter>,
+    stand_in: bool,
 ) -> PyResult<Utf8Buf<'py>> {
     if let Some(l) = layout(bound.py()) {
         match inspect(bound, l) {
-            Stored::Utf8(s) => return Ok(Utf8Buf::Borrowed(s)),
+            Stored::Utf8(s) => return Ok(Utf8Buf::Borrowed(s, false)),
             Stored::Transcode(kind, len, data) => {
                 if let Some(p) = prefilter {
                     // SAFETY: `data`/`len`/`kind` come from `inspect`
@@ -460,6 +472,7 @@ pub(crate) fn utf8_of_filtered<'py>(
                     kind,
                     len,
                     data,
+                    stand_in,
                 )?));
             }
             Stored::Unknown => {}
@@ -470,6 +483,88 @@ pub(crate) fn utf8_of_filtered<'py>(
     scratch.buf.extend_from_slice(cow.as_bytes());
     scratch.len = cow.len();
     Ok(Utf8Buf::Owned(scratch))
+}
+
+/// Base of the private-use block standing in for lone surrogates.
+///
+/// `re` treats a lone surrogate as an ordinary code point. Private-use
+/// characters are indistinguishable from surrogates across `re`'s whole
+/// class vocabulary -- not `\w`, `\d` or `\s`, matched by `.` and by
+/// negated classes, no case mapping -- and the block is 2048 wide,
+/// exactly the surrogate range, so the mapping is one code point per
+/// code point and every offset stays valid. Plane 15 PUA-A is used
+/// because ordinary text does not contain it; a string or pattern that
+/// does is refused (see `utf8_of_filtered`'s callers), which is the one
+/// remaining corner where a surrogate still raises.
+pub(crate) const SURROGATE_BASE: u32 = 0xF0000;
+
+/// Map a lone surrogate (U+D800..U+DFFF) into the stand-in block.
+#[inline]
+pub(crate) fn surrogate_stand_in(u: u32) -> u32 {
+    SURROGATE_BASE + (u - 0xD800)
+}
+
+/// Is `cp` inside the stand-in block?
+#[inline]
+pub(crate) fn in_stand_in_block(cp: u32) -> bool {
+    (SURROGATE_BASE..SURROGATE_BASE + 0x800).contains(&cp)
+}
+
+/// Does the pattern permit the surrogate stand-in mapping?
+///
+/// False when the pattern can tell a stand-in character from a
+/// surrogate or from a real character: it names a code point in the
+/// block (literally or through a `\x{...}` escape), or it asks for a
+/// property that separates private use (Co) from surrogates (Cs). Such
+/// a pattern keeps the old behaviour -- a lone surrogate in the
+/// haystack raises -- which is the only residual corner.
+pub(crate) fn pattern_allows_stand_in(pattern: &str) -> bool {
+    let mut chars = pattern.chars().peekable();
+    while let Some(c) = chars.next() {
+        if in_stand_in_block(c as u32) {
+            return false;
+        }
+        if c != '\\' {
+            continue;
+        }
+        match chars.next() {
+            Some('x') if chars.peek() == Some(&'{') => {
+                chars.next();
+                let mut value = 0u32;
+                let mut digits = 0;
+                for d in chars.by_ref() {
+                    if d == '}' {
+                        break;
+                    }
+                    let v = match d.to_digit(16) {
+                        Some(v) => v,
+                        None => return true,
+                    };
+                    value = value.saturating_mul(16).saturating_add(v);
+                    digits += 1;
+                }
+                if digits > 0 && in_stand_in_block(value) {
+                    return false;
+                }
+            }
+            Some('p') | Some('P') if chars.peek() == Some(&'{') => {
+                chars.next();
+                let mut name = String::new();
+                for d in chars.by_ref() {
+                    if d == '}' {
+                        break;
+                    }
+                    name.push(d);
+                }
+                let tail = name.rsplit('=').next().unwrap_or("").trim();
+                if tail == "Co" || tail == "Cs" {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+    true
 }
 
 fn surrogate_error() -> PyErr {
@@ -500,6 +595,7 @@ fn transcode_maybe_detached(
     kind: Kind,
     len: usize,
     data: *const u8,
+    stand_in: bool,
 ) -> PyResult<Utf8Scratch> {
     let source_bytes = len
         * match kind {
@@ -508,10 +604,10 @@ fn transcode_maybe_detached(
             Kind::Ucs4 => 4,
         };
     if source_bytes < TRANSCODE_DETACH_MIN_BYTES {
-        return unsafe { transcode(kind, len, data) };
+        return unsafe { transcode(kind, len, data, stand_in) };
     }
     let addr = data as usize;
-    py.detach(move || unsafe { transcode(kind, len, addr as *const u8) })
+    py.detach(move || unsafe { transcode(kind, len, addr as *const u8, stand_in) })
 }
 
 /// Transcode UCS-1/2/4 to UTF-8 in Rust (cache was cold), into a
@@ -521,24 +617,31 @@ fn transcode_maybe_detached(
 /// the bulk; the scalar loop is the portable fallback, the error
 /// path, and the reference the kernel is differentially tested
 /// against.
-unsafe fn transcode(kind: Kind, len: usize, data: *const u8) -> PyResult<Utf8Scratch> {
+unsafe fn transcode(
+    kind: Kind,
+    len: usize,
+    data: *const u8,
+    stand_in: bool,
+) -> PyResult<Utf8Scratch> {
     let cap = (match kind {
         Kind::Ucs1 => len * 2,
         Kind::Ucs2 => len * 3,
         Kind::Ucs4 => len * 4,
     }) + 32;
     let mut scratch = Utf8Scratch::take(cap);
+    let mut mapped = false;
     let n = unsafe {
         #[cfg(target_arch = "x86_64")]
         if simd::supported() {
-            simd::transcode(kind, len, data, &mut scratch.buf)?
+            simd::transcode(kind, len, data, stand_in, &mut mapped, &mut scratch.buf)?
         } else {
-            transcode_scalar(kind, len, data, &mut scratch.buf)?
+            transcode_scalar(kind, len, data, stand_in, &mut mapped, &mut scratch.buf)?
         }
         #[cfg(not(target_arch = "x86_64"))]
-        transcode_scalar(kind, len, data, &mut scratch.buf)?
+        transcode_scalar(kind, len, data, stand_in, &mut mapped, &mut scratch.buf)?
     };
     scratch.len = n;
+    scratch.mapped = mapped;
     Ok(scratch)
 }
 
@@ -550,6 +653,8 @@ unsafe fn transcode_scalar(
     kind: Kind,
     len: usize,
     data: *const u8,
+    stand_in: bool,
+    mapped: &mut bool,
     out: &mut Vec<u8>,
 ) -> PyResult<usize> {
     let start = out.len();
@@ -567,19 +672,46 @@ unsafe fn transcode_scalar(
                 // point) every surrogate unit is a lone surrogate
                 // *code point* and must raise, exactly like
                 // `PyUnicode_AsUTF8AndSize`.
+                // UCS-2 storage cannot contain a stand-in block code
+                // point (the block is astral), so mapping a lone
+                // surrogate can never alias a real character here.
                 let units = slice::from_raw_parts(data as *const u16, len);
                 let mut out = String::with_capacity(len * 3);
                 for &u in units {
-                    let c = char::from_u32(u as u32).ok_or_else(surrogate_error)?;
+                    let cp = u as u32;
+                    let c = match char::from_u32(cp) {
+                        Some(c) => c,
+                        None if stand_in && cp <= 0xDFFF => {
+                            *mapped = true;
+                            char::from_u32(surrogate_stand_in(cp)).expect("stand-in is valid")
+                        }
+                        None => return Err(surrogate_error()),
+                    };
                     out.push(c);
                 }
                 out
             }
             Kind::Ucs4 => {
+                // UCS-4 storage can hold a real character from the
+                // stand-in block. Mapping a surrogate next to one would
+                // make them indistinguishable, so the first such
+                // character disables substitution for the whole string
+                // (and a later surrogate raises, as before).
                 let units = slice::from_raw_parts(data as *const u32, len);
                 let mut out = String::with_capacity(len);
+                let mut substituting = stand_in;
                 for &u in units {
-                    let c = char::from_u32(u).ok_or_else(surrogate_error)?;
+                    if substituting && in_stand_in_block(u) {
+                        substituting = false;
+                    }
+                    let c = match char::from_u32(u) {
+                        Some(c) => c,
+                        None if substituting && (0xD800..0xE000).contains(&u) => {
+                            *mapped = true;
+                            char::from_u32(surrogate_stand_in(u)).expect("stand-in is valid")
+                        }
+                        None => return Err(surrogate_error()),
+                    };
                     out.push(c);
                 }
                 out
@@ -596,7 +728,7 @@ mod tests {
 
     fn utf8_of_str(py: Python<'_>, s: &str) -> String {
         let obj = PyString::new(py, s);
-        utf8_of(&obj).unwrap().as_str().to_string()
+        utf8_of(&obj, false).unwrap().as_str().to_string()
     }
 
     fn py_of(s: &str) -> String {
@@ -707,7 +839,7 @@ mod tests {
                 .collect();
             Python::attach(|py| {
                 let obj = py_str_from_cps(py, &cps);
-                let via_rust = utf8_of(&obj);
+                let via_rust = utf8_of(&obj, false);
                 let via_cpython = obj.to_str();
                 match (via_rust, via_cpython) {
                     (Ok(a), Ok(b)) => assert_eq!(a.as_str(), b, "cps {cps:?}"),
@@ -757,7 +889,7 @@ mod tests {
                     let mut cps = base.clone();
                     cps.insert(pos.min(cps.len()), bad);
                     let obj = py_str_from_cps(py, &cps);
-                    let e = match utf8_of(&obj) {
+                    let e = match utf8_of(&obj, false) {
                         Err(e) => e,
                         Ok(_) => panic!("surrogates must raise"),
                     };
@@ -770,7 +902,7 @@ mod tests {
             }
             // Adjacent lone surrogates (a UTF-16 pair by bytes).
             let obj = py_str_from_cps(py, &[0xD82A, 0xDEE0]);
-            assert!(utf8_of(&obj).is_err());
+            assert!(utf8_of(&obj, false).is_err());
             assert!(obj.to_str().is_err());
         });
     }
@@ -790,8 +922,8 @@ mod tests {
                 Stored::Utf8(got) => assert_eq!(got, s),
                 _ => panic!("cache must be warm now"),
             }
-            match utf8_of(&obj).unwrap() {
-                Utf8Buf::Borrowed(got) => assert_eq!(got, s),
+            match utf8_of(&obj, false).unwrap() {
+                Utf8Buf::Borrowed(got, _) => assert_eq!(got, s),
                 Utf8Buf::Owned(_) => panic!("warm non-ASCII must borrow"),
                 Utf8Buf::NoMatch => panic!("no prefilter was passed"),
             }
@@ -804,8 +936,8 @@ mod tests {
     fn ascii_borrows_internal_buffer() {
         Python::attach(|py| {
             let obj = PyString::new(py, "hello world 123");
-            match utf8_of(&obj).unwrap() {
-                Utf8Buf::Borrowed(s) => assert_eq!(s, "hello world 123"),
+            match utf8_of(&obj, false).unwrap() {
+                Utf8Buf::Borrowed(s, _) => assert_eq!(s, "hello world 123"),
                 Utf8Buf::Owned(_) => panic!("ASCII must borrow, not own"),
                 Utf8Buf::NoMatch => panic!("no prefilter was passed"),
             }
@@ -817,9 +949,9 @@ mod tests {
     fn cold_non_ascii_transcodes() {
         Python::attach(|py| {
             let obj = PyString::new(py, "مرحبا");
-            match utf8_of(&obj).unwrap() {
+            match utf8_of(&obj, false).unwrap() {
                 Utf8Buf::Owned(s) => assert_eq!(s.as_str(), "مرحبا"),
-                Utf8Buf::Borrowed(_) => panic!("cold non-ASCII must own"),
+                Utf8Buf::Borrowed(..) => panic!("cold non-ASCII must own"),
                 Utf8Buf::NoMatch => panic!("no prefilter was passed"),
             }
         });

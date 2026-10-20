@@ -296,6 +296,21 @@ the Rust extension and never leaks (the rure-python lesson).
 - Global inline flags must lead the pattern (`a(?i)b` raises
   `global flags not at the start of the expression`, like
   Python 3.11+); scoped groups (`(?i:...)`) are legal anywhere.
+- **Lone surrogates in a `str` haystack are matched, like `re`.** The
+  engine works on UTF-8, which cannot encode U+D800..U+DFFF, so each
+  lone surrogate is mapped to a private-use stand-in (U+F0000 plus the
+  surrogate offset) while matching and restored when a result string is
+  built. Private-use characters are indistinguishable from surrogates
+  across `re`'s whole class vocabulary (not `\w`, `\d`, `\s`, matched
+  by `.` and negated classes, no case mapping), and the mapping is one
+  code point per code point, so spans and `pos`/`endpos` are unchanged.
+  Three corners still raise `UnicodeEncodeError` rather than risk a
+  wrong answer: a haystack that already contains a character from that
+  stand-in block; a pattern that names it (literally or through a
+  `\x{...}` escape) or asks for `\p{Co}`/`\p{Cs}`; and a pattern that
+  itself contains a surrogate (pattern-side parity is a separate task).
+  Strings without a surrogate are untouched, so the fast paths and
+  their cost are unchanged.
 - Capture groups inside an unbounded loop report the engine's last
   successful iteration; `re` can re-enter a loop body for a final
   empty iteration (`^((x|y)*)*` group 1 is `""` in `re`, `"xyy"`
