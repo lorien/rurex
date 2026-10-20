@@ -199,9 +199,13 @@ parity, `search` still +51 ns because the module side boxes the
   final span vector. The known fix is the `CaptureLocations` reuse listed
   in `report-1792325206-findall-prefilter-speedup.md`, which now also
   covers `search`/`match`/`finditer`, not just grouped `findall`.
-- [open] Inline the usual 0-to-3 group spans inside `Match` (small array
+- [acted] Inline the usual 0-to-3 group spans inside `Match` (small array
   plus heap fallback) to remove the last result-path allocation; measure
   against the ~14% instruction gap to `re` before committing to it.
+  [acted — four inline slots plus a heap spill shipped; the measurement
+  found the span `Vec` itself immaterial and the group accessor's
+  Python-level slice the real cost (24% on `08-words/all-english`):
+  ADR-0016, report-1792536315-per-match-objects.]
 - [open] `FindIter::step`, `SreScanner::next` and `Scanner::scan` obtain
   the haystack with PyO3's `extract::<&str>`, i.e. CPython's encoder on
   a cold non-ASCII string, instead of the project's AVX2 transcoder.

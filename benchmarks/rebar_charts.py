@@ -512,12 +512,18 @@ three groups:
   {fmt_time(med[('curated/10-bounded-repeat/compile-capitals', 'rust/regex')])}.
 - **Match-heavy iteration** ({len(ascii_words)} point):
   rebar's counting models call `m.group(0)` per match, so a haystack with
-  tens of thousands of matches measures Python object construction. In
-  `08-words/all-english` (byte mode, no transcode, 56,601 matches) rurex
+  tens of thousands of matches measures the Python object per match plus
+  the accessor call. In
+  `08-words/all-english` (an ASCII haystack in text mode, so no transcode,
+  with 56,601 matches) rurex
   takes {fmt_time(med[('curated/08-words/all-english', 'python/rurex')])} against
   {fmt_time(med[('curated/08-words/all-english', 'python/re')])} for `re` and
-  {fmt_time(med[('curated/08-words/all-english', 'rust/regex')])} for the engine alone: about 63 ns per
-  match for rurex, 40 for `re`, 13 for the engine's own loop.
+  {fmt_time(med[('curated/08-words/all-english', 'rust/regex')])} for the engine alone: about
+  {med[('curated/08-words/all-english', 'python/rurex')] / 56601 * 1e9:.0f} ns per
+  match for rurex, {med[('curated/08-words/all-english', 'python/re')] / 56601 * 1e9:.0f} for `re`, and
+  {med[('curated/08-words/all-english', 'rust/regex')] / 56601 * 1e9:.0f} for the engine's own loop. The
+  object is a `Match` per match (ADR-0016); the rest is the per-call
+  boundary.
 - **Unicode word boundaries on non-ASCII text** ({len(unicode_words)} points,
   `all-russian` and `long-russian`): the engine itself is slower than `re` here — `rust/regex`
   takes {fmt_time(med[('curated/08-words/all-russian', 'rust/regex')])} against `re`'s

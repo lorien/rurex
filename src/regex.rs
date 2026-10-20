@@ -12,7 +12,7 @@ use pyo3::types::{PyAny, PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
 
 use crate::error;
 use crate::flags;
-use crate::match_::{Endpos, Match};
+use crate::match_::{Endpos, Match, Spans};
 use crate::prefilter::{self, Prefilter};
 use crate::retry::RetryEngine;
 use crate::template;
@@ -43,8 +43,10 @@ pub struct Regex {
     /// Number of capture groups (excluding the implicit group 0).
     groups: usize,
     /// Capture names by group index (index 0 unnamed), shared with
-    /// every `Match` this regex produces.
-    names: Arc<Vec<Option<String>>>,
+    /// every `Match` this regex produces. `None` when no group is
+    /// named: the table is then never built, and a `Match` never pays
+    /// a refcount bump for it.
+    names: Option<Arc<Vec<Option<String>>>>,
     /// Lazily compiled `\A(?:pattern)\z` variant used by `fullmatch`.
     /// `None` means the variant could not be built and the span-check
     /// fallback is used instead.
@@ -271,7 +273,7 @@ fn per_step<T>(f: impl FnOnce() -> T) -> T {
 /// unanchored leftmost-first search, `advance` the one-unit step
 /// (char boundary in text mode, `+1` in bytes mode).
 enum StepSource {
-    Retry(Vec<Option<(usize, usize)>>),
+    Retry(Spans),
     Search(usize),
 }
 
@@ -305,9 +307,9 @@ fn cpython_step<S, A>(
     search: S,
     retry: Option<&RetryEngine>,
     advance: A,
-) -> Option<Vec<Option<(usize, usize)>>>
+) -> Option<Spans>
 where
-    S: FnOnce(usize) -> Option<Vec<Option<(usize, usize)>>>,
+    S: FnOnce(usize) -> Option<Spans>,
     A: FnOnce(usize) -> usize,
 {
     match step_source(hay, scan, pending, retry, advance) {
@@ -335,7 +337,7 @@ where
 {
     match step_source(hay, scan, pending, retry, advance) {
         StepSource::Retry(spans) => {
-            out.extend(spans);
+            out.extend(spans.iter().copied());
             true
         }
         StepSource::Search(at) => search(at, out),
@@ -588,13 +590,19 @@ pub(crate) fn extract_hay<'py>(
     }
 }
 
-/// Capture names by group index (index 0 unnamed).
-fn names_of(re: &regex::Regex) -> Vec<Option<String>> {
-    re.capture_names().map(|n| n.map(str::to_string)).collect()
+/// Capture names by group index (index 0 unnamed), or `None` when no
+/// group is named.
+fn names_of<'a, I: Iterator<Item = Option<&'a str>>>(it: I) -> Option<Arc<Vec<Option<String>>>> {
+    let names: Vec<Option<String>> = it.map(|n| n.map(str::to_string)).collect();
+    names.iter().any(Option::is_some).then(|| Arc::new(names))
 }
 
-fn names_of_bytes(re: &regex::bytes::Regex) -> Vec<Option<String>> {
-    re.capture_names().map(|n| n.map(str::to_string)).collect()
+fn names_of_text(re: &regex::Regex) -> Option<Arc<Vec<Option<String>>>> {
+    names_of(re.capture_names())
+}
+
+fn names_of_bytes(re: &regex::bytes::Regex) -> Option<Arc<Vec<Option<String>>>> {
+    names_of(re.capture_names())
 }
 
 impl Regex {
@@ -748,10 +756,10 @@ impl Regex {
             Inner::Text(re) => re.captures_len() - 1,
             Inner::Bytes(re) => re.captures_len() - 1,
         };
-        let names = Arc::new(match &inner {
-            Inner::Text(re) => names_of(re),
+        let names = match &inner {
+            Inner::Text(re) => names_of_text(re),
             Inner::Bytes(re) => names_of_bytes(re),
-        });
+        };
         let stand_in = !bytes_mode && crate::utf8::pattern_allows_stand_in(text);
         Ok(Regex {
             inner,
@@ -894,7 +902,7 @@ impl Regex {
                         let spans =
                             maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, 0));
                         Ok(spans.map(|mut sp| {
-                            for span in &mut sp {
+                            for span in sp.iter_mut() {
                                 *span = span.map(|(a, b)| (a + pb, b + pb));
                             }
                             to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
@@ -1577,15 +1585,13 @@ impl Regex {
     }
 }
 
-fn captures_spans_text(
-    re: &regex::Regex,
-    hay: &str,
-    start: usize,
-) -> Option<Vec<Option<(usize, usize)>>> {
+fn captures_spans_text(re: &regex::Regex, hay: &str, start: usize) -> Option<Spans> {
     re.captures_at(hay, start).map(|caps| {
-        (0..caps.len())
-            .map(|i| caps.get(i).map(|m| (m.start(), m.end())))
-            .collect()
+        let mut spans = Spans::with_capacity(caps.len());
+        for i in 0..caps.len() {
+            spans.push(caps.get(i).map(|m| (m.start(), m.end())));
+        }
+        spans
     })
 }
 
@@ -1793,23 +1799,18 @@ fn findall_item_bytes<'py>(
     })
 }
 
-fn captures_spans_bytes(
-    re: &regex::bytes::Regex,
-    hay: &[u8],
-    start: usize,
-) -> Option<Vec<Option<(usize, usize)>>> {
+fn captures_spans_bytes(re: &regex::bytes::Regex, hay: &[u8], start: usize) -> Option<Spans> {
     re.captures_at(hay, start).map(|caps| {
-        (0..caps.len())
-            .map(|i| caps.get(i).map(|m| (m.start(), m.end())))
-            .collect()
+        let mut spans = Spans::with_capacity(caps.len());
+        for i in 0..caps.len() {
+            spans.push(caps.get(i).map(|m| (m.start(), m.end())));
+        }
+        spans
     })
 }
 
-fn offset_spans(spans: Vec<Option<(usize, usize)>>, off: usize) -> Vec<Option<(usize, usize)>> {
-    spans
-        .into_iter()
-        .map(|sp| sp.map(|(a, b)| (a + off, b + off)))
-        .collect()
+fn offset_spans(spans: Spans, off: usize) -> Spans {
+    spans.shifted(off)
 }
 
 /// Shared implementation of `sub` and `subn`.
@@ -1828,11 +1829,9 @@ pub(crate) fn substitute(
         Template(Vec<u8>, template::Template),
         Callable(Py<PyAny>),
     }
-    let names_vec: Vec<Option<String>> = match &reg.inner {
-        Inner::Text(re) => names_of(re),
-        Inner::Bytes(re) => names_of_bytes(re),
-    };
-    let names_map: HashMap<&str, usize> = template::names_map(&names_vec);
+    let empty: &[Option<String>] = &[];
+    let names_map: HashMap<&str, usize> =
+        template::names_map(reg.names.as_deref().map_or(empty, |v| v.as_slice()));
     let parsed = if repl.is_callable() {
         Repl::Callable(repl.clone().unbind())
     } else if bytes_mode {
@@ -2052,7 +2051,7 @@ pub struct FindIter {
     /// Whether the text view had a surrogate mapped to a stand-in (see
     /// `SreScanner::mapped`); carried into a scanner built from here.
     mapped: bool,
-    names: Arc<Vec<Option<String>>>,
+    names: Option<Arc<Vec<Option<String>>>>,
     bytes_mode: bool,
     done: bool,
 }
@@ -2211,7 +2210,7 @@ pub struct SreScanner {
     /// Whether the text view had a surrogate mapped to a stand-in; set
     /// on the first step from the transcoder.
     mapped: bool,
-    names: Arc<Vec<Option<String>>>,
+    names: Option<Arc<Vec<Option<String>>>>,
     bytes_mode: bool,
     done: bool,
 }
@@ -2481,7 +2480,7 @@ impl Scanner {
             bytes_seen: 0,
             utf8: None,
             mapped: false,
-            names: Arc::new(Vec::new()),
+            names: None,
             bytes_mode: false,
             done: false,
         };

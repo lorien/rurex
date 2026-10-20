@@ -76,6 +76,17 @@ stored program.
   previous match and a handoff cannot be paid back (see `per_step`).
 - Results are converted back to Python objects (`Match`, tuples, lists)
   after the scan, under the GIL.
+- A `Match` holds its group spans inline for up to four groups (group 0
+  plus three capture groups) and spills to a heap vector above that, so
+  the usual `finditer` step allocates nothing for spans. The shared
+  capture-name table exists only for patterns that actually name a
+  group, so an unnamed pattern's match pays no refcount bump either.
+  Group text is produced with `PyUnicode_Substring` (character indices)
+  or `PyBytes_FromStringAndSize` (byte indices) rather than a
+  Python-level slice, and is clamped to the haystack first, because a
+  bytes-like haystack can be resized between the match and a later
+  `group()` read. See
+  [adr/0016-per-match-object-cost.md](adr/0016-per-match-object-cost.md).
 - `findall` is a dedicated whole-scan path: every match's spans are
   collected in one flat buffer in a single Rust pass (no `Captures`
   object and no per-match `Vec`; patterns without groups use

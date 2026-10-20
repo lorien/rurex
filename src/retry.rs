@@ -15,6 +15,7 @@ use regex_automata::{
 };
 
 use crate::flags;
+use crate::match_::Spans;
 use crate::vendor::pikevm::{Config as VmConfig, PikeVM as RetryVm};
 
 pub(crate) struct RetryEngine {
@@ -58,12 +59,7 @@ impl RetryEngine {
     /// within `[p, eb)`, as byte spans of all groups (`None` for a
     /// group that did not participate). `None` when there is no such
     /// match (the caller then advances one unit past `p`).
-    pub(crate) fn retry(
-        &self,
-        hay: &[u8],
-        p: usize,
-        eb: usize,
-    ) -> Option<Vec<Option<(usize, usize)>>> {
+    pub(crate) fn retry(&self, hay: &[u8], p: usize, eb: usize) -> Option<Spans> {
         if p >= eb || eb > hay.len() {
             return None;
         }
@@ -71,7 +67,7 @@ impl RetryEngine {
         let mut cache = self.vm.create_cache();
         let mut slots: Vec<Option<NonMaxUsize>> = vec![None; (self.groups + 1) * 2];
         self.vm.search_slots(&mut cache, &input, &mut slots)?;
-        let mut spans = Vec::with_capacity(self.groups + 1);
+        let mut spans = Spans::with_capacity(self.groups + 1);
         for i in 0..=self.groups {
             let span = match (slots[2 * i], slots[2 * i + 1]) {
                 (Some(s), Some(e)) => Some((s.get(), e.get())),

@@ -69,6 +69,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   compiles first and validates only on rejection, and derives the
   first-byte prefilter on the first cold transcode, so an accepted
   pattern is parsed once.
+- [adr/0016-per-match-object-cost.md](adr/0016-per-match-object-cost.md) —
+  inline spans for up to four groups, group text built with the direct
+  `str`/`bytes` constructors, and a name table only for patterns that
+  name a group; the remaining per-match gap is PyO3 call machinery.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.
