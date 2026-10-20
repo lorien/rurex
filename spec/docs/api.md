@@ -254,9 +254,10 @@ position: `pos`/`lineno`/`colno` are `None` and the message carries the
 engine's text.
 
 The structured positions come from parsing the pattern with
-`regex-syntax` (the engine's own parser); messages and positions are
-rewritten to CPython's wording for every case its test suite asserts
-(`tests/test_error_parity.py` locks them differentially) before compilation; flag
+`regex-syntax` (the engine's own parser) when the engine rejects it;
+messages and positions are rewritten to CPython's wording for every
+case its test suite asserts (`tests/test_error_parity.py` locks them
+differentially). Flag
 problems are `ValueError` (bad arguments), pattern problems are
 `rurex.error` — the same split `re` makes.
 

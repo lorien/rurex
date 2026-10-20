@@ -67,7 +67,7 @@ use pyo3::exceptions::PyUnicodeEncodeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyString};
 
-use crate::prefilter::Prefilter;
+use crate::prefilter::Cold;
 use std::slice;
 use std::sync::OnceLock;
 
@@ -446,21 +446,23 @@ pub(crate) fn utf8_of<'py>(bound: &Bound<'py, PyString>, stand_in: bool) -> PyRe
     utf8_of_filtered(bound, None, stand_in)
 }
 
-/// Like `utf8_of`, but on the cold-transcode path consult `prefilter`
-/// first: when the pattern's required first byte is absent from the
-/// UCS storage, return `NoMatch` instead of transcoding. The prefilter
-/// is never applied to ASCII strings, warm CPython caches, or objects
-/// whose layout could not be validated.
+/// Like `utf8_of`, but on the cold-transcode path consult the
+/// pattern's first-byte prefilter first: when the pattern's required
+/// first byte is absent from the UCS storage, return `NoMatch` instead
+/// of transcoding. `cold` is the lazily derived prefilter slot, so a
+/// pattern is only parsed for it once a cold string actually needs the
+/// test (ADR-0015). The prefilter is never applied to ASCII strings,
+/// warm CPython caches, or objects whose layout could not be validated.
 pub(crate) fn utf8_of_filtered<'py>(
     bound: &Bound<'py, PyString>,
-    prefilter: Option<&Prefilter>,
+    cold: Option<&Cold<'_>>,
     stand_in: bool,
 ) -> PyResult<Utf8Buf<'py>> {
     if let Some(l) = layout(bound.py()) {
         match inspect(bound, l) {
             Stored::Utf8(s) => return Ok(Utf8Buf::Borrowed(s, false)),
             Stored::Transcode(kind, len, data) => {
-                if let Some(p) = prefilter {
+                if let Some(p) = cold.and_then(Cold::first) {
                     // SAFETY: `data`/`len`/`kind` come from `inspect`
                     // under the validated layout.
                     if !unsafe { p.may_match_ucs(kind, len, data) } {

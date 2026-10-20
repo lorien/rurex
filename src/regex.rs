@@ -54,17 +54,18 @@ pub struct Regex {
     /// match ever encountered. `None` = not yet built or failed to
     /// build (callers then fall back to advancing one unit).
     retry: OnceLock<Option<Arc<RetryEngine>>>,
-    /// First-byte prefilter consulted only on the cold-transcode path
-    /// (see `prefilter.rs`).
-    first: Option<Prefilter>,
-    /// Whether the pattern can match the empty string; `false` skips
-    /// building the zero-width retry engine entirely.
-    nullable: bool,
+    /// Lazily derived first-byte prefilter, consulted only on the
+    /// cold-transcode path (see `prefilter.rs` and `cold()`).
+    first: OnceLock<Option<Prefilter>>,
     /// Whether a lone surrogate in a `str` haystack may be mapped into
     /// the private-use stand-in block instead of raising. False when
     /// the pattern could tell the stand-in from a surrogate (see
     /// `utf8::pattern_allows_stand_in`); bytes patterns never use it.
     stand_in: bool,
+    /// The engine configuration the pattern was compiled with, kept for
+    /// the lazily built variants (`anchored`, the retry engine, the
+    /// prefilter) so they never re-run flag translation.
+    cfg: flags::Config,
 }
 
 /// Rewrite engine byte spans to Python character offsets in place.
@@ -371,10 +372,13 @@ pub(crate) enum Hay<'a> {
     Bytes(&'a [u8]),
 }
 
-/// Pre-parse a pattern with regex-syntax (the engine's own parser)
-/// under `cfg`, so syntax errors carry structured positions for full
-/// `re.error` attribute parity. `pattern` becomes the error's
-/// `pattern` attribute; `text` is the (UTF-8 validated) pattern text.
+/// Explain a rejected pattern: re-parse it with `regex-syntax` (the
+/// engine's own parser) under `cfg`, so syntax errors carry structured
+/// positions for full `re.error` attribute parity. Only the failure
+/// path calls this — the engine parses the pattern itself when it
+/// succeeds, so an accepted pattern is parsed once (ADR-0015).
+/// `pattern` becomes the error's `pattern` attribute; `text` is the
+/// (UTF-8 validated) pattern text.
 pub(crate) fn validate_pattern(
     py: Python<'_>,
     pattern: &Bound<'_, PyAny>,
@@ -503,26 +507,28 @@ impl<'py> HayKeep<'py> {
             .expect("without a prefilter a haystack always exists"))
     }
 
-    /// Like `hay`, but consult `prefilter` on the cold-transcode path.
-    /// `None` means the prefilter proved that no match can exist in
-    /// this haystack, so the caller returns its no-match answer without
+    /// Like `hay`, but consult the pattern's first-byte prefilter on the
+    /// cold-transcode path. `cold` is resolved lazily, so the pattern is
+    /// only parsed for it when a cold string actually reaches the test.
+    /// `None` means the prefilter proved that no match can exist in this
+    /// haystack, so the caller returns its no-match answer without
     /// transcoding or scanning.
     pub(crate) fn hay_with(
         &mut self,
-        prefilter: Option<&Prefilter>,
+        cold: Option<&prefilter::Cold<'_>>,
         stand_in: bool,
     ) -> PyResult<Option<Hay<'_>>> {
-        self.hay_impl(prefilter, stand_in)
+        self.hay_impl(cold, stand_in)
     }
 
     fn hay_impl(
         &mut self,
-        prefilter: Option<&Prefilter>,
+        cold: Option<&prefilter::Cold<'_>>,
         stand_in: bool,
     ) -> PyResult<Option<Hay<'_>>> {
         match self {
             HayKeep::Text(bound, owned) => {
-                match crate::utf8::utf8_of_filtered(bound, prefilter, stand_in)? {
+                match crate::utf8::utf8_of_filtered(bound, cold, stand_in)? {
                     crate::utf8::Utf8Buf::Borrowed(s, mapped) => Ok(Some(Hay::Text(s, mapped))),
                     crate::utf8::Utf8Buf::Owned(s) => {
                         let mapped = s.mapped();
@@ -685,61 +691,58 @@ impl Regex {
         let flags = flags | extra;
         let cfg = flags::translate(flags, bytes_mode).map_err(PyValueError::new_err)?;
 
-        // The engine and the validator see the adjusted source
-        // (`src`), not the user-visible pattern.
+        // The engine and the error-path validator see the adjusted
+        // source (`src`), not the user-visible pattern.
         let text: &str = match &src {
             Pattern::Text(s) => s,
             Pattern::Bytes(b) => std::str::from_utf8(b).expect("checked above"),
         };
 
-        validate_pattern(py, pattern, text, &cfg, bytes_mode)?;
-
-        // Build the engine program. Errors here are engine limits
-        // (e.g. compiled too big), which have no pattern position.
-        let inner = if bytes_mode {
-            let built = regex::bytes::RegexBuilder::new(text)
+        // Build the engine program first. It parses the pattern itself,
+        // so parsing beforehand (as the validator does) made every
+        // accepted pattern be parsed twice; instead the `regex-syntax`
+        // pass runs only for a pattern the engine rejected. That cannot
+        // widen what compiles: the validator and the engine share one
+        // `regex-syntax` version and one builder configuration, so a
+        // pattern the engine accepts was always accepted by the
+        // validator as well. A rejection is either a syntax error, which
+        // the validator turns into an `re`-shaped error with positions,
+        // or an engine limit (compiled program too large), which has no
+        // pattern position.
+        let built: Result<Inner, regex::Error> = if bytes_mode {
+            regex::bytes::RegexBuilder::new(text)
                 .case_insensitive(cfg.case_insensitive)
                 .multi_line(cfg.multi_line)
                 .dot_matches_new_line(cfg.dot_matches_new_line)
                 .ignore_whitespace(cfg.ignore_whitespace)
                 .unicode(cfg.unicode)
-                .build();
-            let re = match built {
-                Ok(re) => re,
-                Err(e) => {
-                    return Err(error::make_error(
-                        py,
-                        &e.to_string(),
-                        pattern,
-                        None,
-                        None,
-                        None,
-                    )?);
-                }
-            };
-            Inner::Bytes(Box::new(re))
+                .build()
+                .map(|re| Inner::Bytes(Box::new(re)))
         } else {
-            let built = regex::RegexBuilder::new(text)
+            regex::RegexBuilder::new(text)
                 .case_insensitive(cfg.case_insensitive)
                 .multi_line(cfg.multi_line)
                 .dot_matches_new_line(cfg.dot_matches_new_line)
                 .ignore_whitespace(cfg.ignore_whitespace)
                 .unicode(cfg.unicode)
-                .build();
-            let re = match built {
-                Ok(re) => re,
-                Err(e) => {
-                    return Err(error::make_error(
-                        py,
-                        &e.to_string(),
-                        pattern,
-                        None,
-                        None,
-                        None,
-                    )?);
-                }
-            };
-            Inner::Text(Box::new(re))
+                .build()
+                .map(|re| Inner::Text(Box::new(re)))
+        };
+        let inner = match built {
+            Ok(inner) => inner,
+            // Propagates the validator's positional error; returns
+            // `Ok` when the pattern is fine and the engine hit a limit.
+            Err(e) => {
+                validate_pattern(py, pattern, text, &cfg, bytes_mode)?;
+                return Err(error::make_error(
+                    py,
+                    &e.to_string(),
+                    pattern,
+                    None,
+                    None,
+                    None,
+                )?);
+            }
         };
         let groups = match &inner {
             Inner::Text(re) => re.captures_len() - 1,
@@ -749,7 +752,6 @@ impl Regex {
             Inner::Text(re) => names_of(re),
             Inner::Bytes(re) => names_of_bytes(re),
         });
-        let analysis = prefilter::analyze(text, &cfg, bytes_mode);
         let stand_in = !bytes_mode && crate::utf8::pattern_allows_stand_in(text);
         Ok(Regex {
             inner,
@@ -760,29 +762,39 @@ impl Regex {
             names,
             anchored: OnceLock::new(),
             retry: OnceLock::new(),
-            first: analysis.first,
-            nullable: analysis.nullable,
+            first: OnceLock::new(),
             stand_in,
+            cfg,
         })
     }
 
-    /// The lazily built must-advance engine (`retry.rs`), shared by
-    /// every iteration site via `cpython_step`.
-    fn retry_engine(&self) -> Option<&Arc<RetryEngine>> {
-        // A pattern with a positive minimum length can never produce an
-        // empty match, so the must-advance engine is dead weight.
-        if !self.nullable {
+    /// The lazy resolver for the first-byte prefilter, consulted only on
+    /// the cold-transcode path. `None` for bytes patterns: the engine's
+    /// own prefilter already scans those.
+    fn cold(&self) -> Option<prefilter::Cold<'_>> {
+        if matches!(self.inner, Inner::Bytes(_)) {
             return None;
         }
+        let text = match &self.src {
+            Pattern::Text(s) => s.as_str(),
+            Pattern::Bytes(b) => std::str::from_utf8(b).ok()?,
+        };
+        Some(prefilter::Cold::new(&self.first, text, &self.cfg))
+    }
+
+    /// The lazily built must-advance engine (`retry.rs`), shared by
+    /// every iteration site via `cpython_step`. Built on the first empty
+    /// match ever seen: a pattern that cannot match empty never produces
+    /// one, so it never pays for this engine.
+    fn retry_engine(&self) -> Option<&Arc<RetryEngine>> {
         self.retry
             .get_or_init(|| {
                 let bytes_mode = matches!(self.inner, Inner::Bytes(_));
-                let cfg = flags::translate(self.flags, bytes_mode).ok()?;
                 let text: &str = match &self.src {
                     Pattern::Text(s) => s,
                     Pattern::Bytes(b) => std::str::from_utf8(b).ok()?,
                 };
-                RetryEngine::build(text, &cfg, bytes_mode).map(Arc::new)
+                RetryEngine::build(text, &self.cfg, bytes_mode).map(Arc::new)
             })
             .as_ref()
     }
@@ -792,7 +804,7 @@ impl Regex {
         self.anchored
             .get_or_init(|| {
                 let bytes_mode = matches!(self.inner, Inner::Bytes(_));
-                let cfg = flags::translate(self.flags, bytes_mode).ok()?;
+                let cfg = &self.cfg;
                 let text: &str = match &self.src {
                     Pattern::Text(s) => s,
                     Pattern::Bytes(b) => std::str::from_utf8(b).ok()?,
@@ -838,7 +850,7 @@ impl Regex {
         // guarantees the match there is found first when it exists.
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
+        let Some(hay) = keep.hay_with(slf.cold().as_ref(), slf.stand_in)? else {
             return Ok(None);
         };
         let start = match hay {
@@ -868,7 +880,7 @@ impl Regex {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = this.clone_ref(py);
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
+        let Some(hay) = keep.hay_with(slf.cold().as_ref(), slf.stand_in)? else {
             return Ok(None);
         };
         match hay {
@@ -993,7 +1005,7 @@ impl Regex {
         };
         // `None` from the prefilter means no match can exist, which is
         // the same state as an invalid window: an exhausted iterator.
-        let window_ok = match keep.hay_with(slf.first.as_ref(), slf.stand_in)? {
+        let window_ok = match keep.hay_with(slf.cold().as_ref(), slf.stand_in)? {
             Some(Hay::Text(s, _)) => window_bytes(s, pos, endpos),
             Some(Hay::Bytes(b)) => window(pos, endpos, b.len()),
             None => None,
@@ -1125,7 +1137,7 @@ impl Regex {
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let re = this.clone_ref(py);
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
+        let Some(hay) = keep.hay_with(slf.cold().as_ref(), slf.stand_in)? else {
             return Ok(None);
         };
         match hay {
@@ -1187,7 +1199,7 @@ impl Regex {
         let slf = this.bind(py).get();
         let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
         let mut keep = extract_hay(bytes_mode, string)?;
-        let Some(hay) = keep.hay_with(slf.first.as_ref(), slf.stand_in)? else {
+        let Some(hay) = keep.hay_with(slf.cold().as_ref(), slf.stand_in)? else {
             return Ok(PyList::empty(py));
         };
         match (hay, &slf.inner) {
@@ -1277,7 +1289,7 @@ impl Regex {
     /// True if the pattern matches anywhere in `text`.
     fn is_match<'py>(&self, py: Python<'py>, string: &Bound<'py, PyAny>) -> PyResult<bool> {
         let mut keep = extract_hay(matches!(self.inner, Inner::Bytes(_)), string)?;
-        let Some(hay) = keep.hay_with(self.first.as_ref(), self.stand_in)? else {
+        let Some(hay) = keep.hay_with(self.cold().as_ref(), self.stand_in)? else {
             return Ok(false);
         };
         match hay {

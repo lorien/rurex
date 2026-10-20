@@ -442,7 +442,7 @@ of ×3 means "typically three times the best engine's time".
 | Host | `{meta['host']}`, {meta['cpu']} |
 | Isolation | `/tmp/core4.lock` lease (cpus {meta['lease_cpus']}), pinned to CPU {meta['pinned_cpu']}, governor `{meta['governor']}` |
 | rebar | {meta['rebar']} (curated set, `--max-time {meta['max_time']} --max-iters {meta['max_iters']}`) |
-| rurex | {meta['rurex']}, release wheel from PyPI |
+| rurex | {meta['rurex']}, {meta.get('rurex_build', 'release wheel from PyPI')} |
 | Opponents | stdlib `re`, `rust/regex` (the engine rurex embeds) |
 | Checks | every point verified with `rebar measure --test` before timing; no failed points in the data |
 
@@ -498,11 +498,18 @@ non-ASCII text, the cost of materialising UTF-8.
 `re` wins {len(re_wins)} of the {len(shared)} shared benchmarks, and they fall into
 three groups:
 
-- **Compile time** ({len(compile_wins)} points): rurex parses the pattern with
-  `regex-syntax` for `re`-compatible error positions and then builds the
-  automata, so `03-date/compile-unicode` costs
+- **Compile time** ({len(compile_wins)} points): `re`'s parser is
+  cheaper than building the automata for these patterns. rurex parses an
+  accepted pattern once (ADR-0015), so what remains is the engine's own
+  compile: `03-date/compile-unicode` costs
   {fmt_time(dict((n, v) for n, v, _, _ in compile_wins)[ 'curated/03-date/compile-unicode' ])} against `re`'s
-  {fmt_time(dict((n, re_t) for n, _, re_t, _ in compile_wins)['curated/03-date/compile-unicode'])}.
+  {fmt_time(dict((n, re_t) for n, _, re_t, _ in compile_wins)['curated/03-date/compile-unicode'])},
+  while `rust/regex` itself takes
+  {fmt_time(med[('curated/03-date/compile-unicode', 'rust/regex')])};
+  `10-bounded-repeat/compile-capitals` costs
+  {fmt_time(med[('curated/10-bounded-repeat/compile-capitals', 'python/rurex')])} against `re`'s
+  {fmt_time(med[('curated/10-bounded-repeat/compile-capitals', 'python/re')])}, engine
+  {fmt_time(med[('curated/10-bounded-repeat/compile-capitals', 'rust/regex')])}.
 - **Match-heavy iteration** ({len(ascii_words)} point):
   rebar's counting models call `m.group(0)` per match, so a haystack with
   tens of thousands of matches measures Python object construction. In

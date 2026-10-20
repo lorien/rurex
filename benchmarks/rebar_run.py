@@ -127,6 +127,15 @@ def main():
     ap.add_argument("--max-time", default="3s")
     ap.add_argument("--max-iters", type=int, default=10)
     ap.add_argument("--no-html", action="store_true")
+    ap.add_argument(
+        "--rurex-build",
+        default="release wheel from PyPI",
+        help=(
+            "How the measured rurex was installed; recorded in the page "
+            "provenance. Set it when the engine venv carries a local "
+            "wheel, e.g. 'local wheel built from commit <sha> (sha256 ...)'."
+        ),
+    )
     args = ap.parse_args()
 
     root = pathlib.Path(args.rebar)
@@ -165,6 +174,7 @@ def main():
         "max_time": args.max_time,
         "max_iters": args.max_iters,
         "rebar": rebar_version(rebar),
+        "rurex_build": args.rurex_build,
         "rurex": subprocess.run(
             [sys.executable, "-c", "import rurex; print(rurex.__version__)"],
             capture_output=True,

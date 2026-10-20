@@ -13,6 +13,11 @@
 //! the UCS storage. If none occurs, the operation's no-match answer is
 //! final and the transcode can be skipped.
 //!
+//! The analysis runs once per pattern, on the first cold transcode, not
+//! at compile time: a pattern that is only ever matched against ASCII
+//! or warm-cache strings never pays for the parse it needs (see
+//! ADR-0015).
+//!
 //! The check is deliberately conservative:
 //!
 //! - only finite, non-empty literal sequences are used (a huge class
@@ -33,23 +38,14 @@
 //! alignment and the zero bytes of the unit; this works on both
 //! endiannesses and avoids a scalar per-unit loop.
 
+use std::sync::OnceLock;
+
 use regex_syntax::ParserBuilder;
 use regex_syntax::hir::Hir;
 use regex_syntax::hir::literal::Extractor;
 
 use crate::flags;
 use crate::utf8::Kind;
-
-/// A pattern analysis performed once at compile time.
-pub(crate) struct Analysis {
-    /// The first-byte set, when the pattern has one that is safe to
-    /// check against UCS storage.
-    pub(crate) first: Option<Prefilter>,
-    /// Whether the pattern can match the empty string. Only used to
-    /// avoid building the zero-width retry engine for patterns that
-    /// cannot possibly need it.
-    pub(crate) nullable: bool,
-}
 
 /// A small set of ASCII bytes, at least one of which every match must
 /// start with.
@@ -133,12 +129,43 @@ fn contains_wide(bytes: &[u8], width: usize, needle: u8) -> bool {
     false
 }
 
+/// The lazy prefilter of one compiled pattern: derived on the first
+/// cold transcode, then reused. Holds only borrows of the owning
+/// `Regex` (its pattern source and its configuration), because the
+/// answer lives in the `OnceLock` the caller owns.
+pub(crate) struct Cold<'a> {
+    slot: &'a OnceLock<Option<Prefilter>>,
+    text: &'a str,
+    cfg: &'a flags::Config,
+}
+
+impl<'a> Cold<'a> {
+    /// A resolver over `slot`, which this pattern's [`first`] answer is
+    /// cached in.
+    pub(crate) fn new(
+        slot: &'a OnceLock<Option<Prefilter>>,
+        text: &'a str,
+        cfg: &'a flags::Config,
+    ) -> Self {
+        Cold { slot, text, cfg }
+    }
+
+    /// The first-byte set, computed on first use. `None` means the
+    /// pattern has no set that is safe to check, not that it cannot
+    /// match.
+    pub(crate) fn first(&self) -> Option<&'a Prefilter> {
+        self.slot
+            .get_or_init(|| first(self.text, self.cfg))
+            .as_ref()
+    }
+}
+
 /// Parse the adjusted pattern under the engine's own configuration and
-/// derive the first-byte set and nullability. Any parse failure yields
-/// the conservative answer (no prefilter, nullable) — validation has
-/// already reported the error to the user, so this is unreachable in
-/// practice.
-pub(crate) fn analyze(text: &str, cfg: &flags::Config, bytes_mode: bool) -> Analysis {
+/// derive the first-byte set. A parse failure yields the conservative
+/// answer (no prefilter). Only `str` patterns reach this: byte patterns
+/// are matched without a transcode, and the engine's own prefilter
+/// already does the work there.
+pub(crate) fn first(text: &str, cfg: &flags::Config) -> Option<Prefilter> {
     let mut parser = ParserBuilder::new();
     parser
         .case_insensitive(cfg.case_insensitive)
@@ -146,22 +173,9 @@ pub(crate) fn analyze(text: &str, cfg: &flags::Config, bytes_mode: bool) -> Anal
         .dot_matches_new_line(cfg.dot_matches_new_line)
         .ignore_whitespace(cfg.ignore_whitespace)
         .unicode(cfg.unicode)
-        .utf8(!bytes_mode);
-    let Ok(hir) = parser.build().parse(text) else {
-        return Analysis {
-            first: None,
-            nullable: true,
-        };
-    };
-    let nullable = hir.properties().minimum_len().is_none_or(|n| n == 0);
-    let first = if bytes_mode {
-        // Byte patterns are matched without a transcode; the engine's
-        // own prefilter already does this work.
-        None
-    } else {
-        from_hir(&hir)
-    };
-    Analysis { first, nullable }
+        .utf8(true);
+    let hir = parser.build().parse(text).ok()?;
+    from_hir(&hir)
 }
 
 fn from_hir(hir: &Hir) -> Option<Prefilter> {
@@ -199,8 +213,7 @@ mod tests {
     }
 
     fn first_bytes(pattern: &str) -> Option<Vec<u8>> {
-        let a = analyze(pattern, &cfg(), false);
-        a.first.map(|p| p.bytes().to_vec())
+        first(pattern, &cfg()).map(|p| p.bytes().to_vec())
     }
 
     #[test]
@@ -231,21 +244,21 @@ mod tests {
     }
 
     #[test]
-    fn nullable_is_reported() {
-        for (pat, want) in [
-            ("", true),
-            ("a*", true),
-            ("(?:a|)", true),
-            ("a+", false),
-            ("abc", false),
-            (r"\bfoo\b", false),
-        ] {
-            assert_eq!(analyze(pat, &cfg(), false).nullable, want, "{pat:?}");
-        }
+    fn cold_resolver_computes_once_and_caches() {
+        let slot = OnceLock::new();
+        let cfg = cfg();
+        let cold = Cold::new(&slot, "@[a-z]+", &cfg);
+        assert_eq!(cold.first().map(|p| p.bytes().to_vec()), Some(vec![b'@']));
+        assert!(slot.get().is_some(), "answer is cached in the slot");
+        // A pattern without a safe set caches the negative answer too.
+        let slot = OnceLock::new();
+        let cold = Cold::new(&slot, "[a-z]+", &cfg);
+        assert!(cold.first().is_none());
+        assert!(matches!(slot.get(), Some(None)), "negative answer cached");
     }
 
     fn pf(pattern: &str) -> Prefilter {
-        analyze(pattern, &cfg(), false).first.expect("prefilter")
+        first(pattern, &cfg()).expect("prefilter")
     }
 
     #[test]

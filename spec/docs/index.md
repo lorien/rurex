@@ -65,6 +65,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
 - [adr/0014-gil-released-transcode.md](adr/0014-gil-released-transcode.md) —
   releases the GIL around the cold transcode for source buffers of at
   least 32 KB, so long-document encodes overlap across threads.
+- [adr/0015-single-parse-compile.md](adr/0015-single-parse-compile.md) —
+  compiles first and validates only on rejection, and derives the
+  first-byte prefilter on the first cold transcode, so an accepted
+  pattern is parsed once.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.

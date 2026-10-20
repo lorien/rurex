@@ -11,7 +11,7 @@ module, `rurex`.
         |                     (regex::Regex for str, regex::bytes::Regex for bytes)
     src/regexset.rs  RegexSet  multi-pattern membership in one scan
     src/match_.rs  Match       span/group view over one match
-    src/prefilter.rs           compile-time first-byte prefilter for cold str
+    src/prefilter.rs           lazily derived first-byte prefilter for cold str
     src/flags.rs               flag bit constants -> RegexBuilder options
     src/error.rs               regex::Error -> rurex.error (Exception subclass)
         |
@@ -26,9 +26,25 @@ the `UNICODE`-forced-on normalization for `str` patterns), and builds
 the compiled regex once, storing it inside the `Regex` pyclass as a
 Rust struct field. Bytes patterns are built with the engine's Unicode
 mode off, so classes are ASCII-only single bytes exactly like `re`.
-Before compilation the pattern is parsed with `regex-syntax` (the
-engine's own parser, under the same flag configuration) so syntax
-errors carry structured positions; `src/error.rs` turns them into
+
+The pattern text first goes through the cheap textual passes that
+enforce `re`'s own rejections: leading global inline flags are folded
+into flag bits, scoped `(?a:` groups are rewritten to the engine's
+`(?-u:`, group names are checked against `re`'s rules, and stacked
+quantifiers are refused. Those run on every pattern, accepted or not,
+because they reject constructs the engine would accept. The engine then
+builds the program, which parses the pattern itself — that is the
+compile path's only parse. The `regex-syntax` pass (the engine's own
+parser, under the same flag configuration) runs only when the engine
+rejects the pattern, so syntax errors still carry structured positions;
+`src/error.rs` turns them into `rurex.error` instances with the full
+`re.error` attribute set (`msg`, `pattern`, `pos`, `lineno`, `colno`).
+A rejection that the validator accepts is an engine limit (compiled
+program too large) and maps to `rurex.error` with `None` positions.
+Parsing every accepted pattern twice is what made rurex 1.4–2.5× the
+engine's compile time; [adr/0015-single-parse-compile.md](adr/0015-single-parse-compile.md)
+records the ordering.
+
 Each thread also keeps a one-entry front for the module cache: the
 most recent (pattern bytes, flags, handle) is compared by slice, with
 no lock, no hash and no key allocation, and a generation counter bumped
@@ -37,10 +53,7 @@ Rust implementation as the `Regex` methods instead of dispatching
 through Python, so a module call costs a handful of instructions more
 than a compiled-pattern call rather than a method lookup.
 
-`rurex.error` instances with the full `re.error` attribute set
-(`msg`, `pattern`, `pos`, `lineno`, `colno`). A compile failure at
-the engine level (size limits) is mapped to `rurex.error` with `None`
-positions. `rurex.compile_set` does the same for `regex::RegexSet`,
+`rurex.compile_set` does the same for `regex::RegexSet`,
 storing one program that answers membership for all patterns in a
 single scan. Compilation cost is paid once; matching methods reuse the
 stored program.
@@ -68,9 +81,9 @@ stored program.
   object and no per-match `Vec`; patterns without groups use
   `find_at`), then only the returned values (strings, or one string
   per group) are built. No `Match` objects are constructed.
-- The zero-width must-advance retry engine is built lazily only for
-  patterns whose HIR can match empty; patterns with a positive minimum
-  length never pay for it.
+- The zero-width must-advance retry engine is built on the first empty
+  match, so a pattern that cannot match empty never produces one and
+  never pays for it.
 - Work proportional to the whole haystack must not run per call or
   per match: `Match.endpos` for `endpos=None` resolves lazily on
   first read (counting characters is O(n) in the text), capture
@@ -132,13 +145,16 @@ UTF-8, so a `str` haystack must be viewed as UTF-8, in three ways
    run during the encode; shorter sources stay GIL-held because the
    handoff would cost more than the encode (ADR-0014).
 
-The prefilter is derived once at compile time from `regex-syntax`'s
-prefix-literal extractor: when every possible match starts with one of
-at most three distinct ASCII bytes, that byte is searched in the raw
-UCS storage (with unit-alignment checks for UCS-2/UCS-4). Its absence
-means no match can exist, so the query returns its no-match answer
-without transcoding. The prefilter is only consulted on the cold path;
-see [adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md).
+The prefilter is derived from `regex-syntax`'s prefix-literal
+extractor on the first cold transcode, not at compile time, and cached
+on the pattern: a pattern that is only ever matched against ASCII or
+warm-cache strings never pays for the parse it would need (ADR-0015).
+When every possible match starts with one of at most three distinct
+ASCII bytes, that byte is searched in the raw UCS storage (with
+unit-alignment checks for UCS-2/UCS-4). Its absence means no match can
+exist, so the query returns its no-match answer without transcoding.
+The prefilter is only consulted on the cold path; see
+[adr/0013-cold-str-required-prefix-prefilter.md](adr/0013-cold-str-required-prefix-prefilter.md).
 
 The detach is safe because `utf8_of_filtered` holds the
 `Bound<PyString>` for the whole call and `str` is immutable: the UCS

@@ -1,7 +1,8 @@
 # Cold-str required-prefix prefilter
 
 Date: 2026-10-18
-Status: accepted
+Status: accepted (prefilter derivation timing revised by ADR-0015:
+computed on the first cold transcode, not at compile time)
 
 ## Context
 
@@ -21,8 +22,8 @@ conservative: a false "impossible" answer would silently drop matches.
 ## Decision
 
 1. **Use `regex-syntax`'s literal extractor, not a hand-written HIR
-   walk.** At compile time `src/prefilter.rs` parses the adjusted
-   pattern with the same configuration as the validator and runs
+   walk.** `src/prefilter.rs` parses the adjusted pattern with the same
+   configuration as the validator and runs
    `hir::literal::Extractor` in prefix mode. Its contract guarantees
    that every match starts with one of the returned literals. The
    optimization accepts a sequence only when it is finite, non-empty,
@@ -71,8 +72,9 @@ conservative: a false "impossible" answer would silently drop matches.
   has unit tests for UCS-1/2/4 alignment, endianness, multi-byte sets,
   and a differential check that a `false` answer implies the required
   byte is absent.
-- The prefilter is compile-time only: no new public API, no side
-  cache, no change to `Match` offsets or result values.
+- The prefilter is internal and cached on the pattern (ADR-0015): no
+  new public API, no side cache, no change to `Match` offsets or
+  result values.
 
 ## Alternatives rejected
 
