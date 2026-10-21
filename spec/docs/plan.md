@@ -3,59 +3,39 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Per-call cost on free-threaded Python
+## Python result objects on free-threaded Python
 
 Status: new
 Priority: 2
 
-The Telegram benchmark's free-threaded `bytes` row does not scale
-(0.18 s at one worker, 0.15-0.20 s at four, against `re`'s
-0.20 -> 0.09 s), and the row's own page blamed the shared `regex` cache
-pool. That is refuted: per-thread engine clones remove 5.3% of the
-instructions at four workers and change neither cycles nor wall time,
-while costing ~1.5% per call single threaded (ADR-0018 has the
-measurements; the change was implemented, measured and reverted).
+With per-thread engines in place (ADR-0019) the free-threaded
+per-call floor is the Python result objects, not the engine: on 200k
+Telegram posts, per-post wall cost of one worker at 1 versus 4 workers
+is 1.04x for `is_match` (99 vs 96 ns), 1.8x for `findall` (302 vs 166)
+and 2.8x for a `finditer` count (661 vs 243). A PyO3 method call that
+creates nothing scales perfectly (`frozen` pyclass, rurex's exact
+signature: 47 -> 40 ns), so the remaining loss is proportional to the
+number of Python objects a call creates.
 
-What the numbers do say, on 200k posts, per-post wall time of one
-worker at 1 versus 4 workers: `len(t)` 1.15x, `t.count(b"@")` on the
-same buffers 1.2x, `re.search` with the same pattern 1.9x,
-`rurex.is_match` 2.6-3.6x, `rurex.findall` 3.5x, `rurex` `finditer`
-count 4.2x. At four workers 51% of self time is CPython's shared
-reference-count paths (`_Py_IncRef`, `_Py_DecRefShared`, `Py_DECREF`)
-against 18% at one, while rurex's own frames are ~12% of the profile
-(`memchr` 6.2%, engine pool 5.8%). So the loss is per-Python-call cost
-that grows with the number of Python-visible operations per call, and
-a call that creates no objects at all (`is_match`) already pays it.
+Targets, in the order the measurements point:
 
-The task is therefore: find and remove binding-side per-call Python
-work, measured at four free-threaded workers with the guard active
-(worker efficiency and physical-core pinning, as `telegram.py` does),
-with single-thread cost as a hard constraint.
+- `finditer`/`Match`: two `Py` handles per match (`Match.re`,
+  `Match.string`) plus the pyclass itself. 2.8x at four workers.
+- grouped `findall`: one `Vec<Bound>` plus a list per call, and one
+  `bytes`/`str` per value.
+- `sub`/`split` with a callable: same per-match objects through a
+  Python callback.
 
-Order of investigation:
+Measurement recipe (this is what produced the numbers above, and the
+previous session's contradictory results came from getting it wrong):
+one case per *process*, worker threads created once, N barrier-started
+rounds inside them, `measurement.pick_physical_cpus` plus
+`pin_current` per worker, callables hoisted into locals, and the same
+loop shape for every engine compared. Recreating threads per round
+inflates every four-worker number two- to threefold.
 
-1. Instrument the trampoline itself: compare a `#[pyclass]` method call
-   against a plain C function and a C method of the same signature
-   (arguments, return value) at 1 and 4 workers, to split "PyO3
-   trampoline" from "our body". The pool and haystack-refcount levers
-   are already measured and dead.
-2. Then attack whatever the split names, in this order of suspicion:
-   argument extraction for `(string, pos = 0, endpos = None)`, the
-   `Match` handle pair per match (`Py<Regex>` + `Py<PyAny>`), and the
-   `Vec<Bound>` + `PyList::new` item path in grouped `findall`.
-3. If the split shows the cost is PyO3's fastcall-with-keywords
-   trampoline rather than the body, the fix is a plain positional
-   signature (no keyword defaults) or a hand-written `METH_FASTCALL`
-   entry, and it needs owner sign-off on the API surface it would
-   touch.
-
-Rejected up front: more engine-side isolation (per-thread pools or
-caches) — measured in ADR-0018 — and caching across calls (a per-thread
-last-haystack cache would change semantics for mutable buffers).
-
-References: ADR-0018, ADR-0017,
-`spec/report/2026/10/18/report-1792361198-contamination-guard.md`,
-`spec/report/2026/10/20/report-1792570216-capture-locations.md`
+References: ADR-0019, ADR-0018 (superseded),
+`spec/report/2026/10/21/report-1792573419-free-threaded-per-call.md`
 
 ## Wire the cold-str prefilter into `split`/`sub`/`subn`
 

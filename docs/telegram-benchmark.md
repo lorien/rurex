@@ -55,10 +55,10 @@ single-threaded.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.19 s | 0.19 s | 0.25 s | 0.12 s | ×1.3 | ×0.6 |
-| 2 | 0.19 s | 0.20 s | 0.27 s | 0.14 s | ×1.4 | ×0.7 |
-| 3 | 0.19 s | 0.19 s | 0.28 s | 0.15 s | ×1.5 | ×0.8 |
-| 4 | 0.18 s | 0.19 s | 0.28 s | 0.15 s | ×1.5 | ×0.8 |
+| 1 | 0.19 s | 0.19 s | 0.27 s | 0.13 s | ×1.5 | ×0.7 |
+| 2 | 0.19 s | 0.19 s | 0.28 s | 0.14 s | ×1.5 | ×0.7 |
+| 3 | 0.19 s | 0.20 s | 0.29 s | 0.15 s | ×1.6 | ×0.7 |
+| 4 | 0.19 s | 0.20 s | 0.29 s | 0.15 s | ×1.5 | ×0.8 |
 
 *(ratio < 1 = rurex faster)*
 
@@ -68,7 +68,7 @@ rurex's engine matches UTF-8 and must materialize it. The
 required-first-byte prefilter (ADR-0013) skips that for the 81% of
 posts with no `@` at all; the **19% that carry a mention pay one
 UCS→UTF-8 encode per call**, and that encode is the entire gap on this
-row (×1.3 single-threaded,
+row (×1.5 single-threaded,
 ×1.5 at four workers). Measured on a 470-char
 post: a cold `str` costs 630 ns, the same object with CPython's UTF-8
 cache already populated costs 126 ns, and the same content as `bytes`
@@ -85,21 +85,21 @@ span buffer instead of a `Captures` object and a `Vec` per match.
 The **bytes** variant feeds the same posts pre-encoded to UTF-8 —
 the corpus is already UTF-8 on disk, so a pipeline that stays in
 bytes never pays the transcode: rurex answers in
-**0.12 s, beating `re`'s
-0.19 s (×0.6)**
+**0.13 s, beating `re`'s
+0.19 s (×0.7)**
 single-threaded, and remains ahead at four workers
 (0.15 s vs
-0.19 s). That is the
+0.20 s). That is the
 RE2-binding-recommended shape (feed UTF-8 bytes), and rurex makes it
 a first-class mode.
 
 With threads, both rurex variants get slower under the GIL
-(str 0.25 → 0.28 s,
-bytes 0.12 → 0.15 s
+(str 0.27 → 0.29 s,
+bytes 0.13 → 0.15 s
 at four workers): the scans are sub-µs, so the GIL-held per-call result
 building dominates and the workers convoy on the lock. `re` bytes
 shows the same shape
-(0.19 → 0.19 s). An earlier
+(0.19 → 0.20 s). An earlier
 build degraded to 5.38 s before the 4 KB GIL-release threshold landed;
 releasing the GIL for every tiny scan was worse.
 
@@ -109,24 +109,27 @@ releasing the GIL for every tiny scan was worse.
 
 | Workers | `re` str | `re` bytes | rurex str | rurex bytes | rurex/re str | rurex/re bytes |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.19 s | 0.20 s | 0.29 s | 0.18 s | ×1.5 | ×0.9 |
-| 2 | 0.12 s | 0.13 s | 0.20 s | 0.20 s | ×1.7 | ×1.6 |
-| 3 | 0.11 s | 0.11 s | 0.20 s | 0.19 s | ×1.9 | ×1.8 |
-| 4 | 0.11 s | 0.09 s | 0.20 s | 0.20 s | ×1.9 | ×2.1 |
+| 1 | 0.19 s | 0.20 s | 0.32 s | 0.18 s | ×1.6 | ×0.9 |
+| 2 | 0.12 s | 0.13 s | 0.22 s | 0.18 s | ×1.8 | ×1.4 |
+| 3 | 0.11 s | 0.11 s | 0.21 s | 0.19 s | ×1.9 | ×1.8 |
+| 4 | 0.11 s | 0.10 s | 0.21 s | 0.20 s | ×2.0 | ×1.9 |
 
 *(ratio < 1 = rurex faster)*
 
 Without the GIL both variants scale: rurex str
-0.29 s → 0.20 s
+0.32 s → 0.21 s
 and bytes
 0.18 s → 0.20 s;
 `re` 0.19 s → 0.11 s str,
-0.20 s → 0.09 s bytes.
+0.20 s → 0.10 s bytes.
 `re` scales further on these short texts: at four workers it wins both
-forms (str ×1.9, bytes
-×2.1), while rurex bytes still wins
+forms (str ×2.0, bytes
+×1.9), while rurex bytes still wins
 single-threaded (×0.9). The four-worker rurex
-cost is per-call result building and allocator work, not the scan.
+cost is per-call result building, not the scan: with per-thread engine
+clones (ADR-0019) a scan-only `is_match` over the same posts inflates
+1.04× at four workers, while `findall` inflates 1.8× and a `finditer`
+count 2.8×, because every match builds a Python object.
 
 ## Reading the numbers
 
@@ -135,7 +138,7 @@ user scanning parsed text once pays — `re` wins at every thread count,
 because the prefilter removes most transcodes but not the per-call
 transcode and result-building floor. **bytes**: what a UTF-8-native
 pipeline pays — rurex **wins single-threaded**
-(×0.6), because its engine scans UTF-8 directly with
+(×0.7), because its engine scans UTF-8 directly with
 SIMD prefilters; with four free-threaded workers `re` catches up. The
 scan-bound leads on the main page (×7–13) do not transfer to
 short-text per-call extraction. Machine-specific; expect different

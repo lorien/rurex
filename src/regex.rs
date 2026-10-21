@@ -780,7 +780,8 @@ impl Regex {
             first: OnceLock::new(),
             stand_in,
             cfg,
-            id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
+            // Two ids per pattern: the engine, and its anchored variant.
+            id: NEXT_ID.fetch_add(2, Ordering::Relaxed),
         })
     }
 
@@ -908,7 +909,7 @@ impl Regex {
                 match slf.anchored() {
                     Some(Inner::Text(engine)) => {
                         let spans = maybe_detach(py, hay.len(), || {
-                            captures_spans_text(engine, slf.id, hay, 0)
+                            captures_spans_text(engine, slf.id + 1, hay, 0)
                         });
                         Ok(spans.map(|mut sp| {
                             for span in sp.iter_mut() {
@@ -959,7 +960,7 @@ impl Regex {
                 match slf.anchored() {
                     Some(Inner::Bytes(engine)) => {
                         let spans = maybe_detach(py, hay.len(), || {
-                            captures_spans_bytes(engine, slf.id, hay, 0)
+                            captures_spans_bytes(engine, slf.id + 1, hay, 0)
                         });
                         Ok(spans.map(|sp| {
                             let sp = offset_spans(sp, pb);
@@ -1321,14 +1322,20 @@ impl Regex {
                     Inner::Text(re) => re,
                     Inner::Bytes(_) => unreachable!(),
                 };
-                Ok(maybe_detach(py, s.len(), || re.is_match(s)))
+                let id = self.id;
+                Ok(maybe_detach(py, s.len(), || {
+                    with_text_engine(re, id, |engine, _| engine.is_match(s))
+                }))
             }
             Hay::Bytes(b) => {
                 let re = match &self.inner {
                     Inner::Bytes(re) => re,
                     Inner::Text(_) => unreachable!(),
                 };
-                Ok(maybe_detach(py, b.len(), || re.is_match(b)))
+                let id = self.id;
+                Ok(maybe_detach(py, b.len(), || {
+                    with_bytes_engine(re, id, |engine, _| engine.is_match(b))
+                }))
             }
         }
     }
@@ -1601,75 +1608,138 @@ impl Regex {
     }
 }
 
-/// Engine ids are never reused, so a thread's scratch slot for a freed
-/// pattern can never be mistaken for a live one.
+/// Engine ids are never reused, so a thread's cache slot for a freed
+/// pattern can never be mistaken for a live one. Two ids are reserved
+/// per pattern: the engine, and its lazily built anchored variant
+/// (`fullmatch`).
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
-/// How many patterns a thread keeps capture-location scratch for. More
-/// than one so alternating patterns do not evict each other every call,
-/// small enough that the scratch stays bounded.
-const LOC_SLOTS: usize = 4;
+/// How many patterns a thread keeps an engine and capture-location
+/// scratch for. More than one so alternating patterns do not evict each
+/// other every call, small enough that the storage stays bounded.
+const CACHE_SLOTS: usize = 4;
 
-/// Per-thread, per-pattern capture-location scratch.
+/// Per-thread, per-pattern engine handle.
 ///
-/// `Regex::captures_at` allocates a `Captures` and its location vector
-/// on every call; `captures_read_at` writes into a caller-provided
-/// `CaptureLocations` instead, so one set per pattern per thread makes
-/// `search`/`match`/`finditer`-step allocation-free. The engine's
-/// `Regex` is shared across threads, so the storage belongs to the
-/// thread, not to the pattern (ADR-0006, ADR-0017).
-struct Locs<T> {
-    slots: [Slot<T>; LOC_SLOTS],
+/// Two costs motivate it, both per call on the result path:
+///
+/// - `Regex::captures_at` allocates a `Captures` and its location
+///   vector; `captures_read_at` writes into a caller-provided
+///   `CaptureLocations`, so one set per pattern per thread makes the
+///   call allocation-free (ADR-0017).
+/// - A `regex::Regex` shared across threads serves every thread but its
+///   owner through its internal cache pool, and a mutex on the search
+///   path is what stops short-haystack scans from scaling: measured on
+///   200k Telegram posts, a shared engine costs 134 ns per `is_match`
+///   at four free-threaded workers against 89 ns for a per-thread clone
+///   (ADR-0019). `Clone` deliberately drops the `Arc` around the pool,
+///   so each clone keeps the shared immutable program and gets its own
+///   caches.
+///
+/// The scratch belongs to the thread rather than to the pattern because
+/// the pattern is shared. Entries are keyed by a never-reused pattern
+/// id, so a slot left behind by a dropped pattern is never hit again; it
+/// is simply overwritten when the next pattern misses.
+struct Cache<E, L> {
+    slots: [Slot<E, L>; CACHE_SLOTS],
     next: usize,
 }
 
-struct Slot<T> {
+struct Slot<E, L> {
     /// 0 = never used; pattern ids start at 1.
     id: u64,
-    locs: Option<T>,
+    engine: Option<E>,
+    locs: Option<L>,
 }
 
-impl<T> Locs<T> {
+impl<E, L> Cache<E, L> {
     fn new() -> Self {
-        Locs {
-            slots: std::array::from_fn(|_| Slot { id: 0, locs: None }),
+        Cache {
+            slots: std::array::from_fn(|_| Slot {
+                id: 0,
+                engine: None,
+                locs: None,
+            }),
             next: 0,
         }
     }
 
-    /// The scratch for pattern `id`, built by `make` on a miss. A miss
-    /// takes the next slot round-robin; ids are never reused, so the
-    /// slot of a dropped pattern is simply overwritten later.
-    fn get(&mut self, id: u64, make: impl FnOnce() -> T) -> &mut T {
-        if let Some(i) = self
+    /// This thread's engine and scratch for pattern `id`, built by
+    /// `make` on a miss. A miss takes the next slot round-robin.
+    #[inline]
+    fn get(&mut self, id: u64, make: impl FnOnce() -> (E, L)) -> (&E, &mut L) {
+        let i = match self
             .slots
             .iter()
-            .position(|s| s.id == id && s.locs.is_some())
+            .position(|s| s.id == id && s.engine.is_some())
         {
-            return self.slots[i].locs.as_mut().expect("checked above");
-        }
-        let i = self.next;
-        self.next = (self.next + 1) % LOC_SLOTS;
-        self.slots[i] = Slot {
-            id,
-            locs: Some(make()),
+            Some(i) => i,
+            None => {
+                let i = self.next;
+                self.next = (self.next + 1) % CACHE_SLOTS;
+                let (engine, locs) = make();
+                self.slots[i] = Slot {
+                    id,
+                    engine: Some(engine),
+                    locs: Some(locs),
+                };
+                i
+            }
         };
-        self.slots[i].locs.as_mut().expect("just set")
+        let slot = &mut self.slots[i];
+        (
+            slot.engine.as_ref().expect("set above"),
+            slot.locs.as_mut().expect("set above"),
+        )
     }
 }
 
 thread_local! {
-    static TEXT_LOCS: RefCell<Locs<regex::CaptureLocations>> = RefCell::new(Locs::new());
-    static BYTES_LOCS: RefCell<Locs<regex::bytes::CaptureLocations>> = RefCell::new(Locs::new());
+    static TEXT_CACHE: RefCell<Cache<regex::Regex, regex::CaptureLocations>> =
+        RefCell::new(Cache::new());
+    static BYTES_CACHE: RefCell<Cache<regex::bytes::Regex, regex::bytes::CaptureLocations>> =
+        RefCell::new(Cache::new());
+}
+
+/// Run `f` with this thread's clone of the text engine `re` and its
+/// capture-location scratch. `id` names the engine: a pattern id, or
+/// that id + 1 for the pattern's anchored `fullmatch` variant.
+///
+/// `f` runs while the thread's cache is borrowed and therefore must not
+/// call back into anything that would take it again; in practice it only
+/// drives the engine.
+#[inline]
+fn with_text_engine<R>(
+    re: &regex::Regex,
+    id: u64,
+    f: impl FnOnce(&regex::Regex, &mut regex::CaptureLocations) -> R,
+) -> R {
+    TEXT_CACHE.with(|cell| {
+        let mut cache = cell.borrow_mut();
+        let (engine, locs) = cache.get(id, || (re.clone(), re.capture_locations()));
+        f(engine, locs)
+    })
+}
+
+/// Byte-mode counterpart of `with_text_engine`.
+#[inline]
+fn with_bytes_engine<R>(
+    re: &regex::bytes::Regex,
+    id: u64,
+    f: impl FnOnce(&regex::bytes::Regex, &mut regex::bytes::CaptureLocations) -> R,
+) -> R {
+    BYTES_CACHE.with(|cell| {
+        let mut cache = cell.borrow_mut();
+        let (engine, locs) = cache.get(id, || (re.clone(), re.capture_locations()));
+        f(engine, locs)
+    })
 }
 
 /// Group spans of the leftmost-first match at or after `start`, copied
 /// out of the thread's scratch for pattern `id`.
 fn captures_spans_text(re: &regex::Regex, id: u64, hay: &str, start: usize) -> Option<Spans> {
-    TEXT_LOCS.with(|cell| {
-        let mut scratch = cell.borrow_mut();
-        let locs = scratch.get(id, || re.capture_locations());
-        re.captures_read_at(locs, hay, start)?;
+    with_text_engine(re, id, |engine, locs| {
+        engine.captures_read_at(locs, hay, start)?;
         Some(text_spans_of(locs))
     })
 }
@@ -1699,9 +1769,7 @@ fn scan_all_flat_text(
 ) -> Vec<Option<(usize, usize)>> {
     let hay = &s[..eb];
     let mut out = Vec::new();
-    TEXT_LOCS.with(|cell| {
-        let mut scratch = cell.borrow_mut();
-        let locs = scratch.get(id, || re.capture_locations());
+    with_text_engine(re, id, |re, locs| {
         let mut scan = pb;
         let mut pending: Option<usize> = None;
         while scan <= eb {
@@ -1755,9 +1823,7 @@ fn scan_all_flat_bytes(
 ) -> Vec<Option<(usize, usize)>> {
     let hay = &b[..eb];
     let mut out = Vec::new();
-    BYTES_LOCS.with(|cell| {
-        let mut scratch = cell.borrow_mut();
-        let locs = scratch.get(id, || re.capture_locations());
+    with_bytes_engine(re, id, |re, locs| {
         let mut scan = pb;
         let mut pending: Option<usize> = None;
         while scan <= eb {
@@ -1903,10 +1969,8 @@ fn captures_spans_bytes(
     hay: &[u8],
     start: usize,
 ) -> Option<Spans> {
-    BYTES_LOCS.with(|cell| {
-        let mut scratch = cell.borrow_mut();
-        let locs = scratch.get(id, || re.capture_locations());
-        re.captures_read_at(locs, hay, start)?;
+    with_bytes_engine(re, id, |engine, locs| {
+        engine.captures_read_at(locs, hay, start)?;
         let mut spans = Spans::with_capacity(locs.len());
         for i in 0..locs.len() {
             spans.push(locs.get(i));

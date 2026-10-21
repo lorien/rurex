@@ -1,7 +1,9 @@
 # Free-threaded per-call cost: the engine pool is not the bottleneck
 
 Date: 2026-10-21
-Status: accepted
+Status: accepted (superseded 2026-10-21 by ADR-0019: the probe behind this
+record's refutation recreated worker threads per round and per case, so
+every four-worker number in it is invalid; the pool hypothesis holds)
 
 ## Context
 

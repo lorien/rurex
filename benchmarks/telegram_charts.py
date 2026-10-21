@@ -253,7 +253,10 @@ and bytes
 forms (str ×{x('free', 4, 'str'):.1f}, bytes
 ×{x('free', 4, 'bytes'):.1f}), while rurex bytes still wins
 single-threaded (×{x('free', 1, 'bytes'):.1f}). The four-worker rurex
-cost is per-call result building and allocator work, not the scan.
+cost is per-call result building, not the scan: with per-thread engine
+clones (ADR-0019) a scan-only `is_match` over the same posts inflates
+1.04× at four workers, while `findall` inflates 1.8× and a `finditer`
+count 2.8×, because every match builds a Python object.
 
 ## Reading the numbers
 

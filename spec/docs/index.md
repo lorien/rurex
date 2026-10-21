@@ -81,6 +81,11 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   per-thread engine clones were measured and reverted: the shared engine
   pool is not what stops the free-threaded rows from scaling, per-call
   Python reference traffic is.
+- [adr/0019-per-thread-engines.md](adr/0019-per-thread-engines.md) —
+  supersedes ADR-0018: a per-thread engine clone (own cache pool, shared
+  program) is what makes short-haystack scans scale on free-threaded
+  Python; ADR-0018's refutation rested on a probe that recreated threads
+  per round.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.
