@@ -17,6 +17,7 @@ this file only renders them.
 import base64
 import json
 import pathlib
+from datetime import date
 import sys
 
 import matplotlib
@@ -139,6 +140,7 @@ def render_md():
     def x(interp, threads, inp="str"):
         return w(interp, threads, "rurex", inp) / w(interp, threads, "re", inp)
 
+    run_date = date.today().isoformat()
     md = f"""# Telegram @mention extraction: rurex vs `re`
 
 Real-world task, measured exactly as performed: **one** pass of
@@ -285,7 +287,7 @@ python benchmarks/telegram_charts.py   # regenerates the charts, this page
 ---
 
 *Raw results: [`benchmarks/telegram_results.json`](../benchmarks/telegram_results.json).
-Numbers on this page were measured on 2026-10-19 with rurex 0.2.0;
+Numbers on this page were measured on {run_date} with rurex 0.2.0;
 see the raw results file for the exact environment.*
 """
     out = DOCS / "telegram-benchmark.md"

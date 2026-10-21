@@ -59,6 +59,13 @@ when `.venv-t` exists, because those benchmarks measure both the GIL
 and free-threaded interpreters. All benchmark targets depend on
 `build-release`.
 
+`make bench` ends with `benchmarks/bench_tables.py`, which rewrites the
+nine result tables in `docs/benchmarks.md` from `results.json` (the
+prose around them is hand-written). Its `--check` mode exits non-zero
+when the page is stale, so a run that forgot the step is visible; the
+tables used to be maintained by copy-paste, which is how some of them
+came to show another test's numbers.
+
 **Run published benchmarks on the benchmark host, not on the laptop.**
 The machine is part of the measurement: published numbers come from
 `web@regexus:/web/benchmark/rurex` (13th Gen Intel Core i5-13500,

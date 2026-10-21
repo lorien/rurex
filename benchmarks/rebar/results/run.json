@@ -13,7 +13,7 @@
   "max_time": "3s",
   "max_iters": 10,
   "rebar": "0.1.0",
-  "rurex_build": "local wheel built from the work tree (commit 5425fab + capture-location reuse), sha256 27e2ffee",
+  "rurex_build": "local wheel built from commit a90c3a5 (per-thread engines, Pattern.count), sha256 a47104da",
   "rurex": "0.2.0",
   "engines": [
     "python/re",
@@ -23,11 +23,11 @@
   ],
   "files": {
     "curated.csv": {
-      "sha256": "f9e20536f5ac3a87ec2b262d995c43128a6b612ec30ae3a70b8839f813a77ddb",
+      "sha256": "68af6751308b007bde3ffa8c7574dbf7ee83acac0f0492fcd2773471f03ee94d",
       "lines": 141
     },
     "dict.csv": {
-      "sha256": "a73860be0418824010a61c858c83c0c53b8626a822f131180cf26778ef094e2c",
+      "sha256": "9437e4bed75e1bb619828552a3336cb5acfb684a66d4490412e520b205413b1c",
       "lines": 5
     }
   }

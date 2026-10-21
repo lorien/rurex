@@ -20,14 +20,14 @@ of ×3 means "typically three times the best engine's time".
 | Host | `regexus`, 13th Gen Intel(R) Core(TM) i5-13500 |
 | Isolation | `/tmp/core4.lock` lease (cpus [0, 2, 4, 6]), pinned to CPU 0, governor `performance` |
 | rebar | 0.1.0 (curated set, `--max-time 3s --max-iters 10`) |
-| rurex | 0.2.0, local wheel built from the work tree (commit 5425fab + capture-location reuse), sha256 27e2ffee |
+| rurex | 0.2.0, local wheel built from commit a90c3a5 (per-thread engines, Pattern.count), sha256 a47104da |
 | Opponents | stdlib `re`, `rust/regex` (the engine rurex embeds) |
 | Checks | every point verified with `rebar measure --test` before timing; no failed points in the data |
 
 | Raw results | sha256 |
 |---|---|
-| `curated.csv` | f9e20536f5ac3a87… |
-| `dict.csv` | a73860be04188240… |
+| `curated.csv` | 68af6751308b007b… |
+| `dict.csv` | 9437e4bed75e1bb6… |
 
 ## The ranking
 
@@ -36,8 +36,8 @@ of ×3 means "typically three times the best engine's time".
 | engine | score | benchmarks |
 |---|---:|---:|
 | `rust/regex` | ×1.08 | 44 |
-| `python/rurex` | ×2.59 | 44 |
-| `python/re` | ×9.75 | 44 |
+| `python/rurex` | ×2.58 | 44 |
+| `python/re` | ×9.81 | 44 |
 
 rurex sits between the engine it embeds and the module it replaces: about
 **3.8× faster than `re`** on average, and
@@ -52,19 +52,19 @@ non-ASCII text, the cost of materialising UTF-8.
 
 | group | rurex | `re` |
 |---|---:|---:|
-| `01-literal` | ×2.73 | ×10.29 |
-| `02-literal-alternate` | ×1.57 | ×21.80 |
-| `03-date` | ×4.68 | ×13.18 |
-| `04-ruff-noqa` | ×4.98 | ×9.11 |
-| `05-lexer-veryl` | ×2.26 | ×3.78 |
-| `06-cloud-flare-redos` | ×9.62 | ×821.65 |
-| `07-unicode-character-data` | ×2.79 | ×4.93 |
-| `08-words` | ×1.54 | ×1.39 |
-| `09-aws-keys` | ×3.69 | ×5.11 |
-| `10-bounded-repeat` | ×1.16 | ×2.21 |
-| `11-unstructured-to-json` | ×1.32 | ×1.83 |
-| `12-dictionary` | ×1.00 | ×108.63 |
-| `14-quadratic` | ×1.63 | ×4.46 |
+| `01-literal` | ×2.74 | ×10.24 |
+| `02-literal-alternate` | ×1.58 | ×22.35 |
+| `03-date` | ×4.77 | ×13.37 |
+| `04-ruff-noqa` | ×5.02 | ×9.29 |
+| `05-lexer-veryl` | ×2.28 | ×3.86 |
+| `06-cloud-flare-redos` | ×9.72 | ×815.09 |
+| `07-unicode-character-data` | ×2.72 | ×4.94 |
+| `08-words` | ×1.55 | ×1.40 |
+| `09-aws-keys` | ×3.53 | ×5.10 |
+| `10-bounded-repeat` | ×1.14 | ×2.22 |
+| `11-unstructured-to-json` | ×1.28 | ×1.80 |
+| `12-dictionary` | ×1.03 | ×108.70 |
+| `14-quadratic` | ×1.66 | ×4.52 |
 
 `re` wins 10 of the 44 shared benchmarks, and they fall into
 three groups:
@@ -73,34 +73,34 @@ three groups:
   cheaper than building the automata for these patterns. rurex parses an
   accepted pattern once (ADR-0015), so what remains is the engine's own
   compile: `03-date/compile-unicode` costs
-  5.67 ms against `re`'s
-  3.72 ms,
+  5.70 ms against `re`'s
+  3.71 ms,
   while `rust/regex` itself takes
-  5.73 ms;
+  5.70 ms;
   `10-bounded-repeat/compile-capitals` costs
-  72.64 µs against `re`'s
-  27.48 µs, engine
-  61.93 µs.
+  69.57 µs against `re`'s
+  28.48 µs, engine
+  61.74 µs.
 - **Match-heavy iteration** (1 point):
   rebar's counting models call `m.group(0)` per match, so a haystack with
   tens of thousands of matches measures the Python object per match plus
   the accessor call. In
   `08-words/all-english` (an ASCII haystack in text mode, so no transcode,
   with 56,601 matches) rurex
-  takes 2.54 ms against
+  takes 2.55 ms against
   2.25 ms for `re` and
-  712.14 µs for the engine alone: about
+  695.43 µs for the engine alone: about
   45 ns per
   match for rurex, 40 for `re`, and
-  13 for the engine's own loop. The
+  12 for the engine's own loop. The
   object is a `Match` per match (ADR-0016); the rest is the per-call
   boundary.
 - **Unicode word boundaries on non-ASCII text** (2 points,
   `all-russian` and `long-russian`): the engine itself is slower than `re` here — `rust/regex`
-  takes 6.31 ms against `re`'s
-  2.98 ms — because its fast DFA cannot handle a
+  takes 6.08 ms against `re`'s
+  2.95 ms — because its fast DFA cannot handle a
   Unicode-aware `\b` on non-ASCII bytes and falls back to a slower engine.
-  rurex adds its per-match objects on top (8.99 ms
+  rurex adds its per-match objects on top (8.90 ms
   total); its transcode of this 130 KB haystack is about 65 µs, under 1% of
   the call. Beating `re` there is not a binding task.
 - **Near parity scans** (4 points): within 15% of each other, with
@@ -112,16 +112,16 @@ benchmarks make that visible.
 
 | benchmark where `re` wins | rurex | `re` | `re` is |
 |---|---:|---:|---:|
-| `01-literal/sherlock-ru` | 227.18 µs | 225.38 µs | 1.01× faster |
-| `03-date/compile-unicode` | 5.67 ms | 3.72 ms | 1.52× faster |
-| `05-lexer-veryl/single` | 83.82 ms | 80.50 ms | 1.04× faster |
-| `08-words/all-english` | 2.54 ms | 2.25 ms | 1.13× faster |
-| `08-words/all-russian` | 8.99 ms | 2.98 ms | 3.02× faster |
-| `08-words/long-russian` | 3.52 ms | 1.26 ms | 2.79× faster |
-| `09-aws-keys/quick` | 168.21 ms | 151.19 ms | 1.11× faster |
-| `10-bounded-repeat/compile-capitals` | 72.64 µs | 27.48 µs | 2.64× faster |
-| `10-bounded-repeat/compile-context` | 59.51 µs | 46.72 µs | 1.27× faster |
-| `11-unstructured-to-json/extract` | 296.90 µs | 195.16 µs | 1.52× faster |
+| `01-literal/sherlock-ru` | 227.69 µs | 225.47 µs | 1.01× faster |
+| `03-date/compile-unicode` | 5.70 ms | 3.71 ms | 1.54× faster |
+| `05-lexer-veryl/single` | 83.67 ms | 82.76 ms | 1.01× faster |
+| `08-words/all-english` | 2.55 ms | 2.25 ms | 1.13× faster |
+| `08-words/all-russian` | 8.90 ms | 2.95 ms | 3.02× faster |
+| `08-words/long-russian` | 3.46 ms | 1.26 ms | 2.75× faster |
+| `09-aws-keys/quick` | 170.54 ms | 151.99 ms | 1.12× faster |
+| `10-bounded-repeat/compile-capitals` | 69.57 µs | 28.48 µs | 2.44× faster |
+| `10-bounded-repeat/compile-context` | 55.90 µs | 46.24 µs | 1.21× faster |
+| `11-unstructured-to-json/extract` | 295.99 µs | 194.16 µs | 1.52× faster |
 
 
 ## Every shared benchmark
@@ -130,58 +130,58 @@ benchmarks make that visible.
 
 | group | benchmark | rurex (str) | `re` | rust/regex | fastest |
 |---|---|---:|---:|---:|---|
-| `01-literal` | `sherlock-casei-en`| 137.72 µs| 2.74 ms| 85.75 µs| rust/regex |
-| `01-literal` | `sherlock-casei-ru`| 418.28 µs| 3.27 ms| 191.90 µs| rust/regex |
-| `01-literal` | `sherlock-en`| 55.88 µs| 255.69 µs| 25.17 µs| rust/regex |
-| `01-literal` | `sherlock-ru`| 227.18 µs| 225.38 µs| 45.61 µs| rust/regex |
-| `01-literal` | `sherlock-zh`| 68.30 µs| 73.11 µs| 17.31 µs| rust/regex |
-| `02-literal-alternate` | `sherlock-casei-en`| 380.77 µs| 17.02 ms| 309.59 µs| rust/regex |
-| `02-literal-alternate` | `sherlock-casei-ru`| 1.33 ms| 26.64 ms| 1.03 ms| rust/regex |
-| `02-literal-alternate` | `sherlock-en`| 122.63 µs| 1.54 ms| 81.09 µs| rust/regex |
-| `02-literal-alternate` | `sherlock-ru`| 463.48 µs| 3.61 ms| 247.14 µs| rust/regex |
-| `02-literal-alternate` | `sherlock-zh`| 126.94 µs| 752.25 µs| 60.24 µs| rust/regex |
-| `03-date` | `ascii`| 38.58 ms| 240.26 ms| 2.05 ms| rust/regex |
-| `03-date` | `compile-ascii`| 1.65 ms| 3.47 ms| 1.47 ms| rust/regex |
-| `03-date` | `compile-unicode`| 5.67 ms| 3.72 ms| 5.73 ms| stdlib re |
-| `03-date` | `unicode`| 45.54 ms| 333.06 ms| 1.98 ms| rust/regex |
-| `04-ruff-noqa` | `compile-real`| 66.69 µs| 68.96 µs| 65.78 µs| rust/regex |
-| `04-ruff-noqa` | `real`| 215.73 ms| 1.11 s| 19.34 ms| rust/regex |
-| `04-ruff-noqa` | `tweaked`| 218.89 ms| 251.58 ms| 20.01 ms| rust/regex |
-| `05-lexer-veryl` | `compile-single`| 295.02 µs| 859.31 µs| 279.53 µs| rust/regex |
-| `05-lexer-veryl` | `multi`| —| —| 2.26 ms| rust/regex |
-| `05-lexer-veryl` | `single`| 83.82 ms| 80.50 ms| 17.28 ms| rust/regex |
-| `06-cloud-flare-redos` | `original`| 2.64 µs| 5.12 µs| 192 ns| rust/regex |
-| `06-cloud-flare-redos` | `simplified-long`| 798 ns| 26.41 ms| 115 ns| rust/regex |
-| `06-cloud-flare-redos` | `simplified-short`| 485 ns| 4.71 µs| 52 ns| rust/regex |
-| `07-unicode-character-data` | `compile`| 34.23 µs| 98.95 µs| 29.10 µs| rust/regex |
-| `07-unicode-character-data` | `parse-line`| 35.83 ms| 38.54 ms| 5.40 ms| rust/regex |
-| `08-words` | `all-english`| 2.54 ms| 2.25 ms| 712.14 µs| rust/regex |
-| `08-words` | `all-russian`| 8.99 ms| 2.98 ms| 6.31 ms| stdlib re |
-| `08-words` | `long-english`| 107.92 µs| 672.97 µs| 98.88 µs| rust/regex |
-| `08-words` | `long-russian`| 3.52 ms| 1.26 ms| 3.45 ms| stdlib re |
-| `09-aws-keys` | `compile-full`| 106.79 µs| 170.08 µs| 92.47 µs| rust/regex |
-| `09-aws-keys` | `compile-quick`| 20.64 µs| 39.23 µs| 15.80 µs| rust/regex |
-| `09-aws-keys` | `full`| 217.80 ms| 294.43 ms| 17.60 ms| rust/regex |
-| `09-aws-keys` | `quick`| 168.21 ms| 151.19 ms| 16.92 ms| rust/regex |
-| `10-bounded-repeat` | `capitals`| 9.32 ms| 105.88 ms| 9.29 ms| rust/regex |
-| `10-bounded-repeat` | `compile-capitals`| 72.64 µs| 27.48 µs| 61.93 µs| stdlib re |
-| `10-bounded-repeat` | `compile-context`| 59.51 µs| 46.72 µs| 59.89 µs| stdlib re |
-| `10-bounded-repeat` | `context`| 77.80 ms| 105.89 ms| 75.00 ms| rust/regex |
-| `10-bounded-repeat` | `letters-en`| 387.04 µs| 2.10 ms| 223.43 µs| rust/regex |
-| `10-bounded-repeat` | `letters-ru`| —| —| 406.22 µs| rust/regex |
-| `11-unstructured-to-json` | `compile`| 25.42 µs| 74.19 µs| 20.20 µs| rust/regex |
-| `11-unstructured-to-json` | `extract`| 296.90 µs| 195.16 µs| 215.03 µs| stdlib re |
-| `12-dictionary` | `compile-multi`| —| —| 14.81 ms| rust/regex |
-| `12-dictionary` | `compile-single`| 8.52 ms| 24.62 ms| 8.63 ms| rurex (str) |
-| `12-dictionary` | `multi`| —| —| 358.53 µs| rust/regex |
-| `12-dictionary` | `single`| 90.23 µs| 369.82 ms| 89.41 µs| rust/regex |
+| `01-literal` | `sherlock-casei-en`| 140.88 µs| 2.74 ms| 85.71 µs| rust/regex |
+| `01-literal` | `sherlock-casei-ru`| 418.26 µs| 3.25 ms| 190.15 µs| rust/regex |
+| `01-literal` | `sherlock-en`| 57.10 µs| 256.50 µs| 25.19 µs| rust/regex |
+| `01-literal` | `sherlock-ru`| 227.69 µs| 225.47 µs| 45.38 µs| rust/regex |
+| `01-literal` | `sherlock-zh`| 68.02 µs| 73.22 µs| 18.01 µs| rust/regex |
+| `02-literal-alternate` | `sherlock-casei-en`| 380.91 µs| 17.34 ms| 309.60 µs| rust/regex |
+| `02-literal-alternate` | `sherlock-casei-ru`| 1.34 ms| 26.51 ms| 1.04 ms| rust/regex |
+| `02-literal-alternate` | `sherlock-en`| 120.72 µs| 1.54 ms| 75.73 µs| rust/regex |
+| `02-literal-alternate` | `sherlock-ru`| 469.79 µs| 3.61 ms| 250.85 µs| rust/regex |
+| `02-literal-alternate` | `sherlock-zh`| 127.37 µs| 805.50 µs| 60.29 µs| rust/regex |
+| `03-date` | `ascii`| 38.49 ms| 240.01 ms| 1.95 ms| rust/regex |
+| `03-date` | `compile-ascii`| 1.68 ms| 3.46 ms| 1.47 ms| rust/regex |
+| `03-date` | `compile-unicode`| 5.70 ms| 3.71 ms| 5.70 ms| stdlib re |
+| `03-date` | `unicode`| 45.50 ms| 335.25 ms| 1.98 ms| rust/regex |
+| `04-ruff-noqa` | `compile-real`| 66.77 µs| 70.66 µs| 63.00 µs| rust/regex |
+| `04-ruff-noqa` | `real`| 215.78 ms| 1.11 s| 19.41 ms| rust/regex |
+| `04-ruff-noqa` | `tweaked`| 218.87 ms| 254.65 ms| 20.36 ms| rust/regex |
+| `05-lexer-veryl` | `compile-single`| 297.55 µs| 862.63 µs| 275.34 µs| rust/regex |
+| `05-lexer-veryl` | `multi`| —| —| 2.12 ms| rust/regex |
+| `05-lexer-veryl` | `single`| 83.67 ms| 82.76 ms| 17.37 ms| rust/regex |
+| `06-cloud-flare-redos` | `original`| 2.65 µs| 4.97 µs| 193 ns| rust/regex |
+| `06-cloud-flare-redos` | `simplified-long`| 827 ns| 26.71 ms| 117 ns| rust/regex |
+| `06-cloud-flare-redos` | `simplified-short`| 492 ns| 4.79 µs| 52 ns| rust/regex |
+| `07-unicode-character-data` | `compile`| 32.20 µs| 99.31 µs| 28.99 µs| rust/regex |
+| `07-unicode-character-data` | `parse-line`| 35.87 ms| 38.32 ms| 5.37 ms| rust/regex |
+| `08-words` | `all-english`| 2.55 ms| 2.25 ms| 695.43 µs| rust/regex |
+| `08-words` | `all-russian`| 8.90 ms| 2.95 ms| 6.08 ms| stdlib re |
+| `08-words` | `long-english`| 107.92 µs| 673.95 µs| 100.96 µs| rust/regex |
+| `08-words` | `long-russian`| 3.46 ms| 1.26 ms| 3.47 ms| stdlib re |
+| `09-aws-keys` | `compile-full`| 100.64 µs| 170.27 µs| 93.71 µs| rust/regex |
+| `09-aws-keys` | `compile-quick`| 18.99 µs| 39.57 µs| 15.66 µs| rust/regex |
+| `09-aws-keys` | `full`| 211.36 ms| 293.46 ms| 17.65 ms| rust/regex |
+| `09-aws-keys` | `quick`| 170.54 ms| 151.99 ms| 17.15 ms| rust/regex |
+| `10-bounded-repeat` | `capitals`| 9.33 ms| 105.87 ms| 9.31 ms| rust/regex |
+| `10-bounded-repeat` | `compile-capitals`| 69.57 µs| 28.48 µs| 61.74 µs| stdlib re |
+| `10-bounded-repeat` | `compile-context`| 55.90 µs| 46.24 µs| 60.04 µs| stdlib re |
+| `10-bounded-repeat` | `context`| 78.90 ms| 105.92 ms| 75.18 ms| rust/regex |
+| `10-bounded-repeat` | `letters-en`| 388.08 µs| 2.09 ms| 221.64 µs| rust/regex |
+| `10-bounded-repeat` | `letters-ru`| —| —| 405.27 µs| rust/regex |
+| `11-unstructured-to-json` | `compile`| 24.39 µs| 73.84 µs| 20.34 µs| rust/regex |
+| `11-unstructured-to-json` | `extract`| 295.99 µs| 194.16 µs| 217.98 µs| stdlib re |
+| `12-dictionary` | `compile-multi`| —| —| 14.82 ms| rust/regex |
+| `12-dictionary` | `compile-single`| 8.79 ms| 24.52 ms| 8.60 ms| rust/regex |
+| `12-dictionary` | `multi`| —| —| 357.59 µs| rust/regex |
+| `12-dictionary` | `single`| 92.34 µs| 370.85 ms| 89.48 µs| rust/regex |
 | `13-noseyparker` | `compile-multi`| —| —| 2.72 ms| rust/regex |
-| `13-noseyparker` | `compile-single`| —| —| 2.39 ms| rust/regex |
-| `13-noseyparker` | `multi`| —| —| 328.88 ms| rust/regex |
-| `13-noseyparker` | `single`| —| —| 264.65 ms| rust/regex |
-| `14-quadratic` | `10x`| 701.12 µs| 2.17 ms| 622.07 µs| rust/regex |
-| `14-quadratic` | `1x`| 14.10 µs| 34.34 µs| 5.94 µs| rust/regex |
-| `14-quadratic` | `2x`| 40.36 µs| 108.75 µs| 24.80 µs| rust/regex |
+| `13-noseyparker` | `compile-single`| —| —| 2.27 ms| rust/regex |
+| `13-noseyparker` | `multi`| —| —| 329.20 ms| rust/regex |
+| `13-noseyparker` | `single`| —| —| 265.37 ms| rust/regex |
+| `14-quadratic` | `10x`| 701.26 µs| 2.16 ms| 621.85 µs| rust/regex |
+| `14-quadratic` | `1x`| 14.25 µs| 34.51 µs| 5.89 µs| rust/regex |
+| `14-quadratic` | `2x`| 40.75 µs| 110.13 µs| 24.23 µs| rust/regex |
 
 ## Text mode versus byte mode, identical input
 
@@ -197,7 +197,7 @@ Rust engine is the Python boundary.
 |---|---:|
 | `rust/regex` | 686 MB/s |
 | `python/rurex-bytes` | 679 MB/s |
-| `python/rurex` | 666 MB/s |
+| `python/rurex` | 663 MB/s |
 | `python/re` | 167 KB/s |
 
 The non-ASCII case is the interesting one, and rebar cannot measure it

@@ -11,6 +11,7 @@ only renders them.
 import base64
 import json
 import pathlib
+from datetime import date
 import re
 import sys
 
@@ -170,6 +171,7 @@ def render_md():
     def x(interp, threads, inp="str"):
         return w(interp, threads, "rurex", inp) / w(interp, threads, "re", inp)
 
+    run_date = date.today().isoformat()
     md = f"""# Frontend HTML href/src extraction: rurex vs `re`
 
 Real-world task: **one** pass of `.findall(document)` over real frontend
@@ -296,7 +298,7 @@ python benchmarks/frontend_html_charts.py     # charts, this page, and the HTML 
 ---
 
 *Raw results: [`benchmarks/frontend_html_results.json`](../benchmarks/frontend_html_results.json).
-Numbers on this page were measured on 2026-10-19 with rurex 0.2.0;
+Numbers on this page were measured on {run_date} with rurex 0.2.0;
 see the raw results file for the exact environment.*
 """
     out = DOCS / "homepage-benchmark.md"

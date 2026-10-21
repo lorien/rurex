@@ -60,6 +60,7 @@ check: fmt clippy rust-test test-all
 bench: build-release
 	@$(MAKE) build-free
 	$(PYTHON) benchmarks/run.py
+	$(PYTHON) benchmarks/bench_tables.py
 	$(PYTHON) benchmarks/make_charts.py
 
 bench-telegram: build-release build-free
