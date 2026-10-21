@@ -1735,9 +1735,40 @@ fn with_bytes_engine<R>(
     })
 }
 
+/// The leftmost-first match at or after `at`, bounded to `hay`.
+///
+/// The zero-width advance can hand over a start past the window end when
+/// the window ends in the middle of the text (the advance steps to the
+/// next character of the *whole* string), and both `find_at` and
+/// `captures_read_at` panic on a start past the haystack. Such a start
+/// has no match inside the window.
+#[inline]
+fn find_at_bounded<'h>(re: &regex::Regex, hay: &'h str, at: usize) -> Option<regex::Match<'h>> {
+    if at > hay.len() {
+        return None;
+    }
+    re.find_at(hay, at)
+}
+
+/// Byte-mode counterpart of `find_at_bounded`.
+#[inline]
+fn find_at_bounded_bytes<'h>(
+    re: &regex::bytes::Regex,
+    hay: &'h [u8],
+    at: usize,
+) -> Option<regex::bytes::Match<'h>> {
+    if at > hay.len() {
+        return None;
+    }
+    re.find_at(hay, at)
+}
+
 /// Group spans of the leftmost-first match at or after `start`, copied
 /// out of the thread's scratch for pattern `id`.
 fn captures_spans_text(re: &regex::Regex, id: u64, hay: &str, start: usize) -> Option<Spans> {
+    if start > hay.len() {
+        return None;
+    }
     with_text_engine(re, id, |engine, locs| {
         engine.captures_read_at(locs, hay, start)?;
         Some(text_spans_of(locs))
@@ -1781,7 +1812,7 @@ fn scan_all_flat_text(
                 &mut out,
                 |at, out| {
                     if groups == 0 {
-                        match re.find_at(hay, at) {
+                        match find_at_bounded(re, hay, at) {
                             Some(m) => {
                                 out.push(Some((m.start(), m.end())));
                                 true
@@ -1835,7 +1866,7 @@ fn scan_all_flat_bytes(
                 &mut out,
                 |at, out| {
                     if groups == 0 {
-                        match re.find_at(hay, at) {
+                        match find_at_bounded_bytes(re, hay, at) {
                             Some(m) => {
                                 out.push(Some((m.start(), m.end())));
                                 true
@@ -1969,6 +2000,9 @@ fn captures_spans_bytes(
     hay: &[u8],
     start: usize,
 ) -> Option<Spans> {
+    if start > hay.len() {
+        return None;
+    }
     with_bytes_engine(re, id, |engine, locs| {
         engine.captures_read_at(locs, hay, start)?;
         let mut spans = Spans::with_capacity(locs.len());

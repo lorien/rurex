@@ -81,6 +81,25 @@ def test_pos_endpos_semantics():
     assert rurex.compile(r"a").prefixmatch("ab", 1) is None
 
 
+def test_zero_width_at_a_window_end_inside_multibyte_text():
+    # A zero-width match at the last position of a window that ends in
+    # the middle of multi-byte text: the iterate advance steps to the next
+    # character of the whole string, which lies past the window. That used
+    # to hand the engine a start past the haystack and panic.
+    hay = "héllo wörld 造字"
+    for pat in ("", r"\b", r"a*"):
+        rx, srx = rurex.compile(pat), stdre.compile(pat)
+        for end in range(0, len(hay) + 1):
+            assert len(list(rx.finditer(hay, 0, end))) == len(
+                list(srx.finditer(hay, 0, end))
+            ), (pat, end)
+            assert len(rx.findall(hay, 0, end)) == len(
+                srx.findall(hay, 0, end)
+            ), (pat, end)
+    # And the whole-string case still terminates (no window edge).
+    assert rurex.compile("").split(hay) == stdre.compile("").split(hay)
+
+
 def test_match_pos_endpos_attributes():
     rx = rurex.compile(r"\w+")
     m = rx.search("abc def", 4)
