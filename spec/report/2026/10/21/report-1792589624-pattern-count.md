@@ -78,7 +78,7 @@ References: ADR-0019, ADR-0018 (superseded),
   stack, GIL released for a large window. No `Match`, no capture group
   and no result value is created.
 - **Fixed a pre-existing panic the new tests found** (separate commit
-  `5179ba7`): a zero-width match at the last position of a window that
+  `b109fd3`): a zero-width match at the last position of a window that
   ends inside multi-byte text advances to the next character of the
   whole string, which can lie past the window;
   `find_at`/`captures_read_at` panic on such a start, so
