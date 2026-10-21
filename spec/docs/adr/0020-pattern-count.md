@@ -59,19 +59,19 @@ Measured on 200k Telegram posts, per-post wall cost of one worker
 | `re` `finditer` count (for reference) | 456 ns | 1298 ns | 2.85× |
 
 So `count` is 1.5× faster than `findall` at one worker and 2.3× at
-four, and 3.7–5.1× faster than the `re` spelling of the same task. It
-does not reach `is_match`'s scaling (1.05×), and the first explanation
-tried — that the `pos`/`endpos` parameters in the PyO3 signature are the
-cost — is **wrong**: measured in one binary, `count` with the window
-parameters (130.7 ns at one worker, 272.0 at four) and a temporary
-`count` without them (131.8 / 265.9) are the same, while `is_match`
-(93.9 / 98.2) scales. The difference is therefore inside the call: the
-iterate loop performs one search per match plus one final failing
-search, where `is_match` performs a single search, and that second
-search per post is what inflates. Isolating it is its own plan record,
-with the same-binary comparison as the method: build both variants into
-one binary, never compare across rebuilds (the same trivial probe method
-measured 47 ns and 86 ns in two builds of the probe extension).
+four, and 3.7–5.1× faster than the `re` spelling of the same task. It does not reach `is_match`'s scaling (1.05×), and neither of the two
+explanations tried holds: in one binary, `count` with the window
+parameters (130.7 ns at one worker, 272.0 at four) and without them
+(131.8 / 265.9) are identical, and returning `bool` instead of `usize`
+(134.4 / 268.8) makes no difference. What does: a *single* `find_at`
+search per call, with no loop and no window arguments, inflates 2.6×
+(101.5 → 259.6 ns) while `is_match` — one existence search on the same
+data — scales (94.3 → 98.9). `count` has to know where each match ends
+in order to advance, so it needs the engine's `find` path (forward DFA
+plus the reverse DFA that resolves the start), not the existence-only
+path; that difference is inside regex-automata, not something the
+binding chooses. The same applies to `search`, `findall` and `finditer`,
+whose four-worker profiles show the same shape.
 
 - The published benchmark rows do not change: rebar's models are
   engine-agnostic (`count` is `sum(1 for _ in finditer)`, others call

@@ -131,19 +131,47 @@ per-match work at all — it still inflates 2.7×, so the cost is per
   ("Window arguments cost 2.3x on free-threaded Python") carries the
   signature-shape measurements.
 
-### Correction (same session): the window arguments are not the cost
+### Correction (same session): the remaining inflation is the engine's find path
 
-The "signature" explanation recorded above was refuted before the
-session ended, by measuring both variants in **one** binary: `count`
-with `pos`/`endpos` (130.7 ns at one worker, 272.0 at four) and a
-temporary `count` without them (131.8 / 265.9) are identical, while
-`is_match` (93.9 / 98.2) scales. The earlier 2.3×/3.6× numbers came from
-comparing across rebuilds of the probe extension, where the same trivial
-method measured 47 ns in one build and 86 ns in the next — build-to-build
-layout noise is larger than the effect. The plan record is now
-"A match loop inflates 2x where a single search does not", with the
-same-binary comparison as its method.
+Two explanations for `count`'s 2.0× four-worker inflation were measured
+and refuted, and the third stands. All numbers per post, 200k Telegram
+posts, one case per process, threads once, variants built into the
+**same** binary:
 
+| variant | 1 worker | 4 workers |
+|---|---:|---:|
+| `is_match(string)` | 94.3 ns | 98.9 ns (1.05×) |
+| `find_at` once, bool return (temporary probe) | 101.5 ns | **259.6 ns (2.6×)** |
+| `count` loop, bool return | 134.4 ns | 268.8 ns |
+| `count` loop, `usize` return | 132.0 ns | 266.7 ns |
+| `count` with the window parameters removed | 131.8 ns | 265.9 ns |
+| `count` (shipped) | 131.9 ns | 274.7 ns |
+
+So: the window arguments cost nothing, the return type costs nothing,
+and even a *single* `find_at` call with no loop inflates 2.6× while
+`is_match` on the same data scales. `count` must know where each match
+ends to advance, so it needs the engine's find path (forward DFA plus
+the reverse DFA that resolves the start), where `is_match` runs an
+existence-only search; that difference is inside regex-automata, not a
+choice the binding makes. The same path backs `search`, `findall` and
+`finditer`, which is why they share the shape.
+
+The earlier 2.3×/3.6× "signature" numbers came from comparing across
+rebuilds of the probe extension, where the same trivial method measured
+47 ns in one build and 86 ns in the next — build-to-build layout noise
+is larger than the effect being chased. The lesson is in the method
+note below and the plan record is closed: there is no binding-side work
+left in it.
+
+### Future-task notes
+
+- [open] Upstream, not here: `regex-automata`'s hybrid cache for the
+  `find` path (forward + reverse DFA) does not scale across threads the
+  way the existence-only path does, even with a per-thread `Regex`
+  clone (ADR-0019). A `search_with`/`Cache` experiment inside
+  `regex-automata`, or a DFA-cache configuration change, is the only
+  remaining lever, and it belongs in an upstream issue rather than this
+  binding.
 ### Future-task notes
 
 - [open] The new record's subject: `count` runs one search per match
