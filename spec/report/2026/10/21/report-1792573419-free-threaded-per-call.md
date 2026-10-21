@@ -92,18 +92,27 @@ Four-worker `perf` self time: `_Py_IncRef` 21.5%, `_Py_DecRefShared`
 
 ### Future-task notes
 
-- [open] The trampoline split is the first step of the new record: a
+- [acted] The trampoline split is the first step of the new record: a
   `#[pyclass]` method versus a plain C function versus a C method of
   the same signature, at one and four workers. Until that is measured,
   no further binding-side per-call change should be attempted.
-- [open] If the split names PyO3's fastcall-with-keywords trampoline,
+  [acted — measured with a throwaway probe crate; see ADR-0019 and
+  report-1792576652-per-thread-engines. The split also exposed that this
+  report's own multi-worker numbers were probe artefacts.]
+- [acted] If the split names PyO3's fastcall-with-keywords trampoline,
   the candidate fixes are a positional-only signature (dropping the
   `pos`/`endpos` defaults is an API change and needs owner sign-off) or
   a hand-written `METH_FASTCALL` entry for the hottest methods
   (`is_match`, `search`, `findall`).
-- [open] `finditer` has the worst inflation (4.2×) because it creates a
+  [acted — it does not: a frozen pyclass method with rurex's exact
+  signature scales 47 → 40 ns at four workers, so the signature stays
+  and the API is untouched.]
+- [acted] `finditer` has the worst inflation (4.2×) because it creates a
   `Match` per match, which holds two `Py` handles; if the trampoline is
   not the cause, the `Match` handle pair is the next suspect.
+  [acted — it is the next suspect, and it is now the "Python result
+  objects on free-threaded Python" plan record (re-measured: 2.8× at
+  four workers after the per-thread engine change).]
 - [open] The `perf` evidence is per-symbol self time with frame-pointer
   call graphs; on the hybrid CPU (`cpu_atom`/`cpu_core` PMUs) plain
   `perf record` records almost nothing, `-e task-clock` is what works.
