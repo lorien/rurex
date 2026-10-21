@@ -110,6 +110,10 @@ stored program.
   bytes-like haystack can be resized between the match and a later
   `group()` read. See
   [adr/0016-per-match-object-cost.md](adr/0016-per-match-object-cost.md).
+- `count` is the counting shape of the same whole-scan path: one Rust
+  pass with `find_at` (group 0 only), no `Match`, no capture group and
+  no result value, one integer at the end — the only entry point whose
+  cost does not grow with the number of matches (ADR-0020).
 - `findall` is a dedicated whole-scan path: every match's spans are
   collected in one flat buffer in a single Rust pass (no `Captures`
   object and no per-match `Vec`; patterns without groups use

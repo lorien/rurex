@@ -114,6 +114,14 @@ translated to engine byte offsets internally.
   `re.split` is the method that yields `None`).
 - `finditer(text, pos=0, endpos=None) -> FindIter` — a lazy iterator
   of `Match`; the GIL is released around each scan step.
+- `count(text, pos=0, endpos=None) -> int` — the number of matches in
+  the window, exactly `len(finditer(text, pos, endpos))` and therefore
+  `len(findall(...))`: same window, same left-to-right advancement,
+  same zero-width rule. No `Match`, no capture group and no result
+  value is built — one Rust pass over the window with the GIL released
+  for a large one. **A rurex extension:** `re` has no equivalent, and
+  `len(findall(text))` materialises one value per match for a number
+  the caller usually discards (ADR-0020).
 - `split(text, maxsplit=0) -> list` — splits on zero-width matches
   per Python 3.7+ `re` semantics.
 - `sub(repl, text, count=0) -> str` — `repl` may be a string using
@@ -274,6 +282,11 @@ the Rust extension and never leaks (the rure-python lesson).
   compile with `rurex.error`.
 - `prefixmatch` is the preferred name for `re.match`, which also
   ships as `match` (soft deprecated, like Python 3.15; ADR-0007).
+- `Pattern.count(text, pos=0, endpos=None)` is an addition, not a
+  divergence in behaviour: there is no `re.Pattern.count`, nothing in
+  `re`'s surface changes, and the module namespace stays `re`'s (no
+  module-level `rurex.count`). Use it where `re` code writes
+  `len(re.findall(...))`; ADR-0020 records why.
 - `fullmatch` with `pos > 0` on patterns containing an explicit
   `^`/`\A` anchors at the window start instead of failing (the
   anchored fallback variant operates on the window); plain

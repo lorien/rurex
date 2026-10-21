@@ -1213,6 +1213,53 @@ impl Regex {
         }
     }
 
+    /// Count non-overlapping matches in the `[pos, endpos)` window.
+    /// No Python object is created per match; the whole scan runs in one
+    /// Rust pass, GIL released for a large window like `findall`'s.
+    pub(crate) fn count_from<'py>(
+        slf: &Regex,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<usize> {
+        let bytes_mode = matches!(slf.inner, Inner::Bytes(_));
+        let mut keep = extract_hay(bytes_mode, string)?;
+        let Some(hay) = keep.hay_with(slf.cold().as_ref(), slf.stand_in)? else {
+            return Ok(0);
+        };
+        match hay {
+            Hay::Text(s, _mapped) => {
+                let Some((pb, eb)) = window_bytes(s, pos, endpos) else {
+                    return Ok(0);
+                };
+                let engine = match &slf.inner {
+                    Inner::Text(re) => re,
+                    Inner::Bytes(_) => unreachable!(),
+                };
+                let retry = slf.retry_engine().map(Arc::as_ref);
+                let id = slf.id;
+                Ok(maybe_detach(py, eb - pb, || {
+                    count_text(engine, id, retry, s, pb, eb)
+                }))
+            }
+            Hay::Bytes(b) => {
+                let Some((pb, eb)) = window(pos, endpos, b.len()) else {
+                    return Ok(0);
+                };
+                let engine = match &slf.inner {
+                    Inner::Bytes(re) => re,
+                    Inner::Text(_) => unreachable!(),
+                };
+                let retry = slf.retry_engine().map(Arc::as_ref);
+                let id = slf.id;
+                Ok(maybe_detach(py, eb - pb, || {
+                    count_bytes(engine, id, retry, b, pb, eb)
+                }))
+            }
+        }
+    }
+
     pub(crate) fn findall_from<'py>(
         this: &Py<Regex>,
         py: Python<'py>,
@@ -1463,6 +1510,24 @@ impl Regex {
     ) -> PyResult<Bound<'py, PyList>> {
         let this = py_handle(&slf, py);
         Self::findall_from(&this, py, string, pos, endpos)
+    }
+
+    /// Number of non-overlapping matches in the `[pos, endpos)` window.
+    ///
+    /// A rurex extension: `re` has no equivalent, and
+    /// `len(findall(string))` materialises one value per match for a
+    /// number the caller usually throws away (ADR-0020). The value is
+    /// exactly `len(finditer(string, pos, endpos))` — same window, same
+    /// left-to-right advancement, including CPython's zero-width rule.
+    #[pyo3(signature = (string, pos = 0, endpos = None))]
+    fn count<'py>(
+        slf: PyRef<'_, Self>,
+        py: Python<'py>,
+        string: &Bound<'py, PyAny>,
+        pos: usize,
+        endpos: Option<usize>,
+    ) -> PyResult<usize> {
+        Self::count_from(&slf, py, string, pos, endpos)
     }
 
     /// Split `text` on matches, including capture groups in the result
@@ -1894,6 +1959,85 @@ fn scan_all_flat_bytes(
             pending = advance_after(&out[start..], &mut scan).or(pending);
         }
         out
+    })
+}
+
+/// Count matches in a `str` window with the same advancement rule as
+/// `finditer` (the zero-width retry included) and no per-match work
+/// beyond the engine's own `find_at`: one group-0 span on the stack, no
+/// `Captures`, no `Match`.
+fn count_text(
+    re: &regex::Regex,
+    id: u64,
+    retry: Option<&RetryEngine>,
+    s: &str,
+    pb: usize,
+    eb: usize,
+) -> usize {
+    with_text_engine(re, id, |re, _locs| {
+        let hay = &s[..eb];
+        let mut n = 0usize;
+        let mut scan = pb;
+        let mut pending: Option<usize> = None;
+        while scan <= eb {
+            let Some(spans) = cpython_step(
+                hay.as_bytes(),
+                scan,
+                &mut pending,
+                |at| {
+                    find_at_bounded(re, hay, at).map(|m| {
+                        let mut sp = Spans::new();
+                        sp.push(Some((m.start(), m.end())));
+                        sp
+                    })
+                },
+                retry,
+                |p| next_boundary(s, p),
+            ) else {
+                break;
+            };
+            n += 1;
+            pending = advance_after(&spans, &mut scan).or(pending);
+        }
+        n
+    })
+}
+
+/// Byte-mode counterpart of `count_text`.
+fn count_bytes(
+    re: &regex::bytes::Regex,
+    id: u64,
+    retry: Option<&RetryEngine>,
+    b: &[u8],
+    pb: usize,
+    eb: usize,
+) -> usize {
+    with_bytes_engine(re, id, |re, _locs| {
+        let hay = &b[..eb];
+        let mut n = 0usize;
+        let mut scan = pb;
+        let mut pending: Option<usize> = None;
+        while scan <= eb {
+            let Some(spans) = cpython_step(
+                hay,
+                scan,
+                &mut pending,
+                |at| {
+                    find_at_bounded_bytes(re, hay, at).map(|m| {
+                        let mut sp = Spans::new();
+                        sp.push(Some((m.start(), m.end())));
+                        sp
+                    })
+                },
+                retry,
+                |p| p + 1,
+            ) else {
+                break;
+            };
+            n += 1;
+            pending = advance_after(&spans, &mut scan).or(pending);
+        }
+        n
     })
 }
 

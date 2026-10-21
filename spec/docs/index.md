@@ -81,6 +81,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   per-thread engine clones were measured and reverted: the shared engine
   pool is not what stops the free-threaded rows from scaling, per-call
   Python reference traffic is.
+- [adr/0020-pattern-count.md](adr/0020-pattern-count.md) —
+  `Pattern.count`, the one API addition beyond `re`: a counting call
+  that builds no result object, defined as the length of the same
+  iteration.
 - [adr/0019-per-thread-engines.md](adr/0019-per-thread-engines.md) —
   supersedes ADR-0018: a per-thread engine clone (own cache pool, shared
   program) is what makes short-haystack scans scale on free-threaded
