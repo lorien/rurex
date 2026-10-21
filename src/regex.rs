@@ -674,6 +674,21 @@ impl Regex {
                     Some(c),
                 )?);
             }
+            // Conditionals are unsupported, so a valid one still fails —
+            // but an *invalid* one must fail with CPython's message and
+            // position rather than the engine's "unknown extension ?(".
+            if let Some((msg, at)) = flags::conditional_check(&rewritten) {
+                let pos = error::byte_offset_to_char(&rewritten, at);
+                let (l, c) = error::line_col_text(&rewritten, pos);
+                return Err(error::make_error(
+                    py,
+                    &msg,
+                    pattern,
+                    Some(pos),
+                    Some(l),
+                    Some(c),
+                )?);
+            }
             Ok((rewritten, extra))
         };
         let (src, extra) = match &pat {

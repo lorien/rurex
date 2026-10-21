@@ -351,6 +351,202 @@ pub fn group_name_check(pattern: &str) -> Option<(String, usize)> {
     None
 }
 
+/// The largest group number CPython accepts (`_sre.MAXGROUPS`), so a
+/// reference at or above it is invalid even in a pattern with no groups.
+const MAXGROUPS: u64 = 1_073_741_823;
+
+/// One open group of the conditional scan below.
+enum Frame {
+    /// A plain group: capture or `(?:`-style.
+    Group,
+    /// A conditional's body, waiting for its closing `)`. `at` is the
+    /// offset of its `(?(` and `pipes` counts the top-level `|` seen in
+    /// it (a conditional takes at most two branches).
+    Conditional { at: usize, pipes: usize },
+}
+
+/// Do the textual checks CPython's parser performs on conditionals,
+/// `(?(`ref`)`yes`|`no`)`, and report the first violation as
+/// (message, byte offset) — the same shape as `group_name_check`.
+///
+/// rurex does not support conditionals (the engine has none), so a
+/// *valid* conditional still fails to compile; without this scan every
+/// one of them reported the engine's generic
+/// "unknown extension ?(", including the ones CPython rejects with a
+/// specific message and position (`test_re_groupref_exists_errors`,
+/// `test_re_groupref_overflow`). The scan only ever rejects patterns
+/// CPython rejects, and only for the reason CPython gives first: it runs
+/// left to right, skipping escapes and character classes, and validates
+/// numeric references against the final group count (CPython counts the
+/// implicit group 0, so `N` is valid when `N <= groups`).
+pub fn conditional_check(pattern: &str) -> Option<(String, usize)> {
+    let bytes = pattern.as_bytes();
+    // Snap forward to a char boundary (escapes may skip into a
+    // multi-byte character).
+    let snap = |i: usize| -> usize {
+        let mut i = i;
+        while i < pattern.len() && !pattern.is_char_boundary(i) {
+            i += 1;
+        }
+        i
+    };
+    let mut groups = 0usize;
+    let mut names: Vec<&str> = Vec::new();
+    // Numeric references are checked when the whole pattern has been
+    // scanned, because CPython validates them against the final count.
+    let mut digit_refs: Vec<(u64, usize)> = Vec::new();
+    let mut frames: Vec<Frame> = Vec::new();
+    let mut i = 0usize;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' => {
+                i = snap(i + 2);
+            }
+            b'[' => {
+                i += 1;
+                if i < bytes.len() && bytes[i] == b'^' {
+                    i += 1;
+                }
+                if i < bytes.len() && bytes[i] == b']' {
+                    i += 1;
+                }
+                while i < bytes.len() && bytes[i] != b']' {
+                    if bytes[i] == b'\\' {
+                        i += 1;
+                    }
+                    i += 1;
+                }
+                i = snap(i + 1);
+            }
+            b'|' => {
+                // Only a `|` directly in a conditional body splits it.
+                if let Some(Frame::Conditional { at, pipes }) = frames.last_mut() {
+                    *pipes += 1;
+                    if *pipes > 1 {
+                        return Some((
+                            "conditional backref with more than two branches".to_string(),
+                            i,
+                        ));
+                    }
+                    let _ = at;
+                }
+                i += 1;
+            }
+            b')' => {
+                frames.pop();
+                i += 1;
+            }
+            b'(' => {
+                if bytes.get(i + 1) == Some(&b'?') && bytes.get(i + 2) == Some(&b'(') {
+                    // `(?(`ref`)`: validate the reference, then scan the
+                    // body as a conditional frame.
+                    let name_start = i + 3;
+                    let close = pattern[name_start..].find(')').map(|at| name_start + at);
+                    let Some(close) = close else {
+                        if name_start >= bytes.len() {
+                            return Some(("missing group name".to_string(), name_start));
+                        }
+                        return Some(("missing ), unterminated name".to_string(), name_start));
+                    };
+                    let name = &pattern[name_start..close];
+                    if name.is_empty() {
+                        return Some(("missing group name".to_string(), name_start));
+                    }
+                    if name.bytes().all(|b| b.is_ascii_digit()) {
+                        match name.parse::<u64>() {
+                            Ok(0) => {
+                                return Some(("bad group number".to_string(), name_start));
+                            }
+                            Ok(value) if value >= MAXGROUPS => {
+                                return Some((
+                                    format!("invalid group reference {value}"),
+                                    name_start,
+                                ));
+                            }
+                            Ok(value) => digit_refs.push((value, name_start)),
+                            Err(_) => {
+                                return Some((
+                                    format!("invalid group reference {name}"),
+                                    name_start,
+                                ));
+                            }
+                        }
+                    } else {
+                        if !is_python_identifier(name) {
+                            return Some((
+                                format!("bad character in group name '{name}'"),
+                                name_start,
+                            ));
+                        }
+                        if !names.contains(&name) {
+                            return Some((format!("unknown group name '{name}'"), name_start));
+                        }
+                    }
+                    frames.push(Frame::Conditional { at: i, pipes: 0 });
+                    i = close + 1;
+                } else if bytes.get(i + 1) == Some(&b'?') && bytes.get(i + 2) == Some(&b'#') {
+                    // A comment group closes at its first `)`.
+                    match pattern[i + 3..].find(')') {
+                        Some(at) => i = i + 3 + at + 1,
+                        None => return Some(("missing ), unterminated comment".to_string(), i)),
+                    }
+                } else if pattern[i..].starts_with("(?P<") {
+                    let name_start = i + 4;
+                    let Some(end) = pattern[name_start..].find('>').map(|e| name_start + e) else {
+                        i += 3;
+                        continue;
+                    };
+                    names.push(&pattern[name_start..end]);
+                    groups += 1;
+                    frames.push(Frame::Group);
+                    i = end + 1;
+                } else if pattern[i..].starts_with("(?P=") {
+                    // A backreference names an open group; no new group.
+                    match pattern[i + 4..].find(')') {
+                        Some(at) => i = i + 4 + at + 1,
+                        None => i += 4,
+                    }
+                } else if bytes.get(i + 1) == Some(&b'?') {
+                    // `(?:`, `(?i:`, `(?=`, `(?<name>` ...: no capture.
+                    frames.push(Frame::Group);
+                    i += 2;
+                } else {
+                    groups += 1;
+                    frames.push(Frame::Group);
+                    i += 1;
+                }
+            }
+            _ => i += 1,
+        }
+    }
+    // A conditional body still open at the end of the pattern.
+    if let Some(Frame::Conditional { at, .. }) = frames.last() {
+        return Some(("missing ), unterminated subpattern".to_string(), *at));
+    }
+    for (value, at) in digit_refs {
+        if value > groups as u64 {
+            return Some((format!("invalid group reference {value}"), at));
+        }
+    }
+    None
+}
+
+/// Whether `name` is a Python identifier, which is what CPython requires
+/// of a conditional's group name (`str.isidentifier`). The ASCII-ish
+/// alphabetic/digit split is the same approximation `group_name_check`
+/// uses: it accepts exactly the names CPython accepts for the cases that
+/// matter and rejects digits, signs, spaces and symbol characters.
+fn is_python_identifier(name: &str) -> bool {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !(first.is_alphabetic() || first == '_') {
+        return false;
+    }
+    chars.all(|c| c.is_alphanumeric() || c == '_')
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -410,6 +606,83 @@ mod tests {
             translate(ASCII | UNICODE, false).err().unwrap(),
             "ASCII and UNICODE flags are incompatible"
         );
+    }
+
+    #[test]
+    fn conditional_groups_report_cpython_diagnostics() {
+        // The cases CPython's own test_re.py asserts
+        // (test_re_groupref_exists_errors / test_re_groupref_overflow),
+        // with the positions CPython reports.
+        let cases: &[(&str, &str, usize)] = &[
+            (r"(?P<a>)(?(0)a|b)", "bad group number", 10),
+            (r"()(?(-1)a|b)", "bad character in group name '-1'", 5),
+            (r"()(?(+1)a|b)", "bad character in group name '+1'", 5),
+            (
+                r"()()()()()()()()()()(?(1_0)a|b)",
+                "bad character in group name '1_0'",
+                23,
+            ),
+            (r"()(?( 1 )a|b)", "bad character in group name ' 1 '", 5),
+            (r"()(?(㊀)a|b)", "bad character in group name '㊀'", 5),
+            (r"()(?(¹)a|b)", "bad character in group name '¹'", 5),
+            (r"()(?(१)a|b)", "bad character in group name '१'", 5),
+            (r"()(?(1", "missing ), unterminated name", 5),
+            (r"()(?()", "missing group name", 5),
+            (r"()(?(1)a", "missing ), unterminated subpattern", 2),
+            (r"()(?(1)a|b", "missing ), unterminated subpattern", 2),
+            (
+                r"()(?(1)a|b|c",
+                "conditional backref with more than two branches",
+                10,
+            ),
+            (
+                r"()(?(1)a|b|c)",
+                "conditional backref with more than two branches",
+                10,
+            ),
+            (
+                r"(?(1)a|b|)",
+                "conditional backref with more than two branches",
+                8,
+            ),
+            (r"()(?(2)a)", "invalid group reference 2", 5),
+            (r"()(?(foo)a)", "unknown group name 'foo'", 5),
+            (
+                r"(?P<a>)(?(1073741823))",
+                "invalid group reference 1073741823",
+                10,
+            ),
+        ];
+        for &(pattern, msg, at) in cases {
+            let got = conditional_check(pattern);
+            // `at` is CPython's character position; the scan reports bytes.
+            let byte_at = pattern
+                .char_indices()
+                .nth(at)
+                .map_or(pattern.len(), |(b, _)| b);
+            assert_eq!(
+                got,
+                Some((msg.to_string(), byte_at)),
+                "pattern {pattern:?} (char position {at})"
+            );
+        }
+    }
+
+    #[test]
+    fn valid_conditionals_are_left_to_the_engine() {
+        // CPython accepts these; the scan must stay silent so the engine
+        // reports its own "unsupported" error.
+        for pattern in [
+            r"()(?(1)a|b)",
+            r"(?P<a>)(?(a)b|c)",
+            r"()(?(1)(?(1)a|b)|c)",
+            r"(?(1)a)(b)",
+            r"()(?(01)a)",
+            r"()(?(1)[|](?x:a))",
+            r"()(?#(?(0))(?(1)a)",
+        ] {
+            assert_eq!(conditional_check(pattern), None, "pattern {pattern:?}");
+        }
     }
 
     #[test]

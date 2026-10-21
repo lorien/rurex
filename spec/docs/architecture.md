@@ -30,8 +30,12 @@ mode off, so classes are ASCII-only single bytes exactly like `re`.
 The pattern text first goes through the cheap textual passes that
 enforce `re`'s own rejections: leading global inline flags are folded
 into flag bits, scoped `(?a:` groups are rewritten to the engine's
-`(?-u:`, group names are checked against `re`'s rules, and stacked
-quantifiers are refused. Those run on every pattern, accepted or not,
+`(?-u:`, group names are checked against `re`'s rules, stacked
+quantifiers are refused, and conditional groups are validated the way
+CPython validates them (their reference, name and branch count) so an
+invalid one reports `re`'s message and position instead of the engine's
+"unknown extension ?(" — the engine rejects every conditional, valid or
+not, so the scan only decides *which* error is reported. Those run on every pattern, accepted or not,
 because they reject constructs the engine would accept. The engine then
 builds the program, which parses the pattern itself — that is the
 compile path's only parse. The `regex-syntax` pass (the engine's own

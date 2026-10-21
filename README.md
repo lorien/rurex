@@ -30,7 +30,8 @@ import rurex as re        # that's it
 
 - Lookaround: `(?=...)`, `(?!...)`, `(?<=...)`, `(?<!...)`
 - Backreferences: `\1`, `(?P=name)`
-- Conditional groups: `(?(1)yes|no)`
+- Conditional groups: `(?(1)yes|no)` (an invalid one is reported with
+  `re`'s message and position)
 - Atomic groups: `(?>...)`
 - `\Z` (spelled `\z` here); octal escapes (`\101`); `LOCALE`/`DEBUG`
   flags

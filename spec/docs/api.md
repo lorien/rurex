@@ -280,6 +280,14 @@ the Rust extension and never leaks (the rure-python lesson).
 
 - No backreferences and no lookaround: patterns using them fail to
   compile with `rurex.error`.
+- Conditional groups `(?(ref)yes|no)` are not supported either, so a
+  valid one fails to compile. An *invalid* one is rejected before the
+  engine ever sees it, with CPython's own message and position —
+  `(?(0)…)` is `bad group number`, a name that is not an identifier is
+  `bad character in group name '…'`, a reference to an unopened name or
+  to a group number above the pattern's count is `unknown group name` /
+  `invalid group reference N`, and a third branch is `conditional
+  backref with more than two branches` — exactly as `re` reports them.
 - `prefixmatch` is the preferred name for `re.match`, which also
   ships as `match` (soft deprecated, like Python 3.15; ADR-0007).
 - `Pattern.count(text, pos=0, endpos=None)` is an addition, not a
