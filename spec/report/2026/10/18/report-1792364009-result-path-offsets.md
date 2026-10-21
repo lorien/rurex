@@ -194,11 +194,13 @@ parity, `search` still +51 ns because the module side boxes the
 
 ### Future-task notes
 
-- [open] The remaining text `search` gap to `re` is one engine-side
+- [acted] The remaining text `search` gap to `re` is one engine-side
   allocation (`Regex::captures_at` builds a `Captures` per call) plus the
   final span vector. The known fix is the `CaptureLocations` reuse listed
   in `report-1792325206-findall-prefilter-speedup.md`, which now also
   covers `search`/`match`/`finditer`, not just grouped `findall`.
+  [acted — the reuse shipped for every site (8–16% per `search` call):
+  ADR-0017, report-1792570216-capture-locations.]
 - [acted] Inline the usual 0-to-3 group spans inside `Match` (small array
   plus heap fallback) to remove the last result-path allocation; measure
   against the ~14% instruction gap to `re` before committing to it.

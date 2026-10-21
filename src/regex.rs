@@ -1,7 +1,9 @@
 //! The `Regex` type: a compile-once wrapper over the engine, plus the
 //! lazy `FindIter` returned by `finditer`.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use pyo3::exceptions::{PyIndexError, PyTypeError, PyValueError};
@@ -68,6 +70,9 @@ pub struct Regex {
     /// the lazily built variants (`anchored`, the retry engine, the
     /// prefilter) so they never re-run flag translation.
     cfg: flags::Config,
+    /// Never-reused id of this pattern, the key of its per-thread
+    /// `CaptureLocations` scratch (see `text_spans`/`bytes_spans`).
+    id: u64,
 }
 
 /// Rewrite engine byte spans to Python character offsets in place.
@@ -775,6 +780,7 @@ impl Regex {
             first: OnceLock::new(),
             stand_in,
             cfg,
+            id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
         })
     }
 
@@ -901,8 +907,9 @@ impl Regex {
                 let hay = &s[pb..eb];
                 match slf.anchored() {
                     Some(Inner::Text(engine)) => {
-                        let spans =
-                            maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, 0));
+                        let spans = maybe_detach(py, hay.len(), || {
+                            captures_spans_text(engine, slf.id, hay, 0)
+                        });
                         Ok(spans.map(|mut sp| {
                             for span in sp.iter_mut() {
                                 *span = span.map(|(a, b)| (a + pb, b + pb));
@@ -927,7 +934,7 @@ impl Regex {
                         };
                         let whole = &s[..eb];
                         let spans = maybe_detach(py, whole.len(), || {
-                            captures_spans_text(engine, whole, pb)
+                            captures_spans_text(engine, slf.id, whole, pb)
                         });
                         Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|mut sp| {
                             to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
@@ -951,8 +958,9 @@ impl Regex {
                 let hay = &b[pb..eb];
                 match slf.anchored() {
                     Some(Inner::Bytes(engine)) => {
-                        let spans =
-                            maybe_detach(py, hay.len(), || captures_spans_bytes(engine, hay, 0));
+                        let spans = maybe_detach(py, hay.len(), || {
+                            captures_spans_bytes(engine, slf.id, hay, 0)
+                        });
                         Ok(spans.map(|sp| {
                             let sp = offset_spans(sp, pb);
                             Match::new(
@@ -973,7 +981,7 @@ impl Regex {
                         };
                         let whole = &b[..eb];
                         let spans = maybe_detach(py, whole.len(), || {
-                            captures_spans_bytes(engine, whole, pb)
+                            captures_spans_bytes(engine, slf.id, whole, pb)
                         });
                         Ok(spans.filter(|sp| sp[0] == Some((pb, eb))).map(|sp| {
                             Match::new(
@@ -1041,6 +1049,7 @@ impl Regex {
             utf8: None,
             mapped: false,
             names,
+            id: slf.id,
             bytes_mode,
             done,
         })
@@ -1072,7 +1081,7 @@ impl Regex {
                             s.as_bytes(),
                             scan,
                             &mut pending,
-                            |at| captures_spans_text(engine, s, at),
+                            |at| captures_spans_text(engine, slf.id, s, at),
                             retry,
                             |p| next_boundary(s, p),
                         )
@@ -1108,7 +1117,7 @@ impl Regex {
                             b,
                             scan,
                             &mut pending,
-                            |at| captures_spans_bytes(engine, b, at),
+                            |at| captures_spans_bytes(engine, slf.id, b, at),
                             retry,
                             |p| p + 1,
                         )
@@ -1160,7 +1169,9 @@ impl Regex {
                     Inner::Bytes(_) => unreachable!(),
                 };
                 let hay = &s[..eb];
-                let spans = maybe_detach(py, hay.len(), || captures_spans_text(engine, hay, pb));
+                let spans = maybe_detach(py, hay.len(), || {
+                    captures_spans_text(engine, slf.id, hay, pb)
+                });
                 Ok(spans.map(|mut sp| {
                     to_py_spans(s, crate::utf8::is_ascii_obj(string), (0, 0), &mut sp);
                     Match::new(
@@ -1183,7 +1194,9 @@ impl Regex {
                     Inner::Text(_) => unreachable!(),
                 };
                 let hay = &b[..eb];
-                let spans = maybe_detach(py, hay.len(), || captures_spans_bytes(engine, hay, pb));
+                let spans = maybe_detach(py, hay.len(), || {
+                    captures_spans_bytes(engine, slf.id, hay, pb)
+                });
                 Ok(spans.map(|sp| {
                     Match::new(
                         re,
@@ -1220,7 +1233,7 @@ impl Regex {
                 let retry = slf.retry_engine().map(Arc::as_ref);
                 let groups = slf.groups;
                 let spans = maybe_detach(py, eb - pb, || {
-                    scan_all_flat_text(engine, retry, s, pb, eb, groups)
+                    scan_all_flat_text(engine, slf.id, retry, s, pb, eb, groups)
                 });
                 findall_list_text(py, s, groups, &spans, mapped)
             }
@@ -1231,7 +1244,7 @@ impl Regex {
                 let retry = slf.retry_engine().map(Arc::as_ref);
                 let groups = slf.groups;
                 let spans = maybe_detach(py, eb - pb, || {
-                    scan_all_flat_bytes(engine, retry, b, pb, eb, groups)
+                    scan_all_flat_bytes(engine, slf.id, retry, b, pb, eb, groups)
                 });
                 findall_list_bytes(py, b, groups, &spans)
             }
@@ -1392,6 +1405,7 @@ impl Regex {
             utf8: it.utf8,
             mapped: it.mapped,
             names: it.names,
+            id: it.id,
             bytes_mode: it.bytes_mode,
             done: it.done,
         })
@@ -1587,14 +1601,85 @@ impl Regex {
     }
 }
 
-fn captures_spans_text(re: &regex::Regex, hay: &str, start: usize) -> Option<Spans> {
-    re.captures_at(hay, start).map(|caps| {
-        let mut spans = Spans::with_capacity(caps.len());
-        for i in 0..caps.len() {
-            spans.push(caps.get(i).map(|m| (m.start(), m.end())));
+/// Engine ids are never reused, so a thread's scratch slot for a freed
+/// pattern can never be mistaken for a live one.
+static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+
+/// How many patterns a thread keeps capture-location scratch for. More
+/// than one so alternating patterns do not evict each other every call,
+/// small enough that the scratch stays bounded.
+const LOC_SLOTS: usize = 4;
+
+/// Per-thread, per-pattern capture-location scratch.
+///
+/// `Regex::captures_at` allocates a `Captures` and its location vector
+/// on every call; `captures_read_at` writes into a caller-provided
+/// `CaptureLocations` instead, so one set per pattern per thread makes
+/// `search`/`match`/`finditer`-step allocation-free. The engine's
+/// `Regex` is shared across threads, so the storage belongs to the
+/// thread, not to the pattern (ADR-0006, ADR-0017).
+struct Locs<T> {
+    slots: [Slot<T>; LOC_SLOTS],
+    next: usize,
+}
+
+struct Slot<T> {
+    /// 0 = never used; pattern ids start at 1.
+    id: u64,
+    locs: Option<T>,
+}
+
+impl<T> Locs<T> {
+    fn new() -> Self {
+        Locs {
+            slots: std::array::from_fn(|_| Slot { id: 0, locs: None }),
+            next: 0,
         }
-        spans
+    }
+
+    /// The scratch for pattern `id`, built by `make` on a miss. A miss
+    /// takes the next slot round-robin; ids are never reused, so the
+    /// slot of a dropped pattern is simply overwritten later.
+    fn get(&mut self, id: u64, make: impl FnOnce() -> T) -> &mut T {
+        if let Some(i) = self
+            .slots
+            .iter()
+            .position(|s| s.id == id && s.locs.is_some())
+        {
+            return self.slots[i].locs.as_mut().expect("checked above");
+        }
+        let i = self.next;
+        self.next = (self.next + 1) % LOC_SLOTS;
+        self.slots[i] = Slot {
+            id,
+            locs: Some(make()),
+        };
+        self.slots[i].locs.as_mut().expect("just set")
+    }
+}
+
+thread_local! {
+    static TEXT_LOCS: RefCell<Locs<regex::CaptureLocations>> = RefCell::new(Locs::new());
+    static BYTES_LOCS: RefCell<Locs<regex::bytes::CaptureLocations>> = RefCell::new(Locs::new());
+}
+
+/// Group spans of the leftmost-first match at or after `start`, copied
+/// out of the thread's scratch for pattern `id`.
+fn captures_spans_text(re: &regex::Regex, id: u64, hay: &str, start: usize) -> Option<Spans> {
+    TEXT_LOCS.with(|cell| {
+        let mut scratch = cell.borrow_mut();
+        let locs = scratch.get(id, || re.capture_locations());
+        re.captures_read_at(locs, hay, start)?;
+        Some(text_spans_of(locs))
     })
+}
+
+fn text_spans_of(locs: &regex::CaptureLocations) -> Spans {
+    let mut spans = Spans::with_capacity(locs.len());
+    for i in 0..locs.len() {
+        spans.push(locs.get(i));
+    }
+    spans
 }
 
 /// Every match in the `[pb, eb)` byte window, as byte-unit group spans
@@ -1605,6 +1690,7 @@ fn captures_spans_text(re: &regex::Regex, hay: &str, start: usize) -> Option<Spa
 /// zero-width iteration rule via `cpython_step_flat`.
 fn scan_all_flat_text(
     re: &regex::Regex,
+    id: u64,
     retry: Option<&RetryEngine>,
     s: &str,
     pb: usize,
@@ -1613,49 +1699,54 @@ fn scan_all_flat_text(
 ) -> Vec<Option<(usize, usize)>> {
     let hay = &s[..eb];
     let mut out = Vec::new();
-    let mut scan = pb;
-    let mut pending: Option<usize> = None;
-    while scan <= eb {
-        let start = out.len();
-        let found = cpython_step_flat(
-            hay.as_bytes(),
-            scan,
-            &mut pending,
-            &mut out,
-            |at, out| {
-                if groups == 0 {
-                    match re.find_at(hay, at) {
-                        Some(m) => {
-                            out.push(Some((m.start(), m.end())));
-                            true
-                        }
-                        None => false,
-                    }
-                } else {
-                    match re.captures_at(hay, at) {
-                        Some(caps) => {
-                            for i in 0..=groups {
-                                out.push(caps.get(i).map(|m| (m.start(), m.end())));
+    TEXT_LOCS.with(|cell| {
+        let mut scratch = cell.borrow_mut();
+        let locs = scratch.get(id, || re.capture_locations());
+        let mut scan = pb;
+        let mut pending: Option<usize> = None;
+        while scan <= eb {
+            let start = out.len();
+            let found = cpython_step_flat(
+                hay.as_bytes(),
+                scan,
+                &mut pending,
+                &mut out,
+                |at, out| {
+                    if groups == 0 {
+                        match re.find_at(hay, at) {
+                            Some(m) => {
+                                out.push(Some((m.start(), m.end())));
+                                true
                             }
-                            true
+                            None => false,
                         }
-                        None => false,
+                    } else {
+                        match re.captures_read_at(locs, hay, at) {
+                            Some(_) => {
+                                for i in 0..=groups {
+                                    out.push(locs.get(i));
+                                }
+                                true
+                            }
+                            None => false,
+                        }
                     }
-                }
-            },
-            retry,
-            |p| next_boundary(s, p),
-        );
-        if !found {
-            break;
+                },
+                retry,
+                |p| next_boundary(s, p),
+            );
+            if !found {
+                break;
+            }
+            pending = advance_after(&out[start..], &mut scan).or(pending);
         }
-        pending = advance_after(&out[start..], &mut scan).or(pending);
-    }
-    out
+        out
+    })
 }
 
 fn scan_all_flat_bytes(
     re: &regex::bytes::Regex,
+    id: u64,
     retry: Option<&RetryEngine>,
     b: &[u8],
     pb: usize,
@@ -1664,45 +1755,49 @@ fn scan_all_flat_bytes(
 ) -> Vec<Option<(usize, usize)>> {
     let hay = &b[..eb];
     let mut out = Vec::new();
-    let mut scan = pb;
-    let mut pending: Option<usize> = None;
-    while scan <= eb {
-        let start = out.len();
-        let found = cpython_step_flat(
-            hay,
-            scan,
-            &mut pending,
-            &mut out,
-            |at, out| {
-                if groups == 0 {
-                    match re.find_at(hay, at) {
-                        Some(m) => {
-                            out.push(Some((m.start(), m.end())));
-                            true
-                        }
-                        None => false,
-                    }
-                } else {
-                    match re.captures_at(hay, at) {
-                        Some(caps) => {
-                            for i in 0..=groups {
-                                out.push(caps.get(i).map(|m| (m.start(), m.end())));
+    BYTES_LOCS.with(|cell| {
+        let mut scratch = cell.borrow_mut();
+        let locs = scratch.get(id, || re.capture_locations());
+        let mut scan = pb;
+        let mut pending: Option<usize> = None;
+        while scan <= eb {
+            let start = out.len();
+            let found = cpython_step_flat(
+                hay,
+                scan,
+                &mut pending,
+                &mut out,
+                |at, out| {
+                    if groups == 0 {
+                        match re.find_at(hay, at) {
+                            Some(m) => {
+                                out.push(Some((m.start(), m.end())));
+                                true
                             }
-                            true
+                            None => false,
                         }
-                        None => false,
+                    } else {
+                        match re.captures_read_at(locs, hay, at) {
+                            Some(_) => {
+                                for i in 0..=groups {
+                                    out.push(locs.get(i));
+                                }
+                                true
+                            }
+                            None => false,
+                        }
                     }
-                }
-            },
-            retry,
-            |p| p + 1,
-        );
-        if !found {
-            break;
+                },
+                retry,
+                |p| p + 1,
+            );
+            if !found {
+                break;
+            }
+            pending = advance_after(&out[start..], &mut scan).or(pending);
         }
-        pending = advance_after(&out[start..], &mut scan).or(pending);
-    }
-    out
+        out
+    })
 }
 
 fn findall_list_text<'py>(
@@ -1801,13 +1896,22 @@ fn findall_item_bytes<'py>(
     })
 }
 
-fn captures_spans_bytes(re: &regex::bytes::Regex, hay: &[u8], start: usize) -> Option<Spans> {
-    re.captures_at(hay, start).map(|caps| {
-        let mut spans = Spans::with_capacity(caps.len());
-        for i in 0..caps.len() {
-            spans.push(caps.get(i).map(|m| (m.start(), m.end())));
+/// Byte-mode counterpart of `captures_spans_text`.
+fn captures_spans_bytes(
+    re: &regex::bytes::Regex,
+    id: u64,
+    hay: &[u8],
+    start: usize,
+) -> Option<Spans> {
+    BYTES_LOCS.with(|cell| {
+        let mut scratch = cell.borrow_mut();
+        let locs = scratch.get(id, || re.capture_locations());
+        re.captures_read_at(locs, hay, start)?;
+        let mut spans = Spans::with_capacity(locs.len());
+        for i in 0..locs.len() {
+            spans.push(locs.get(i));
         }
-        spans
+        Some(spans)
     })
 }
 
@@ -1888,7 +1992,7 @@ pub(crate) fn substitute(
                         s.as_bytes(),
                         scan,
                         &mut pending,
-                        |at| captures_spans_text(engine, s, at),
+                        |at| captures_spans_text(engine, reg.id, s, at),
                         retry,
                         |p| next_boundary(s, p),
                     )
@@ -1952,7 +2056,7 @@ pub(crate) fn substitute(
                         b,
                         scan,
                         &mut pending,
-                        |at| captures_spans_bytes(engine, b, at),
+                        |at| captures_spans_bytes(engine, reg.id, b, at),
                         retry,
                         |p| p + 1,
                     )
@@ -2054,6 +2158,9 @@ pub struct FindIter {
     /// `SreScanner::mapped`); carried into a scanner built from here.
     mapped: bool,
     names: Option<Arc<Vec<Option<String>>>>,
+    /// The pattern's never-reused id, the key of its per-thread
+    /// capture-location scratch.
+    id: u64,
     bytes_mode: bool,
     done: bool,
 }
@@ -2106,12 +2213,13 @@ impl FindIter {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
+                let ctx_id = self.id;
                 let spans = per_step(|| {
                     cpython_step(
                         hay.as_bytes(),
                         scan,
                         &mut pending,
-                        |at| captures_spans_text(engine, hay, at),
+                        |at| captures_spans_text(engine, ctx_id, hay, at),
                         retry,
                         |p| next_boundary(s, p),
                     )
@@ -2156,12 +2264,13 @@ impl FindIter {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
+                let ctx_id = self.id;
                 let spans = per_step(|| {
                     cpython_step(
                         hay,
                         scan,
                         &mut pending,
-                        |at| captures_spans_bytes(engine, hay, at),
+                        |at| captures_spans_bytes(engine, ctx_id, hay, at),
                         retry,
                         |p| p + 1,
                     )
@@ -2213,6 +2322,9 @@ pub struct SreScanner {
     /// on the first step from the transcoder.
     mapped: bool,
     names: Option<Arc<Vec<Option<String>>>>,
+    /// The pattern's never-reused id, the key of its per-thread
+    /// capture-location scratch.
+    id: u64,
     bytes_mode: bool,
     done: bool,
 }
@@ -2256,12 +2368,13 @@ impl SreScanner {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
+                let ctx_id = self.id;
                 let spans = per_step(|| {
                     cpython_step(
                         hay.as_bytes(),
                         scan,
                         &mut pending,
-                        |at| captures_spans_text(engine, hay, at),
+                        |at| captures_spans_text(engine, ctx_id, hay, at),
                         retry,
                         |p| next_boundary(s, p),
                     )
@@ -2319,12 +2432,13 @@ impl SreScanner {
                 let scan = self.scan;
                 let retry = re_ref.retry_engine().map(Arc::as_ref);
                 let mut pending = self.pending;
+                let ctx_id = self.id;
                 let spans = per_step(|| {
                     cpython_step(
                         hay,
                         scan,
                         &mut pending,
-                        |at| captures_spans_bytes(engine, hay, at),
+                        |at| captures_spans_bytes(engine, ctx_id, hay, at),
                         retry,
                         |p| p + 1,
                     )
@@ -2468,6 +2582,7 @@ impl Scanner {
         let actions: Vec<Py<PyAny>> = slf.actions.iter().map(|a| a.clone_ref(py)).collect();
         let last_match_cell = slf.last_match.clone();
         let re_handle = slf.scanner.clone_ref(py);
+        let re_id = re_handle.bind(py).get().id;
         let self_obj: Bound<'py, Scanner> = slf.into_pyobject(py)?;
         let mut state = SreScanner {
             re: re_handle,
@@ -2483,6 +2598,7 @@ impl Scanner {
             utf8: None,
             mapped: false,
             names: None,
+            id: re_id,
             bytes_mode: false,
             done: false,
         };

@@ -117,9 +117,12 @@ a noisy run; the extraction improvement is recorded here.
 
 - [open] Wire the prefilter into `split`/`sub`/`subn`; their no-match
   answers need a plain `str`/`bytes` copy without forcing a transcode.
-- [open] Reuse `CaptureLocations` for `findall` patterns with capture
+- [acted] Reuse `CaptureLocations` for `findall` patterns with capture
   groups; the flat buffer removed the per-match `Vec`, but
   `captures_at` still allocates a `Captures` per matching call.
+  [acted — a per-thread `CaptureLocations` per pattern now backs every
+  site that used `captures_at`, including the flat scan: ADR-0017,
+  report-1792570216-capture-locations.]
 - [acted] The single cold run per benchmark point remains noisy
   (carried over from the Tier 1 report); min-of-N or recorded variance
   would make published numbers comparable run to run.

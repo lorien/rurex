@@ -1,5 +1,5 @@
 name,model,rebar_version,engine,engine_version,err,haystack_len,iters,total,median,mad,mean,stddev,min,max
-dictionary/search/english-15,count-spans,0.1.0,python/re,3.13.5,,61436,9,5.26s,370.03ms,662.64us,370.27ms,888.78us,369.15ms,371.93ms
-dictionary/search/english-15,count-spans,0.1.0,rust/regex,1.12.4,,61436,10,1.56s,89.49us,24.00ns,89.48us,59.00ns,89.35us,89.54us
-dictionary/search/english-15,count-spans,0.1.0,python/rurex,0.2.0,,61436,10,1.56s,92.72us,148.00ns,93.57us,2.38us,92.56us,100.68us
-dictionary/search/english-15,count-spans,0.1.0,python/rurex-bytes,0.2.0,,61436,10,1.55s,90.76us,43.00ns,91.35us,0.95us,90.67us,93.15us
+dictionary/search/english-15,count-spans,0.1.0,python/re,3.13.5,,61436,9,5.21s,368.40ms,180.84us,369.22ms,1.67ms,368.19ms,373.06ms
+dictionary/search/english-15,count-spans,0.1.0,rust/regex,1.12.4,,61436,10,1.55s,89.58us,44.00ns,89.59us,60.00ns,89.48us,89.69us
+dictionary/search/english-15,count-spans,0.1.0,python/rurex,0.2.0,,61436,10,1.55s,92.26us,68.00ns,92.28us,145.00ns,92.10us,92.58us
+dictionary/search/english-15,count-spans,0.1.0,python/rurex-bytes,0.2.0,,61436,10,1.56s,90.50us,52.00ns,90.53us,186.00ns,90.37us,91.06us

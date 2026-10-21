@@ -1,5 +1,5 @@
 {
-  "measured_at": "2026-10-20",
+  "measured_at": "2026-10-21",
   "host": "regexus",
   "cpu": "13th Gen Intel(R) Core(TM) i5-13500",
   "governor": "performance",
@@ -13,7 +13,7 @@
   "max_time": "3s",
   "max_iters": 10,
   "rebar": "0.1.0",
-  "rurex_build": "local wheel built from the work tree (commit e0bdfa8 + per-match work), sha256 8bba10b5",
+  "rurex_build": "local wheel built from the work tree (commit 5425fab + capture-location reuse), sha256 27e2ffee",
   "rurex": "0.2.0",
   "engines": [
     "python/re",
@@ -23,11 +23,11 @@
   ],
   "files": {
     "curated.csv": {
-      "sha256": "33450f9ef4cd74ab23ab064101bb1dcbdea4a3f3966dfbe857d42621fe218ced",
+      "sha256": "f9e20536f5ac3a87ec2b262d995c43128a6b612ec30ae3a70b8839f813a77ddb",
       "lines": 141
     },
     "dict.csv": {
-      "sha256": "1a116cee5387f9a7ac0a327765dcbb73445bc86c768c233c0e402f60cc8d7547",
+      "sha256": "a73860be0418824010a61c858c83c0c53b8626a822f131180cf26778ef094e2c",
       "lines": 5
     }
   }

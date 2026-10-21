@@ -76,6 +76,14 @@ stored program.
   previous match and a handoff cannot be paid back (see `per_step`).
 - Results are converted back to Python objects (`Match`, tuples, lists)
   after the scan, under the GIL.
+- The engine's capture locations are reused: each thread keeps up to
+  four `CaptureLocations` keyed by a never-reused pattern id
+  (`src/regex.rs`), so a `search`, a `finditer` step, a scanner step, a
+  `sub` step or a grouped `findall` match fills scratch instead of
+  allocating a `Captures`. The pattern's id is assigned at compile time
+  from a global counter, because keying by address would let a freed
+  pattern's slot be reused (see
+  [adr/0017-thread-local-capture-locations.md](adr/0017-thread-local-capture-locations.md)).
 - A `Match` holds its group spans inline for up to four groups (group 0
   plus three capture groups) and spills to a heap vector above that, so
   the usual `finditer` step allocates nothing for spans. The shared

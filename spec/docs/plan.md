@@ -3,30 +3,6 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Reuse `CaptureLocations` instead of allocating `Captures` per call
-
-Status: new
-Priority: 2
-
-Every `search`/`match`/`fullmatch`/`finditer` step calls
-`regex::Regex::captures_at`, which allocates a `Captures` object and its
-location vector per call; grouped `findall` does the same per match. That
-is the largest remaining item in the text `search` gap to `re`: the
-result-path report measured text `search` at ~3,500 instructions per call
-on a short haystack, within ~14% of `re`, with this allocation a
-substantial share of what is left.
-
-`Regex::captures_read_at` writes into a caller-provided
-`CaptureLocations`, so the fix is to keep one per engine per thread
-(thread-local, keyed by a stable engine id so a freed engine's slot is
-never reused) and copy the spans out of it. The engine's `Regex` is
-already shared across threads, so the storage must be thread-local rather
-than a field.
-
-References: ADR-0006,
-`spec/report/2026/10/18/report-1792364009-result-path-offsets.md`,
-`spec/report/2026/10/18/report-1792325206-findall-prefilter-speedup.md`
-
 ## Per-thread engines to remove free-threaded cache-pool contention
 
 Status: new

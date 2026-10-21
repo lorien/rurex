@@ -73,6 +73,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   inline spans for up to four groups, group text built with the direct
   `str`/`bytes` constructors, and a name table only for patterns that
   name a group; the remaining per-match gap is PyO3 call machinery.
+- [adr/0017-thread-local-capture-locations.md](adr/0017-thread-local-capture-locations.md) —
+  one `CaptureLocations` per pattern per thread, keyed by a never-reused
+  pattern id, so `search`/`finditer`/`sub` steps and grouped `findall`
+  matches stop allocating a `Captures` per call.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.
