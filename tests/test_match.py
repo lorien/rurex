@@ -65,6 +65,15 @@ def test_pos_endpos_semantics():
     # endpos truncates the window.
     assert rurex.compile(r"\w+").search("abc def", 0, 3).span() == (0, 3)
     assert rurex.compile(r"\w+").search("abc def", 4).span() == (4, 7)
+    # endpos = 0 is an empty window, not a missing one (the bounds walk
+    # is skipped when neither index is beyond 0).
+    assert rurex.compile(r"\w+").search("abc def", 0, 0) is None
+    assert stdre.compile(r"\w+").search("abc def", 0, 0) is None
+    assert list(rurex.compile(r"\w+").finditer("abc def", 0, 0)) == []
+    assert list(stdre.compile(r"\w+").finditer("abc def", 0, 0)) == []
+    assert rurex.compile(r"\w+").findall("abc def", 0, 0) == []
+    assert rurex.compile(r"").search("abc", 0, 0).span() == (0, 0)
+    assert stdre.compile(r"").search("abc", 0, 0).span() == (0, 0)
     # pos beyond the text: empty matches still found at the end (re).
     assert rurex.compile(r"").search("ab", 5).span() == (2, 2)
     # prefixmatch with pos anchors at pos.

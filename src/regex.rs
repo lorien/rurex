@@ -190,7 +190,9 @@ fn to_py_spans(s: &str, ascii: bool, start: (usize, usize), spans: &mut [Option<
 fn window_bytes(s: &str, pos: usize, endpos: Option<usize>) -> Option<(usize, usize)> {
     let far = endpos.map_or(pos, |e| pos.max(e));
     let mut pb = if pos == 0 { Some(0) } else { None };
-    let mut eb = s.len();
+    // `endpos = 0` is the one bound the walk below cannot discover,
+    // because the walk is skipped when nothing is farther than 0.
+    let mut eb = if endpos == Some(0) { 0 } else { s.len() };
     if far > 0 {
         for (i, (b, _)) in s.char_indices().enumerate() {
             if i == pos {
