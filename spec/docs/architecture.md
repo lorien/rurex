@@ -76,6 +76,13 @@ stored program.
   previous match and a handoff cannot be paid back (see `per_step`).
 - Results are converted back to Python objects (`Match`, tuples, lists)
   after the scan, under the GIL.
+- On free-threaded CPython the per-call cost is dominated by
+  Python-level reference traffic, not by the engine: the same 470-byte
+  posts cost 2.6–3.6× more per `is_match` call at four workers, while a
+  C method over the same buffers costs 1.2× more. Per-thread engine
+  clones remove the shared cache-pool mutex but change no wall time
+  (ADR-0018), so engine isolation is not the lever; the number of
+  Python-visible operations per call is.
 - The engine's capture locations are reused: each thread keeps up to
   four `CaptureLocations` keyed by a never-reused pattern id
   (`src/regex.rs`), so a `search`, a `finditer` step, a scanner step, a

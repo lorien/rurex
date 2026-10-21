@@ -62,9 +62,14 @@ and retry before publishing.
 - [open] `RUREX_MAX_LOAD` is disabled by default so laptop runs with
   ordinary background load are not rejected automatically; set it
   explicitly on a controlled host.
-- [open] The shared regex cache-pool contention behind the flat Telegram
+- [acted] The shared regex cache-pool contention behind the flat Telegram
   bytes scaling is still unaddressed; the explicit per-thread cache
   remains the next optimization candidate.
+  [acted — per-thread engine clones were implemented and measured: the
+  pool is not the cause (5.3% fewer instructions at four workers, no
+  cycles or wall change). The per-call inflation is CPython's shared
+  reference traffic; see ADR-0018 and the re-scoped plan task
+  "Per-call cost on free-threaded Python".]
 
 ### Tooling/process
 

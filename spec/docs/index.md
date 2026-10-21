@@ -77,6 +77,10 @@ Catalog of the documents under `spec/docs/`. Recommended reading order:
   one `CaptureLocations` per pattern per thread, keyed by a never-reused
   pattern id, so `search`/`finditer`/`sub` steps and grouped `findall`
   matches stop allocating a `Captures` per call.
+- [adr/0018-free-threaded-per-call-cost.md](adr/0018-free-threaded-per-call-cost.md) —
+  per-thread engine clones were measured and reverted: the shared engine
+  pool is not what stops the free-threaded rows from scaling, per-call
+  Python reference traffic is.
 
 Workflow files (task/report/ADR lifecycle, session workflow) live in
 `spec/skills/`.
