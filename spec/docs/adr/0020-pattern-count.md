@@ -59,19 +59,20 @@ Measured on 200k Telegram posts, per-post wall cost of one worker
 | `re` `finditer` count (for reference) | 456 ns | 1298 ns | 2.85× |
 
 So `count` is 1.5× faster than `findall` at one worker and 2.3× at
-four, and 3.7–5.1× faster than the `re` spelling — but it does *not*
-scale like `is_match`. The profiling says why: with a pattern that never
-matches, so that no per-match work happens at all, `count` still
-inflates 2.7×, and 51% of its four-worker self time is CPython's shared
-reference-count paths. The difference from `is_match` is the argument
-list: `count` carries `pos = 0, endpos = None`, and a PyO3 method with
-defaulted integer parameters inflates ~2.3× at four workers where a
-one-argument method on the same frozen class scales 1.0× (a *supplied*
-integer argument, which the caller passes as a shared small-int object,
-is worse still: 3.6×). That is a property of every windowed method in
-the binding (`search`, `match`, `fullmatch`, `findall`, `finditer`,
-`count`), not of the counting path, and it is the next lever — with its
-own record in `plan.md`, since fixing it would lift all of them.
+four, and 3.7–5.1× faster than the `re` spelling of the same task. It
+does not reach `is_match`'s scaling (1.05×), and the first explanation
+tried — that the `pos`/`endpos` parameters in the PyO3 signature are the
+cost — is **wrong**: measured in one binary, `count` with the window
+parameters (130.7 ns at one worker, 272.0 at four) and a temporary
+`count` without them (131.8 / 265.9) are the same, while `is_match`
+(93.9 / 98.2) scales. The difference is therefore inside the call: the
+iterate loop performs one search per match plus one final failing
+search, where `is_match` performs a single search, and that second
+search per post is what inflates. Isolating it is its own plan record,
+with the same-binary comparison as the method: build both variants into
+one binary, never compare across rebuilds (the same trivial probe method
+measured 47 ns and 86 ns in two builds of the probe extension).
+
 - The published benchmark rows do not change: rebar's models are
   engine-agnostic (`count` is `sum(1 for _ in finditer)`, others call
   `m.group(0)`), and the Telegram harness compares like with like, so a

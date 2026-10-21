@@ -3,53 +3,49 @@
 Open-task list. Format, statuses, and lifecycle: `spec/skills/task_tracking.md`.
 Priorities: higher number = more important; `-1` = deferred.
 
-## Window arguments cost 2.3x on free-threaded Python
+## A match loop inflates 2x where a single search does not
 
 Status: new
 Priority: 2
 
-Every windowed method (`search`, `match`/`prefixmatch`, `fullmatch`,
-`findall`, `finditer`, `count`) is declared as
-`#[pyo3(signature = (string, pos = 0, endpos = None))]`, and that shape
-is what stops them from scaling on free-threaded CPython. Measured with
-the probe extension (ADR-0019, ADR-0020), frozen pyclass, per-process,
-threads created once, per-post wall of one worker:
+`Pattern.count` is 1.5x faster than `findall` at one free-threaded
+worker and 2.3x at four, but it still inflates 2.0x per post at four
+workers where `is_match` inflates 1.05x. Measured in **one binary**
+(200k Telegram posts, per-process, threads created once):
 
-| probe method | 1 worker | 4 workers |
-|---|---:|---:|
-| `m(string)` | 47 ns | 41 ns (1.0x) |
-| `m(string, pos = 0, endpos = None)` | 55 ns | 124 ns (2.3x) |
-| `m(string, pos)` with `pos` required | 69 ns | 246 ns (3.6x) |
+| call | 1 worker | 4 workers | inflation |
+|---|---:|---:|---:|
+| `is_match(string)` | 93.9 ns | 98.2 ns | 1.05x |
+| `count(string, pos=0, endpos=None)` | 130.7 ns | 272.0 ns | 2.08x |
+| `count` with the window parameters removed (temporary probe) | 131.8 ns | 265.9 ns | 2.02x |
 
-The same pattern shows in rurex itself: `is_match(string)` scales 1.05x
-at four workers while `count(string, pos=0, endpos=None)` inflates 2.7x
-even with a pattern that never matches, and 51% of that four-worker
-profile is CPython's shared reference-count paths. A supplied integer
-argument is worst because callers pass small ints, which are shared
-singletons: four threads then hammer one object's refcount line.
+So the window arguments are **not** the cost (the earlier 2.3x claim came
+from comparing across rebuilds of a probe extension, where the same
+trivial method measured 47 ns and 86 ns in two builds — never compare
+across builds for effects under ~50%). What differs is the call's shape:
+`is_match` runs one search per post, while the iterate loop runs one
+search per match plus one final failing search, and that extra search
+costs ~4x more at four workers than at one. `count` on a corpus where
+the pattern never matches is still 2x worse at four workers, so the
+effect is present even with exactly one search — the difference is
+therefore in how the *loop* drives the engine (`find_at` from a moving
+start) rather than in the per-match work.
 
-The task: make the window parameters free on the hot path, without
-changing the public signature (`re` accepts `pos`/`endpos` both
-positionally and as keywords, so they stay). Candidates, cheapest to
-try first:
+Next: profile `count` with a never-matching pattern (`zzzzzq`) at 1 and 4
+workers and compare against `is_match` on the same data — both do one
+search, so any difference is in the call path (`with_*_engine` borrow,
+`cpython_step`, `find_at` versus `is_match`). Then decide whether the
+same shape can be used for `is_match`/`search`, or whether the iterate
+loop's `find_at` can avoid whatever the pool/DFA does differently.
 
-1. Hand-written argument handling: take `*args, **kwargs` and parse the
-   two optional ints in Rust, bypassing PyO3's generated
-   `extract_arguments_fastcall` for the common `rx.method(text)` and
-   `rx.method(text, pos)` calls.
-2. A split surface: keep the keyword-capable method, and give the
-   common no-window call a plain one-argument entry point that the
-   keyword form delegates to.
-3. If neither moves it, check whether PyO3 0.31+ changed the defaults
-   code path, and whether `Option<usize>` (Rust default `None`) is
-   cheaper than `usize` with a default.
-
-Constraint: semantics and the public signature must not change; the
-measurement recipe from ADR-0019 applies (one case per process, threads
-once, `perf stat -e task-clock,instructions` for anything under 10%).
+Method: one case per process, worker threads created once, N
+barrier-started rounds, `measurement.pick_physical_cpus` plus
+`pin_current` per worker, callables hoisted into locals, variants built
+into the *same* binary, and `perf stat -e task-clock,instructions` for
+anything under 10%.
 
 References: ADR-0020, ADR-0019,
-`spec/report/2026/10/21/report-1792581610-findall-scaling.md`
+`spec/report/2026/10/21/report-1792589624-pattern-count.md`
 
 ## Wire the cold-str prefilter into `split`/`sub`/`subn`
 

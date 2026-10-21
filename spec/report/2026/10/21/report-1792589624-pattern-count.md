@@ -131,14 +131,27 @@ per-match work at all — it still inflates 2.7×, so the cost is per
   ("Window arguments cost 2.3x on free-threaded Python") carries the
   signature-shape measurements.
 
+### Correction (same session): the window arguments are not the cost
+
+The "signature" explanation recorded above was refuted before the
+session ended, by measuring both variants in **one** binary: `count`
+with `pos`/`endpos` (130.7 ns at one worker, 272.0 at four) and a
+temporary `count` without them (131.8 / 265.9) are identical, while
+`is_match` (93.9 / 98.2) scales. The earlier 2.3×/3.6× numbers came from
+comparing across rebuilds of the probe extension, where the same trivial
+method measured 47 ns in one build and 86 ns in the next — build-to-build
+layout noise is larger than the effect. The plan record is now
+"A match loop inflates 2x where a single search does not", with the
+same-binary comparison as its method.
+
 ### Future-task notes
 
-- [open] The new record's subject: `pos = 0, endpos = None` in a PyO3
-  signature costs 2.3× at four workers (a required integer argument,
-  which callers pass as a shared small-int singleton, costs 3.6×) while
-  a one-argument method on the same frozen class scales 1.0×. It
-  affects every windowed method, so fixing it lifts `search`,
-  `findall`, `finditer` and `count` at once.
+- [open] The new record's subject: `count` runs one search per match
+  plus a final failing one, `is_match` runs a single search, and the
+  iterate loop inflates 2.0× at four workers while `is_match` inflates
+  1.05× — including with a pattern that never matches, so it is the call
+  path, not the per-match work. Next step is a profile of the
+  never-matching case against `is_match` on the same data.
 - [open] `count` returns the number of *matches*, and `findall` returns
   one value per match even for grouped patterns, so `count` equals
   `len(findall(...))` for every pattern. A future grouped-count
