@@ -76,6 +76,13 @@ stored program.
   previous match and a handoff cannot be paid back (see `per_step`).
 - Results are converted back to Python objects (`Match`, tuples, lists)
   after the scan, under the GIL.
+- On free-threaded CPython a whole-scan `findall` is the one workload
+  that does not scale: stdlib `re`'s `findall` keeps scaling (208 -> 195
+  ns per 470-byte post from one to four workers) while rurex's degrades
+  (167 -> 302 ns), because the per-value Python objects sit on CPython's
+  shared reference-count paths. The engine does scale (`is_match`:
+  1.04× at four workers), so the remaining lever is fewer Python objects
+  per call, which is an API question (`plan.md`).
 - Every thread matches with its own clone of the engine (one per
   pattern, in the same thread-local table as the capture scratch, keyed
   by the never-reused pattern id). A shared `regex::Regex` serves all
