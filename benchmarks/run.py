@@ -210,51 +210,6 @@ def run_test(test, quick):
     return result
 
 
-def extension_identity():
-    """Identify the extension binary this interpreter is actually running.
-
-    `results.json` used to carry a hard-coded "built with --release"
-    string, which cannot prove which artifact was measured: a debug or
-    stale extension produced the same text. Record what the process
-    loaded instead — path, size, mtime and sha256 — so a published
-    number is traceable to one binary and two runs are comparable. The
-    compiler profile still comes from `make build-release` (and
-    `build-free`); the hash only proves *which* artifact those produced.
-    """
-    info = {
-        "python": platform.python_version(),
-        "executable": sys.executable,
-        "gil_enabled": bool(getattr(sys, "_is_gil_enabled", lambda: True)()),
-    }
-    pkg = pathlib.Path(rurex.__file__).resolve().parent
-    suffixes = importlib.machinery.EXTENSION_SUFFIXES
-    ext = next(
-        (
-            p
-            for p in sorted(pkg.iterdir())
-            if any(p.name.endswith(s) for s in suffixes)
-        ),
-        None,
-    )
-    if ext is None:
-        info["path"] = None
-        return info
-    digest = hashlib.sha256()
-    with open(ext, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            digest.update(chunk)
-    st = ext.stat()
-    info.update(
-        {
-            "path": str(ext),
-            "size": st.st_size,
-            "mtime_ns": st.st_mtime_ns,
-            "sha256": digest.hexdigest(),
-        }
-    )
-    return info
-
-
 def stale_against_sources(info):
     """True when the loaded extension predates the Rust sources.
 
@@ -289,7 +244,7 @@ def environment():
         "python": platform.python_implementation() + " " + platform.python_version(),
         "os": f"{platform.system()} {platform.release()}",
         "rurex": rurex.__version__,
-        "rurex_extension": extension_identity(),
+        "rurex_extension": measurement.extension_identity(),
         "timeout_s": PATHO_TIMEOUT_S,
     }
 
@@ -343,7 +298,7 @@ def main():
         child = {
             "environment": {
                 "free_python": platform.python_version(),
-                "rurex_extension": extension_identity(),
+                "rurex_extension": measurement.extension_identity(),
             },
             "tests": [],
         }

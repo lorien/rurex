@@ -140,7 +140,12 @@ def render_md():
     def x(interp, threads, inp="str"):
         return w(interp, threads, "rurex", inp) / w(interp, threads, "re", inp)
 
-    run_date = date.today().isoformat()
+    # The date the data was measured, not the day the page was
+    # rendered: the two differ whenever a page is regenerated.
+    run_date = (
+        (data.get("environment", {}).get("measured_at") or "")[:10]
+        or date.today().isoformat()
+    )
     md = f"""# Telegram @mention extraction: rurex vs `re`
 
 Real-world task, measured exactly as performed: **one** pass of

@@ -17,10 +17,15 @@ still a cold pass over the real data.
 import hashlib
 import os
 import pathlib
+import platform
+import importlib.machinery
 import statistics
 import subprocess
 import sys
 import time
+
+import rurex
+from datetime import datetime, timezone
 
 WARMUP_ENV = "RUREX_WARMUP"
 DEFAULT_WARMUP_S = 1.0
@@ -254,6 +259,56 @@ def max_load():
         return float(raw)
     except ValueError:
         return None
+
+
+def extension_identity():
+    """Identify the extension binary this interpreter is actually running.
+
+    `results.json` used to carry a hard-coded "built with --release"
+    string, which cannot prove which artifact was measured: a debug or
+    stale extension produced the same text. Record what the process
+    loaded instead — path, size, mtime and sha256 — so a published
+    number is traceable to one binary and two runs are comparable. The
+    compiler profile still comes from `make build-release` (and
+    `build-free`); the hash only proves *which* artifact those produced.
+    """
+    info = {
+        "python": platform.python_version(),
+        "executable": sys.executable,
+        "gil_enabled": bool(getattr(sys, "_is_gil_enabled", lambda: True)()),
+    }
+    pkg = pathlib.Path(rurex.__file__).resolve().parent
+    suffixes = importlib.machinery.EXTENSION_SUFFIXES
+    ext = next(
+        (
+            p
+            for p in sorted(pkg.iterdir())
+            if any(p.name.endswith(s) for s in suffixes)
+        ),
+        None,
+    )
+    if ext is None:
+        info["path"] = None
+        return info
+    digest = hashlib.sha256()
+    with open(ext, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    st = ext.stat()
+    info.update(
+        {
+            "path": str(ext),
+            "size": st.st_size,
+            "mtime_ns": st.st_mtime_ns,
+            "sha256": digest.hexdigest(),
+        }
+    )
+    return info
+
+
+def measured_at():
+    """UTC timestamp of a run, for the result file and the page footer."""
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def efficiency(thread_cpu, walls, gil=None):

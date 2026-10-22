@@ -83,10 +83,14 @@ copy the result file and charts back:
     rsync -a web@regexus:/web/benchmark/rurex/docs/img/ docs/img/
 
 `make bench` rebuilds both interpreters, so the free-threaded tests
-cannot silently run against a stale `.venv-t`. `results.json` records
-the CPU and each interpreter's extension sha256, so every row is
-traceable to a machine and a binary; if the environment line says a
-laptop CPU, the run must not be published.
+cannot silently run against a stale `.venv-t`. Every result file —
+`results.json` and the two real-world suites' (`telegram_results.json`,
+`frontend_html_results.json`) — records the CPU, the measurement
+timestamp and each interpreter's extension sha256, so every row is
+traceable to a machine, a moment and a binary; if the environment says a
+laptop CPU, the run must not be published. The real-world pages take
+their "measured on" date from that timestamp, not from the day the page
+was rendered.
 
 The real-world benchmarks pin the process to physical CPUs,
 pin free-threaded workers one per core (GIL workers share the process

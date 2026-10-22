@@ -278,6 +278,29 @@ def interpreter_env():
     return cpu
 
 
+def free_extension_identity(interpreter):
+    """Identity of the extension the free-threaded interpreter loads.
+
+    The points that use it run in child processes, so the parent cannot
+    ask its own `rurex`; the same helper runs in the child instead.
+    """
+    if not interpreter:
+        return None
+    probe = (
+        "import json, sys;"
+        "sys.path.insert(0, %r);"
+        "import measurement;"
+        "print(json.dumps(measurement.extension_identity()))"
+        % str(pathlib.Path(__file__).resolve().parent)
+    )
+    out = subprocess.run(
+        [interpreter, "-c", probe], capture_output=True, text=True
+    )
+    if out.returncode != 0:
+        return {"error": (out.stderr or out.stdout).strip()[:400]}
+    return json.loads(out.stdout.strip().splitlines()[-1])
+
+
 def free_python():
     cand = os.environ.get("RUREX_FREE_PYTHON")
     if cand and pathlib.Path(cand).exists():
@@ -304,9 +327,12 @@ def main():
     script = str(pathlib.Path(__file__).resolve())
     results = {
         "environment": {
+            "measured_at": measurement.measured_at(),
             "cpu": interpreter_env(),
             "pattern": PATTERN,
             "threads": THREADS,
+            "extension": measurement.extension_identity(),
+            "extension_free": free_extension_identity(fp),
             "protocol": "one cold real-world run per point "
                         "(fresh process: load -> CPU-pinned warm-up -> "
                         "single pass; load and frequency recorded)",
